@@ -4,8 +4,7 @@ import {Toaster} from "react-hot-toast";
 import { useDispatch } from "react-redux";
 import { getUserProfileThunk } from "./store/slice/user/user.thunk";
 import { useEffect } from "react";
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
+
 function App() {
 
     

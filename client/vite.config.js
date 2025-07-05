@@ -7,8 +7,11 @@ export default defineConfig({
   define: {
     'global': {},
     'process.env': {},
-    'Buffer': Buffer // Updated to use the correct reference
+    'Buffer': 'buffer.Buffer' // Updated to use the correct reference
     // Updated to use the correct reference
+  },
+   optimizeDeps: {
+    include: ['buffer']
   },
   plugins: [react()],
 });

@@ -120,7 +120,7 @@ export const userSlice = createSlice({
 
 export const { setSelectedUser } = userSlice.actions;
 
-// Memoized selector for allUsers
+
 export const selectAllUsers = createSelector(
   (state) => state.userReducer.allUsers,
   (allUsers) => allUsers || []

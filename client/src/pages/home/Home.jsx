@@ -2,10 +2,7 @@ import React, { useEffect } from "react";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  initializeSocket,
-  setOnlineUsers,
-} from "../../store/slice/socket/socket.slice";
+import {initializeSocket, setOnlineUsers,} from "../../store/slice/socket/socket.slice";
 import { setNewMessage } from "../../store/slice/message/message.slice";
 
 const Home = () => {

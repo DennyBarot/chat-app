@@ -6,7 +6,7 @@ const initialState = {
   screenLoading: false,
   messages: null,
   conversations: [],
-  sendMessageStatus: 'idle', // new state to track sendMessageThunk status
+  sendMessageStatus: 'idle', 
 };
 
 export const messageSlice = createSlice({
@@ -15,7 +15,7 @@ export const messageSlice = createSlice({
   reducers: {
     setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
-      // Filter out duplicates by _id
+      
       const filteredOldMessages = oldMessages.filter(
         (msg) => msg._id !== action.payload._id
       );
@@ -23,14 +23,14 @@ export const messageSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // send message
+  
     builder.addCase(sendMessageThunk.pending, (state, action) => {
       state.buttonLoading = true;
       state.sendMessageStatus = 'pending';
     });
     builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
       const oldMessages = state.messages ?? [];
-      // Filter out duplicates by _id
+      
       const filteredOldMessages = oldMessages.filter(
         (msg) => msg._id !== action.payload?.responseData?._id
       );
@@ -48,7 +48,7 @@ export const messageSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
-      // Filter duplicates by _id
+     
       const messages = action.payload?.responseData?.messages ?? [];
       const uniqueMessagesMap = new Map();
       messages.forEach((msg) => {

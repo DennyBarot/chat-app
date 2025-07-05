@@ -13,7 +13,7 @@ export const loginUserThunk = createAsyncThunk(
       
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
+      console.error("Axios error:", error); 
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
@@ -31,7 +31,7 @@ export const forgotPasswordUserThunk = createAsyncThunk(
       toast.success("Password reset link sent successfully!!");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
+      console.error("Axios error:", error); 
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
@@ -53,7 +53,7 @@ export const registerUserThunk = createAsyncThunk(
       toast.success("Account created successfully!!");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
+      console.error("Axios error:", error); 
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
@@ -99,7 +99,7 @@ export const getOtherUsersThunk = createAsyncThunk(
       const response = await axiosInstance.get("/user/get-other-users");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
+      console.error("Axios error:", error); 
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
@@ -114,7 +114,7 @@ export const updateUserProfileThunk = createAsyncThunk(
       const response = await axiosInstance.put("/user/update-profile", {
         fullName,
         username,
-        avatar, // Include avatar in the request
+        avatar, 
       });
 
       toast.success("Profile updated successfully!");

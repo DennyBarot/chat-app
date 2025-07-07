@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 5000;
 app.use('/api/v1/user', userRoute)
 app.use('/api/v1/message', messageRoute)
 app.use(errorMiddleware);
-
+console.log("CLIENT_URL:", process.env.CLIENT_URL);
 server.listen(PORT, () => {
   console.log(`your server listening at port ${PORT}`);
 });

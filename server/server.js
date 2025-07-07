@@ -9,7 +9,7 @@ import { errorMiddleware } from './middlewares/errorMiddleware.js';
 connectDB();
 
 app.use(cors({
-  origin: "*", 
+  origin: process.env.CLIENT_URL , // Use the environment variable or fallback to localhost
   credentials: true 
 }));  
 

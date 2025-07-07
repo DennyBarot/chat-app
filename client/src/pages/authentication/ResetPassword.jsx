@@ -16,7 +16,7 @@ const ResetPassword = () => {
         }
 
         try {
-            const response = await axios.post('http://localhost:5000/api/v1/user/reset-password', {
+            const response = await axios.post('https://chat-app-frontend-ngqc.onrender.com/api/v1/user/reset-password', {
                 email: emailParam, // Send email from URL parameter
                 password: newPassword,
             });

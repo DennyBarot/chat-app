@@ -103,7 +103,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   }
 
   const mailData = email;
-  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.FRONTEND_URL || 'https://chat-app-frontend-ngqc.onrender.com';
 
   console.log("Frontend URL:", frontendUrl); 
 

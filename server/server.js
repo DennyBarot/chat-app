@@ -11,7 +11,8 @@ import { errorMiddleware } from './middlewares/errorMiddleware.js';
 connectDB();
 
 app.use(cors({
-  origin: process.env.CLIENT_URL , // Use the environment variable or fallback to localhost
+  origin: process.env.CLIENT_URL || 'https://chat-app-frontend-ngqc.onrender.com', // Use the environment variable or a default value
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true 
 }));  
 

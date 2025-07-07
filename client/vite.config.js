@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   define: {
     'process.env': {},
-    'Buffer': 'Buffer',
+    
   },
   build: {
     outDir: 'dist',

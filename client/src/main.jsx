@@ -12,8 +12,7 @@ import ForgotPassword from './pages/authentication/ForgotPassword.jsx';
 import ResetPassword from './pages/authentication/ResetPassword.jsx';
 import ProtectedRoute from './components/ProtectedRoutes.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
-import { Buffer } from 'buffer';
-window.Buffer = Buffer;
+
 const router = createBrowserRouter([
     {
       path: '/',

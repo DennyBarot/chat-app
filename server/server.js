@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import {app, server} from './socket/socket.js';
 import express from "express";
 import { connectDB } from "./db/connection1db.js";

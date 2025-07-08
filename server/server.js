@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
+console.log("All env vars starting with CLIENT_:", Object.keys(process.env).filter(key => key.startsWith("CLIENT_")).map(key => ({ [key]: process.env[key] })));
+
 import {app, server} from './socket/socket.js';
 import express from "express";
 import { connectDB } from "./db/connection1db.js";

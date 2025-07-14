@@ -8,7 +8,7 @@ import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 
-const UserSidebar = () => {
+const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
@@ -29,11 +29,14 @@ const UserSidebar = () => {
     // console.log("UserSidebar: User selected:", user);
     dispatch(setSelectedUser(user));
     setIsAddUserModalOpen(false);
+    if (onUserSelect) {
+      onUserSelect(user);
+    }
   };
 
   useEffect(() => {
-    if (!socket) {
-      // console.log("UserSidebar: Socket not available");
+    if (!socket || !userProfile?._id) {
+      // console.log("UserSidebar: Socket not available or user not authenticated");
       return;
     }
 
@@ -56,25 +59,38 @@ const UserSidebar = () => {
       socket.off("newMessage");
       window.removeEventListener("socketReconnect", handleSocketReconnect);
     };
-  }, [dispatch, socket]);
+  }, [dispatch, socket, userProfile]);
 
   useEffect(() => {
+    if (!userProfile?._id) {
+      return;
+    }
     dispatch(getConversationsThunk());
-  }, [dispatch]);
+  }, [dispatch, userProfile]);
 
   useEffect(() => {
+    if (!userProfile?._id) {
+      setUsers([]);
+      return;
+    }
     if (conversations.length > 0) {
       // console.log("UserSidebar: Updating users state from conversations:", conversations);
       const usersList = conversations.map((conv) => {
+        if (!Array.isArray(conv.participants)) {
+          return null;
+        }
         const otherUser = conv.participants.find(
-          (participant) => participant._id !== userProfile._id
+          (participant) => participant && participant._id !== userProfile._id
         );
+        if (!otherUser) {
+          return null;
+        }
         return {
           ...otherUser,
           lastMessage: conv.messages[0] || null,
           conversationId: conv._id,
         };
-      });
+      }).filter(Boolean);
       setUsers(usersList);
     } else {
       setUsers([]);

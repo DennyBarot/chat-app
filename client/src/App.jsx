@@ -16,6 +16,11 @@ function App() {
       if (window.location.pathname === '/login' || window.location.pathname === '/signup') {
         return;
       }
+      // Check if token exists in cookies or localStorage before dispatching
+      const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || localStorage.getItem('token');
+      if (!token) {
+        return;
+      }
       await dispatch(getUserProfileThunk());
     })();
   }, []);

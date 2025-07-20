@@ -15,7 +15,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!userProfile?._id) return;
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://chat-app-production-4c98.up.railway.app";
     console.log("SocketContext - backendUrl:", backendUrl);
 
     const newSocket = io(backendUrl, {

@@ -24,6 +24,7 @@ export const SocketProvider = ({ children }) => {
       query: {
         userId: userProfile?._id,
       },
+      path: '/socket.io',
       transports: ['websocket']
     });
 

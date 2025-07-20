@@ -15,7 +15,9 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!userProfile?._id) return;
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "https://chat-app-production-4c98.up.railway.app";
+    const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
+    const backendUrlRaw = import.meta.env.VITE_BACKEND || "https://chat-app-production-4c98.up.railway.app";
+    const backendUrl = trimTrailingSlash(backendUrlRaw);
     console.log("SocketContext - backendUrl:", backendUrl);
 
     const newSocket = io(backendUrl, {

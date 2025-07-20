@@ -9,9 +9,11 @@ const app = express();
 
 const server = http.createServer(app);
 
+const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
+    origin: trimTrailingSlash(process.env.CLIENT_URL),
   },
 });
 

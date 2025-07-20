@@ -80,14 +80,14 @@ const UserSidebar = ({ onUserSelect }) => {
           return null;
         }
         const otherUser = conv.participants.find(
-          (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
+          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
         );
         if (!otherUser) {
           return null;
         }
         return {
           ...otherUser,
-          lastMessage: conv.messages[0] || null,
+          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
         };
       }).filter(Boolean);
@@ -102,11 +102,11 @@ const UserSidebar = ({ onUserSelect }) => {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
         const otherUser = conv.participants.find(
-          (participant) => participant._id !== userProfile._id
+          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
         );
         return {
           ...otherUser,
-          lastMessage: conv.messages[0] || null,
+          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
         };
       });

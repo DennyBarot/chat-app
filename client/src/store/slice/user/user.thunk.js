@@ -10,7 +10,10 @@ export const loginUserThunk = createAsyncThunk(
         email,
         password,
       });
-      
+      // Store token in localStorage for persistence
+      if (response.data?.responseData?.token) {
+        localStorage.setItem('token', response.data.responseData.token);
+      }
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 
@@ -66,6 +69,8 @@ export const logoutUserThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post("/user/logout");
+      // Clear token from localStorage on logout
+      localStorage.removeItem('token');
       toast.success("Logout successful!!");
       return response.data;
     } catch (error) {
@@ -87,6 +92,8 @@ export const getUserProfileThunk = createAsyncThunk(
       console.error("Axios error:", error); // Log the full error response
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
+      // Clear token on error to force login
+      localStorage.removeItem('token');
       return rejectWithValue(errorOutput);
     }
   }

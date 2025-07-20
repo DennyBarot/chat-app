@@ -19,6 +19,8 @@ function App() {
       // Check if token exists in cookies or localStorage before dispatching
       const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || localStorage.getItem('token');
       if (!token) {
+        // If no token, set screenLoading to false to allow redirect
+        dispatch({ type: 'user/setScreenLoadingFalse' });
         return;
       }
       await dispatch(getUserProfileThunk());

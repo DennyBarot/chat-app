@@ -27,6 +27,9 @@ export const userSlice = createSlice({
       localStorage.setItem('selectedUser', JSON.stringify(action.payload));
       state.selectedUser = action.payload;
     },
+    setScreenLoadingFalse: (state) => {
+      state.screenLoading = false;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(loginUserThunk.pending, (state) => {

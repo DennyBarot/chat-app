@@ -34,14 +34,18 @@ const Login = () => {
    };
 
    const handleLogin = async () => {
-      console.log("login successful")
-      toast.success("Login successful");
-      const response = await dispatch(loginUserThunk(loginData));
-      if (response?.payload?.success) {
-         navigate("/");
+      try {
+         const response = await dispatch(loginUserThunk(loginData));
+         if (response?.payload?.success) {
+            toast.success("Login successful");
+            navigate("/");
+         } else {
+            toast.error(response?.payload || "Login failed");
+         }
+      } catch (error) {
+         console.error("Login error:", error);
+         toast.error(error?.message || "Login failed");
       }
-
-
    }
 
    return (

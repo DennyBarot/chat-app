@@ -17,16 +17,16 @@ export const SocketProvider = ({ children }) => {
 
     const newSocket = io({
       query: {
-        userId: userProfile._id,
+        userId: userProfile?._id,
       },
     });
 
     newSocket.on("connect", () => {
-      console.log("Socket connected:", newSocket.id, "UserId:", userProfile._id);
+      console.log("Socket connected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
     newSocket.on("disconnect", () => {
-      console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile._id);
+      console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
     // Add reconnect listener to fetch conversations on reconnect

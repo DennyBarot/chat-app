@@ -6,22 +6,20 @@ import http from "http";
 import express from "express";
 
 const app = express();
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: function (origin, callback) {
-      if (!origin || origin === process.env.CLIENT_URL || /^https:\/\/chat-.*\.vercel\.app$/.test(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Socket.IO CORS not allowed: " + origin));
-      }
-    },
-    credentials: true,
+    origin: process.env.CLIENT_URL,
   },
 });
 
-const userSocketMap = {};
+const userSocketMap = {
+    // userId : socketId,
+}
+
+export { io, app, server, getSocketId, userSocketMap };
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
@@ -32,7 +30,7 @@ io.on("connection", (socket) => {
   userSocketMap[userId] = socket.id;
   console.log("UserSocketMap updated:", userSocketMap);
 
-  io.emit("onlineUsers", Object.keys(userSocketMap));
+  io.emit("onlineUsers", Object.keys(userSocketMap))
 
   socket.on("disconnect", () => {
     delete userSocketMap[userId];
@@ -41,6 +39,7 @@ io.on("connection", (socket) => {
   });
 });
 
-const getSocketId = (userId) => userSocketMap[userId];
+const getSocketId = (userId) =>{
+    return userSocketMap[userId];
+}
 
-export { io, app, server, getSocketId, userSocketMap };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+ import React, { useEffect, useState } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -80,7 +80,7 @@ const UserSidebar = ({ onUserSelect }) => {
           return null;
         }
         const otherUser = conv.participants.find(
-          (participant) => participant && participant._id !== userProfile._id
+          (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
         );
         if (!otherUser) {
           return null;
@@ -101,39 +101,39 @@ const UserSidebar = ({ onUserSelect }) => {
     if (!searchValue) {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
-          const otherUser = conv.participants.find(
-            (participant) => participant._id !== userProfile._id
-          );
-          return {
-            ...otherUser,
-            lastMessage: conv.messages[0] || null,
-            conversationId: conv._id,
-          };
-        });
-        setUsers(usersList);
+        const otherUser = conv.participants.find(
+          (participant) => participant._id !== userProfile._id
+        );
+        return {
+          ...otherUser,
+          lastMessage: conv.messages[0] || null,
+          conversationId: conv._id,
+        };
+      });
+      setUsers(usersList);
       } else {
         setUsers([]);
       }
     } else {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
-          const otherUser = conv.participants.find(
-            (participant) => participant._id !== userProfile._id
-          );
-          return {
-            ...otherUser,
-            lastMessage: conv.messages[0] || null,
-            conversationId: conv._id,
-          };
-        });
-        const filteredUsers = usersList.filter((user) => {
-          return (
-            (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-            (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-            (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
-          );
-        });
-        setUsers(filteredUsers);
+        const otherUser = conv.participants.find(
+          (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
+        );
+        return {
+          ...otherUser,
+          lastMessage: conv.messages[0] || null,
+          conversationId: conv._id,
+        };
+      });
+      const filteredUsers = usersList.filter((user) => {
+        return (
+          (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+          (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+          (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
+        );
+      });
+      setUsers(filteredUsers);
       } else {
         setUsers([]);
       }

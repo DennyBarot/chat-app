@@ -110,7 +110,6 @@ const UserSidebar = ({ onUserSelect }) => {
           conversationId: conv._id,
         };
       });
-      setUsers(usersList);
       } else {
         setUsers([]);
       }

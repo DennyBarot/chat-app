@@ -16,6 +16,7 @@ export const SocketProvider = ({ children }) => {
     if (!userProfile?._id) return;
 
     const backendUrl = import.meta.env.VITE_BACKEND_URL;
+    console.log("SocketContext - backendUrl:", backendUrl);
 
     const newSocket = io(backendUrl, {
       query: {

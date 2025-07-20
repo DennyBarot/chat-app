@@ -25,7 +25,9 @@ export const SocketProvider = ({ children }) => {
         userId: userProfile?._id,
       },
       path: '/socket.io',
-      transports: ['websocket']
+      transports: ['websocket'],
+      upgrade: false,
+      forceNew: true,
     });
 
     newSocket.on("connect", () => {

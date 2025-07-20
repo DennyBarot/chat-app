@@ -16,7 +16,7 @@ export const SocketProvider = ({ children }) => {
     if (!userProfile?._id) return;
 
     const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
-    const backendUrlRaw = import.meta.env.VITE_BACKEND || "https://chat-app-production-4c98.up.railway.app";
+    const backendUrlRaw = import.meta.env.VITE_BACKEND_URL || "https://chat-app-production-4c98.up.railway.app";
     const backendUrl = trimTrailingSlash(backendUrlRaw);
     console.log("SocketContext - backendUrl:", backendUrl);
 
@@ -24,6 +24,7 @@ export const SocketProvider = ({ children }) => {
       query: {
         userId: userProfile?._id,
       },
+      transports: ['websocket']
     });
 
     newSocket.on("connect", () => {

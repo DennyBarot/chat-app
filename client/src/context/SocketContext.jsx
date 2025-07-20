@@ -15,7 +15,9 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!userProfile?._id) return;
 
-    const newSocket = io({
+    const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
+    const newSocket = io(backendUrl, {
       query: {
         userId: userProfile?._id,
       },

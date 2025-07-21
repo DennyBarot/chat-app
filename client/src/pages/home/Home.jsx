@@ -37,7 +37,7 @@ const Home = () => {
     socket.on("newMessage", (newMessage) => {
       dispatch(setNewMessage(newMessage));
       // Fetch fresh messages for the selected user when a new message arrives
-      if (newMessage.senderId === selectedUser?._id || newMessage.receiverId === selectedUser?._id) {
+      if (selectedUser && selectedUser._id && (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)) {
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
       }
     });

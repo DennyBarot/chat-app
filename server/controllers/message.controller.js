@@ -72,6 +72,10 @@ export const getMessages = asyncHandler(async (req, res, next) => {
         participants: { $all: [myId, otherParticipantId] },
     }).populate("messages");
 
+    if (!conversation) {
+        return next(new errorHandler("Conversation not found", 404));
+    }
+
     res.status(200).json({
         success: true,
         responseData: conversation,

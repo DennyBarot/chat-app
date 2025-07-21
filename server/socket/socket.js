@@ -13,11 +13,11 @@ const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
 
 const io = new Server(server, {
   cors: {
-    origin: trimTrailingSlash(process.env.CLIENT_URL),
-    methods: ['GET', 'POST'],
-    credentials: true,
+    origin: trimTrailingSlash(process.env.CLIENT_URL), 
+    methods: ["GET", "POST"],
+    credentials: true
   },
-  transports: ['websocket', 'polling'],
+  transports: ['websocket'],
 });
 
 

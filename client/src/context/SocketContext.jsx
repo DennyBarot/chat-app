@@ -20,16 +20,14 @@ export const SocketProvider = ({ children }) => {
     const backendUrl = trimTrailingSlash(backendUrlRaw);
     console.log("SocketContext - backendUrl:", backendUrl);
 
-    const newSocket = io(backendUrl, {
-      query: {
-        userId: userProfile?._id,
-      },
-      path: '/socket.io',
-      transports: ['websocket'],
- 
-      forceNew: true,
-    
-    });
+   const newSocket = io(backendUrl, {
+  query: {
+    userId: userProfile._id,
+  },
+  transports: ['websocket'], // ✅ prevent polling fallback
+  forceNew: true,
+  upgrade: false, // ✅ prevent upgrade from websocket → polling
+});
 
     newSocket.io.on("packet", (packet) => {
       console.log("Socket packet event:", packet);

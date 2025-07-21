@@ -15,6 +15,14 @@ const io = new Server(server, {
   cors: {
     origin: trimTrailingSlash(process.env.CLIENT_URL),
   },
+  transports: ['websocket', 'polling'],
+});
+
+
+
+// Fallback route to handle polling requests on frontend domain
+app.get('/socket.io/*', (req, res) => {
+  res.status(200).send('Polling fallback route');
 });
 
 const userSocketMap = {

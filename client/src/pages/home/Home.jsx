@@ -36,11 +36,15 @@ const Home = () => {
     });
     socket.on("newMessage", (newMessage) => {
       dispatch(setNewMessage(newMessage));
+      // Fetch fresh messages for the selected user when a new message arrives
+      if (newMessage.senderId === selectedUser?._id || newMessage.receiverId === selectedUser?._id) {
+        dispatch(getMessageThunk({ recieverId: selectedUser._id }));
+      }
     });
     return () => {
       socket.close();
     };
-  }, [socket]);
+  }, [socket, selectedUser, dispatch]);
 
   useEffect(() => {
     if (isMobile) {

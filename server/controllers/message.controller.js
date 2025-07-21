@@ -73,7 +73,15 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     }).populate("messages");
 
     if (!conversation) {
-        return next(new errorHandler("Conversation not found", 404));
+        // Return empty conversation with empty messages instead of error
+        return res.status(200).json({
+            success: true,
+            responseData: {
+                _id: null,
+                participants: [myId, otherParticipantId],
+                messages: [],
+            },
+        });
     }
 
     res.status(200).json({

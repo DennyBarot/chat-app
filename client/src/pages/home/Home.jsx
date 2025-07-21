@@ -38,7 +38,7 @@ const Home = () => {
       dispatch(setNewMessage(newMessage));
       // Fetch fresh messages for the selected user when a new message arrives
       if (newMessage.senderId === selectedUser?._id || newMessage.receiverId === selectedUser?._id) {
-        dispatch(getMessageThunk({ recieverId: selectedUser._id }));
+        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
       }
     });
     return () => {

@@ -9,6 +9,23 @@ import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 
 const MessageContainer = ({ onBack, isMobile }) => {
+  const socket = window.socket; // or use context if available
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewMessage = (newMessage) => {
+      if (
+        selectedUser && selectedUser._id &&
+        (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)
+      ) {
+        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      }
+    };
+    socket.on("newMessage", handleNewMessage);
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, selectedUser, dispatch]);
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
   const { messages } = useSelector((state) => state.messageReducer);

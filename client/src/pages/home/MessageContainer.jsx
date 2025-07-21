@@ -17,7 +17,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
-      dispatch(getMessageThunk({ recieverId: selectedUser._id }));
+      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
     }
   }, [selectedUser, location]);
 

@@ -27,6 +27,11 @@ export const sendMessageThunk = createAsyncThunk(
 export const getMessageThunk = createAsyncThunk(
   "message/get",
   async ({ otherParticipantId }, { rejectWithValue }) => {
+    if (!otherParticipantId) {
+      const errorOutput = "otherParticipantId is required";
+      toast.error(errorOutput);
+      return rejectWithValue(errorOutput);
+    }
     try {
       const response = await axiosInstance.get(`/message/get-messages/${otherParticipantId}`);
       return response.data;

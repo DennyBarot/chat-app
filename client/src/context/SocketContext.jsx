@@ -30,6 +30,10 @@ export const SocketProvider = ({ children }) => {
       forceNew: true,
     });
 
+    newSocket.io.on("packet", (packet) => {
+      console.log("Socket packet event:", packet);
+    });
+
     newSocket.on("connect", () => {
       console.log("Socket connected:", newSocket.id, "UserId:", userProfile?._id);
     });

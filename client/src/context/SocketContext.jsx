@@ -28,6 +28,7 @@ export const SocketProvider = ({ children }) => {
       transports: ['websocket'],
       upgrade: false,
       forceNew: true,
+      rememberUpgrade: false,
     });
 
     newSocket.io.on("packet", (packet) => {

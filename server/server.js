@@ -17,7 +17,9 @@ const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
 app.use(cors({
   origin: trimTrailingSlash(process.env.CLIENT_URL) || 'https://chat-app-frontend-ngqc.onrender.com', // Use the environment variable or a default value
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true 
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200,
 }));  
 
 app.use(express.json({ limit: '10mb' })); 

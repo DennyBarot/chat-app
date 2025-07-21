@@ -14,21 +14,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const { selectedUser } = useSelector((state) => state.userReducer);
   const socket = useSocket();
 
-  useEffect(() => {
-    if (!socket) return;
-    const handleNewMessage = (newMessage) => {
-      if (
-        selectedUser && selectedUser._id &&
-        (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)
-      ) {
-        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-      }
-    };
-    socket.on("newMessage", handleNewMessage);
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-    };
-  }, [socket, selectedUser, dispatch]);
+  // ...existing code...
   const { messages } = useSelector((state) => state.messageReducer);
   const location = useLocation();
   const messagesEndRef = useRef(null);

@@ -39,17 +39,16 @@ const Home = () => {
     socket.on("onlineUsers", (onlineUsers) => {
       dispatch(setOnlineUsers(onlineUsers));
     });
-    socket.on("newMessage", (newMessage) => {
+    const handleNewMessage = (newMessage) => {
       dispatch(setNewMessage(newMessage));
       // Fetch fresh messages for the selected user when a new message arrives
       if (selectedUser && selectedUser._id && (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)) {
-        console.log("Home.jsx: Dispatching getMessageThunk with otherParticipantId:", selectedUser._id);
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-      } else {
-        console.log("Home.jsx: Skipping getMessageThunk due to missing selectedUser or _id", selectedUser);
       }
-    });
+    };
+    socket.on("newMessage", handleNewMessage);
     return () => {
+      socket.off("newMessage", handleNewMessage);
       socket.close();
     };
   }, [socket, selectedUser, dispatch]);

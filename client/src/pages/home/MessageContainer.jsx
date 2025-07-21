@@ -9,6 +9,8 @@ import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 
 const MessageContainer = ({ onBack, isMobile }) => {
+  const dispatch = useDispatch();
+  const { selectedUser } = useSelector((state) => state.userReducer);
   const socket = window.socket; // or use context if available
 
   useEffect(() => {
@@ -26,8 +28,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
       socket.off("newMessage", handleNewMessage);
     };
   }, [socket, selectedUser, dispatch]);
-  const dispatch = useDispatch();
-  const { selectedUser } = useSelector((state) => state.userReducer);
   const { messages } = useSelector((state) => state.messageReducer);
   const location = useLocation();
   const messagesEndRef = useRef(null);

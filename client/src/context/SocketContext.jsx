@@ -26,9 +26,9 @@ export const SocketProvider = ({ children }) => {
       },
       path: '/socket.io',
       transports: ['websocket'],
-      upgrade: false,
+ 
       forceNew: true,
-      rememberUpgrade: false,
+    
     });
 
     newSocket.io.on("packet", (packet) => {
@@ -43,12 +43,11 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
-    // Add reconnect listener to fetch conversations on reconnect
-    newSocket.on("connect", () => {
-      console.log("Socket reconnected");
-      const event = new Event("socketReconnect");
-      window.dispatchEvent(event);
-    });
+    //reconnect event to handle reconnections
+  newSocket.io.on("reconnect", () => {
+    const event = new Event("socketReconnect");
+    window.dispatchEvent(event);
+  });
 
     setSocket(newSocket);
 

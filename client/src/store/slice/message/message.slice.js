@@ -15,11 +15,18 @@ export const messageSlice = createSlice({
   reducers: {
     setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
-      
-      const filteredOldMessages = oldMessages.filter(
-        (msg) => msg._id !== action.payload._id
-      );
-      state.messages = [...filteredOldMessages, action.payload];
+
+      // Check if the new message already exists
+      const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
+      if (!messageExists) {
+        state.messages = [...oldMessages, action.payload];
+      }
+      // If message exists, replace it to update
+      else {
+        state.messages = oldMessages.map(msg =>
+          msg._id === action.payload._id ? action.payload : msg
+        );
+      }
     },
   },
   extraReducers: (builder) => {

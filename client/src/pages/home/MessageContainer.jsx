@@ -4,6 +4,7 @@ import Message from "./Message";
 import DateSeparator from "./DateSeparator";
 import { useDispatch, useSelector } from "react-redux";
 import { getMessageThunk } from "../../store/slice/message/message.thunk";
+import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
@@ -11,7 +12,7 @@ import { format, isToday, isTomorrow, parseISO } from "date-fns";
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
-  const socket = window.socket; // or use context if available
+  const socket = useSocket();
 
   useEffect(() => {
     if (!socket) return;

@@ -58,6 +58,9 @@ const Home = () => {
     if (selectedUser && selectedUser._id) {
       console.log("Home.jsx: selectedUser changed, fetching messages for:", selectedUser._id);
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+    } else {
+      // Prevent dispatch if selectedUser or _id is missing
+      console.warn("Home.jsx: getMessageThunk not dispatched, selectedUser or _id missing", selectedUser);
     }
   }, [selectedUser, dispatch]);
 

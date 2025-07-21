@@ -54,6 +54,13 @@ const Home = () => {
   }, [socket, selectedUser, dispatch]);
 
   useEffect(() => {
+    if (selectedUser && selectedUser._id) {
+      console.log("Home.jsx: selectedUser changed, fetching messages for:", selectedUser._id);
+      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+    }
+  }, [selectedUser, dispatch]);
+
+  useEffect(() => {
     if (isMobile) {
       setShowMessageContainer(!!selectedUser);
     } else {

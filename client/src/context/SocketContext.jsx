@@ -26,7 +26,8 @@ export const SocketProvider = ({ children }) => {
   },
   transports: ['websocket'], // ✅ prevent polling fallback
   forceNew: true,
-  upgrade: false, // ✅ prevent upgrade from websocket → polling
+  upgrade: false,
+   path: '/socket.io',  // ✅ prevent upgrade from websocket → polling
 });
 
     newSocket.io.on("packet", (packet) => {

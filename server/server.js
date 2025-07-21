@@ -25,10 +25,6 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' })); 
 app.use(cookieParser());
 
-// Fallback route to handle polling requests on frontend domain
-app.get('/socket.io/*', (req, res) => {
-  res.status(200).send('Polling fallback route');
-});
 
 const PORT = process.env.PORT || 5000;
 

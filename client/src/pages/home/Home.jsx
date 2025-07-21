@@ -11,6 +11,10 @@ const Home = () => {
   const { isAuthenticated, userProfile, selectedUser } = useSelector(
     (state) => state.userReducer
   );
+
+  React.useEffect(() => {
+    console.log("Home.jsx: selectedUser changed:", selectedUser);
+  }, [selectedUser]);
   const { socket, onlineUsers } = useSelector((state) => state.socketReducer);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -38,7 +42,10 @@ const Home = () => {
       dispatch(setNewMessage(newMessage));
       // Fetch fresh messages for the selected user when a new message arrives
       if (selectedUser && selectedUser._id && (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)) {
+        console.log("Home.jsx: Dispatching getMessageThunk with otherParticipantId:", selectedUser._id);
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      } else {
+        console.log("Home.jsx: Skipping getMessageThunk due to missing selectedUser or _id", selectedUser);
       }
     });
     return () => {

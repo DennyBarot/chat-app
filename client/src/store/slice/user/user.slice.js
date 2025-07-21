@@ -7,6 +7,7 @@ import {
   registerUserThunk,
   forgotPasswordUserThunk,
   getAllUsersThunk,
+  updateUserProfileThunk,
 } from './user.thunk';
 
 const initialState = {
@@ -95,6 +96,10 @@ export const userSlice = createSlice({
     });
     builder.addCase(getUserProfileThunk.rejected, (state) => {
       state.screenLoading = false;
+    });
+
+    builder.addCase(updateUserProfileThunk.fulfilled, (state, action) => {
+      state.userProfile = action.payload?.responseData?.user;
     });
 
     builder.addCase(getOtherUsersThunk.pending, (state) => {

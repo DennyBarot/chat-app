@@ -63,6 +63,8 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 export const getMessages = asyncHandler(async (req, res, next) => {
     const myId = req.user._id;
     const otherParticipantId = req.params.otherParticipantId;
+    const limit = parseInt(req.query.limit) || 25;
+    const skip = parseInt(req.query.skip) || 0;
 
     if (!myId || !otherParticipantId) {
         return next(new errorHandler("All fields are required", 400));
@@ -70,7 +72,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 
     let conversation = await Conversation.findOne({
         participants: { $all: [myId, otherParticipantId] },
-    }).populate("messages");
+    });
 
     if (!conversation) {
         // Return empty conversation with empty messages instead of error
@@ -84,9 +86,24 @@ export const getMessages = asyncHandler(async (req, res, next) => {
         });
     }
 
+    // Paginate messages: most recent first
+    const totalMessages = await Message.countDocuments({
+        _id: { $in: conversation.messages }
+    });
+    const messages = await Message.find({
+        _id: { $in: conversation.messages }
+    })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
     res.status(200).json({
         success: true,
-        responseData: conversation,
+        responseData: {
+            ...conversation.toObject(),
+            messages,
+            totalMessages,
+        },
     });
 });
 

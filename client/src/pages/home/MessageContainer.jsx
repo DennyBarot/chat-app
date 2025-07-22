@@ -10,6 +10,17 @@ import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 
 const MessageContainer = ({ onBack, isMobile }) => {
+  useEffect(() => {
+    if (!socket || !selectedUser || !selectedUser._id) return;
+    const handleNewMessage = (newMessage) => {
+      console.log("MessageContainer.jsx: Received newMessage event, fetching messages for:", selectedUser._id);
+      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+    };
+    socket.on("newMessage", handleNewMessage);
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, selectedUser, dispatch]);
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
   const socket = useSocket();

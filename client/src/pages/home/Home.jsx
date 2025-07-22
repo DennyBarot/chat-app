@@ -42,10 +42,14 @@ const Home = () => {
       dispatch(setOnlineUsers(onlineUsers));
     });
     const handleNewMessage = (newMessage) => {
+      console.log("Home.jsx: Received newMessage socket event:", newMessage);
       dispatch(setNewMessage(newMessage));
       // Always fetch messages for the selected user for true real-time updates
       if (selectedUser && selectedUser._id) {
+        console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      } else {
+        console.log("Home.jsx: No selectedUser or _id, not dispatching getMessageThunk");
       }
     };
     socket.on("newMessage", handleNewMessage);

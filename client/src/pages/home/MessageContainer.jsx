@@ -21,11 +21,13 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
+      console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
     }
   }, [selectedUser, location]);
 
   useEffect(() => {
+    console.log("MessageContainer.jsx: messages updated, re-rendering", messages);
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }

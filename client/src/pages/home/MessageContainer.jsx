@@ -16,6 +16,13 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   // ...existing code...
   const { messages } = useSelector((state) => state.messageReducer);
+  // Filter messages for the selected user if messages is an array of all messages
+  const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
+    ? messages.filter(
+        (msg) =>
+          (msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id)
+      )
+    : messages;
   const location = useLocation();
   const messagesEndRef = useRef(null);
 
@@ -46,7 +53,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   let lastDate = null;
 
   if (messages && messages.length > 0) {
-    messages.forEach((message) => {
+    filteredMessages.forEach((message) => {
       const messageDate = message.createdAt || message.timestamp;
       if (messageDate) {
         const currentDate = messageDate.split("T")[0];

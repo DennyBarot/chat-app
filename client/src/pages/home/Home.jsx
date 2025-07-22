@@ -49,7 +49,7 @@ const Home = () => {
     socket.on("newMessage", handleNewMessage);
     return () => {
       socket.off("newMessage", handleNewMessage);
-      socket.close();
+   
     };
   }, [socket, selectedUser, dispatch]);
 

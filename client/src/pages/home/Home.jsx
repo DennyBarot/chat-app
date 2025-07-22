@@ -54,6 +54,10 @@ const Home = () => {
   }, [socket, selectedUser, dispatch]);
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      console.warn("Home.jsx: getMessageThunk not dispatched, user not authenticated");
+      return;
+    }
     if (selectedUser && selectedUser._id) {
       console.log("Home.jsx: selectedUser changed, fetching messages for:", selectedUser._id);
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));

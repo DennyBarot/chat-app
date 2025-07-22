@@ -32,6 +32,8 @@ const Home = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     dispatch(initializeSocket(userProfile?._id));
+    // Ensure conversations are fetched after login
+    dispatch(require("../../store/slice/message/message.thunk").getConversationsThunk());
   }, [isAuthenticated]);
 
   useEffect(() => {

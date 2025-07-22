@@ -43,7 +43,7 @@ const UserSidebar = ({ onUserSelect }) => {
     // console.log("UserSidebar: Setting up newMessage listener");
 
     socket.on("newMessage", (data) => {
-      // console.log("UserSidebar: Received newMessage event:", data);
+      console.log("UserSidebar: Received newMessage event:", data);
       dispatch(getConversationsThunk());
     });
 
@@ -74,8 +74,8 @@ const UserSidebar = ({ onUserSelect }) => {
       return;
     }
     if (conversations.length > 0) {
-      // console.log("UserSidebar: Updating users state from conversations:", conversations);
-      const usersList = conversations.map((conv) => {
+      // Map users from conversations
+      let usersList = conversations.map((conv) => {
         if (!Array.isArray(conv.participants)) {
           return null;
         }
@@ -89,8 +89,15 @@ const UserSidebar = ({ onUserSelect }) => {
           ...otherUser,
           lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
+          updatedAt: conv.updatedAt,
         };
       }).filter(Boolean);
+      // Sort users by last message time (most recent first)
+      usersList = usersList.sort((a, b) => {
+        const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
+        const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
+        return new Date(bTime) - new Date(aTime);
+      });
       setUsers(usersList);
     } else {
       setUsers([]);

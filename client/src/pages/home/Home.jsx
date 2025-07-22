@@ -33,7 +33,9 @@ const Home = () => {
     if (!isAuthenticated) return;
     dispatch(initializeSocket(userProfile?._id));
     // Ensure conversations are fetched after login
-    dispatch(require("../../store/slice/message/message.thunk").getConversationsThunk());
+    import("../../store/slice/message/message.thunk").then(module => {
+      dispatch(module.getConversationsThunk());
+    });
   }, [isAuthenticated]);
 
   useEffect(() => {

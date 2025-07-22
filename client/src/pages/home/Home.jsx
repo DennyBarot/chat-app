@@ -32,11 +32,8 @@ const Home = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
     dispatch(initializeSocket(userProfile?._id));
-    // Ensure conversations are fetched after login
-    import("../../store/slice/message/message.thunk").then(module => {
-      dispatch(module.getConversationsThunk());
-    });
-  }, [isAuthenticated]);
+    dispatch(getConversationsThunk());
+  }, [isAuthenticated, userProfile?._id]);
 
   useEffect(() => {
     if (!socket) return;
@@ -45,8 +42,8 @@ const Home = () => {
     });
     const handleNewMessage = (newMessage) => {
       dispatch(setNewMessage(newMessage));
-      // Fetch fresh messages for the selected user when a new message arrives
-      if (selectedUser && selectedUser._id && (newMessage.senderId === selectedUser._id || newMessage.receiverId === selectedUser._id)) {
+      // Always fetch messages for the selected user for true real-time updates
+      if (selectedUser && selectedUser._id) {
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
       }
     };

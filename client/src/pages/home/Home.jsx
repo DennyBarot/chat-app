@@ -6,6 +6,7 @@ import {initializeSocket, setOnlineUsers,} from "../../store/slice/socket/socket
 import { setNewMessage } from "../../store/slice/message/message.slice";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getMessageThunk } from "../../store/slice/message/message.thunk";
+import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 
 const Home = () => {
   const dispatch = useDispatch();

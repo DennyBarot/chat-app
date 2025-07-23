@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
+import axiosInstance from "../../api/axiosInstance"; // Adjust the import based on your project structure
 
 const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
@@ -13,13 +14,13 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
     if (!message.trim()) return;
 
     setIsSubmitting(true);
-    await dispatch(
-      sendMessageThunk({
-        recieverId: selectedUser?._id,
+    const response = await axiosInstance.post(
+      `/message/send/${selectedUser?._id}`,
+      {
         message,
         timestamp: new Date().toISOString(),
         replyTo: replyMessage?._id, // <-- Add this line
-      })
+      }
     );
     setMessage("");
     setIsSubmitting(false);

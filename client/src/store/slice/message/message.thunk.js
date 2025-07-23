@@ -1,16 +1,15 @@
-
-
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-hot-toast";
 import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const sendMessageThunk = createAsyncThunk(
   "message/send",
-  async ({ recieverId, message, timestamp }, { dispatch, rejectWithValue }) => {
+  async ({ recieverId, message, timestamp, replyTo }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/message/send/${recieverId}`, {
         message,
-        timestamp
+        timestamp,
+        replyTo, // <-- add this
       });
       // After sending message, refresh conversations
       await dispatch(getConversationsThunk());

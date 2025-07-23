@@ -48,9 +48,12 @@ const Message = ({ messageDetails }) => {
       )}
       <div className={`max-w-[70%] relative`}>
         {/* Show quoted message if this is a reply */}
-        {messageDetails.replyToMessage && (
-          <div className="bg-indigo-50 border-l-4 border-indigo-400 px-3 py-1 mb-1 text-xs text-slate-700 rounded">
-            Replying to: <span className="font-semibold">{messageDetails.replyToMessage.senderId === userProfile?._id ? 'You' : (messageDetails.replyToMessage.senderName || 'User')}</span> — {messageDetails.replyToMessage.message}
+        {messageDetails.replyTo && (
+          <div className="quoted-reply">
+            <span>
+              Replying to: {messageDetails.replyTo.senderId === userProfile._id ? "You" : "Other"}
+            </span>
+            <div>{messageDetails.replyTo.message}</div>
           </div>
         )}
         <div 

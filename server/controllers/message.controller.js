@@ -11,6 +11,9 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const timestamp = req.body.timestamp;
   const replyTo = req.body.replyTo; // <-- get replyTo
 
+  console.log("sendMessage req.body:", req.body);
+  console.log("sendMessage req.user:", req.user);
+
   if (!senderId || !receiverId || !message) {
       return next(new errorHandler("any field is missing.", 400));
   }

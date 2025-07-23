@@ -23,7 +23,7 @@ const Message = ({ messageDetails }) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Add reply UI: click to reply
+  // Add reply UI: show reply icon and option
   const handleReply = () => {
     if (window.setReplyToMessage) {
       window.setReplyToMessage(messageDetails);
@@ -33,9 +33,7 @@ const Message = ({ messageDetails }) => {
   return (
     <div
       ref={messageRef}
-      className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4`}
-      onDoubleClick={handleReply}
-      style={{ cursor: 'pointer' }}
+      className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4 group`}
     >
       {!isSentByMe && (
         <div className="flex-shrink-0 mr-3">
@@ -48,11 +46,11 @@ const Message = ({ messageDetails }) => {
           </div>
         </div>
       )}
-      <div className={`max-w-[70%]`}>
+      <div className={`max-w-[70%] relative`}>
         {/* Show quoted message if this is a reply */}
         {messageDetails.replyToMessage && (
           <div className="bg-indigo-50 border-l-4 border-indigo-400 px-3 py-1 mb-1 text-xs text-slate-700 rounded">
-            Replying to: {messageDetails.replyToMessage.message}
+            Replying to: <span className="font-semibold">{messageDetails.replyToMessage.senderId === userProfile?._id ? 'You' : (messageDetails.replyToMessage.senderName || 'User')}</span> — {messageDetails.replyToMessage.message}
           </div>
         )}
         <div 
@@ -67,6 +65,15 @@ const Message = ({ messageDetails }) => {
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
           {formatTime(createdAt)}
         </div>
+        {/* Reply icon and option (visible on hover) */}
+        <button
+          className="absolute -top-6 right-0 bg-white border border-slate-200 rounded-full p-1 shadow-sm text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs"
+          title={`Reply to ${isSentByMe ? 'You' : selectedUser?.fullName}`}
+          onClick={handleReply}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h7V6a1 1 0 011.707-.707l7 7a1 1 0 010 1.414l-7 7A1 1 0 0110 18v-4H3v-4z" /></svg>
+          Reply
+        </button>
       </div>
       {isSentByMe && (
         <div className="flex-shrink-0 ml-3">

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useSelector } from "react-redux";
 
-const Message = ({ messageDetails, setReplyToMessage }) => {
+const Message = ({ messageDetails }) => {
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
     (state) => state.userReducer
@@ -48,16 +48,6 @@ const Message = ({ messageDetails, setReplyToMessage }) => {
               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'
           }`}
         >
-          {messageDetails.replyTo && (
-            <div className="quoted-reply mb-1">
-              <span className="text-xs text-slate-500">
-                Replying to: {messageDetails.replyTo.senderId === userProfile._id ? "You" : "Other"}
-              </span>
-              <div className="text-sm">
-                {messageDetails.replyTo.message}
-              </div>
-            </div>
-          )}
           <p className="whitespace-pre-wrap break-words">{messageDetails?.message}</p>
         </div>
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
@@ -76,9 +66,6 @@ const Message = ({ messageDetails, setReplyToMessage }) => {
           </div>
         </div>
       )}
-      <button onClick={() => setReplyToMessage(messageDetails)} className={`mt-2 ${isSentByMe ? 'ml-auto' : ''} px-3 py-1 text-xs rounded-full ${isSentByMe ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-800'}`}>
-        Reply
-      </button>
     </div>
   );
 };

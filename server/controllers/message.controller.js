@@ -9,7 +9,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     const senderId = req.user._id;
     const message = req.body.message;
     const timestamp = req.body.timestamp; 
-    const replyTo = req.body.replyTo; // <-- get replyTo from request body
 
     if (!senderId || !receiverId || !message) {
         return next(new errorHandler("any field is missing.", 400));
@@ -30,7 +29,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         senderId,
         receiverId,
         message,
-        replyTo, // <-- pass this from frontend
     });
 
     const createdAt = newMessage.createdAt;
@@ -56,12 +54,9 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     console.log("sendMessage: Emitting newMessage to socketId:", socketId);
     io.to(socketId).emit("newMessage", newMessage);
 
-    // When sending to frontend, populate replyTo
-    const populatedMessage = await Message.findById(newMessage._id).populate('replyTo');
-
     res.status(200).json({
         success: true,
-        responseData: populatedMessage, // <-- send populated message
+        responseData: newMessage,
     });
 });
 

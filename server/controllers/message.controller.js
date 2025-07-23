@@ -115,3 +115,30 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         responseData: conversations,
     });
 });
+
+export const createMessage = async (req, res) => {
+  const { content, senderId, replyTo } = req.body;
+  let quotedContent = '';
+  if (replyTo) {
+    const quotedMsg = await Message.findById(replyTo);
+    if (quotedMsg) quotedContent = quotedMsg.content;
+  }
+  const message = new Message({ content, senderId, replyTo, quotedContent });
+  await message.save();
+  res.status(201).json(message);
+};
+
+export const getMessages = async (req, res) => {
+  const messages = await Message.find({ conversationId: req.params.id })
+    .populate('replyTo');
+  // Optionally, format quotedMessage for frontend
+  const formatted = messages.map(msg => ({
+    ...msg.toObject(),
+    quotedMessage: msg.replyTo ? {
+      content: msg.replyTo.content,
+      senderName: msg.replyTo.senderId.name, // adjust as needed
+      replyTo: msg.replyTo.replyTo,
+    } : null,
+  }));
+  res.json(formatted);
+};

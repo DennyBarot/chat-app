@@ -3,7 +3,7 @@ import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 
-const SendMessage = () => {
+const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
   const [message, setMessage] = useState("");
@@ -11,7 +11,7 @@ const SendMessage = () => {
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
-    
+
     setIsSubmitting(true);
     await dispatch(
       sendMessageThunk({
@@ -20,12 +20,27 @@ const SendMessage = () => {
         timestamp: new Date().toISOString(),
       })
     );
-    setMessage('');
+    setMessage("");
     setIsSubmitting(false);
+  };
+
+  const handleSend = () => {
+    onSend(message, replyMessage?._id);
+    setMessage("");
+    onCancelReply();
   };
 
   return (
     <div className="p-4 bg-white border-t border-slate-200">
+      {replyMessage && (
+        <div className="quoted-reply">
+          <div className="quoted-content">
+            <strong>Replying to:</strong> {replyMessage.content}
+            {replyMessage.replyTo && <span> (Nested reply)</span>}
+          </div>
+          <button onClick={onCancelReply}>Cancel</button>
+        </div>
+      )}
       <div className="flex gap-3 items-center">
         <div className="flex-1 relative">
           <input
@@ -35,23 +50,22 @@ const SendMessage = () => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 handleSendMessage();
               }
             }}
             disabled={isSubmitting}
           />
-         
         </div>
-        
+
         <button
           onClick={handleSendMessage}
           disabled={!message.trim() || isSubmitting}
           className={`p-3 rounded-full ${
             message.trim() && !isSubmitting
-              ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-              : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+              ? "bg-indigo-600 text-white hover:bg-indigo-700"
+              : "bg-slate-200 text-slate-400 cursor-not-allowed"
           } transition-colors flex items-center justify-center`}
         >
           {isSubmitting ? (

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useSelector } from "react-redux";
 
-const Message = ({ messageDetails }) => {
+const Message = ({ messageDetails, onReply }) => {
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
     (state) => state.userReducer
@@ -41,6 +41,15 @@ const Message = ({ messageDetails }) => {
       )}
       
       <div className={`max-w-[70%]`}>
+        {/* Quoted message block */}
+        {messageDetails.quotedMessage && (
+          <div className="bg-gray-100 border-l-4 border-gray-400 mb-1 px-2 py-1 text-sm">
+            <span className="font-semibold">{messageDetails.quotedMessage.senderName}:</span>
+            <span> {messageDetails.quotedMessage.content}</span>
+            {messageDetails.quotedMessage.replyTo && <span className="italic text-xs ml-2">(Nested reply)</span>}
+          </div>
+        )}
+        {/* Main message */}
         <div 
           className={`px-4 py-2 rounded-2xl ${
             isSentByMe 

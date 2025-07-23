@@ -1,21 +1,18 @@
 import mongoose from "mongoose";
 
-const messageSchema = new mongoose.Schema({
-    senderId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    receiverId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
-    message: {
-        type: String,
-        required: true,
-    },
-},
-    { timestamps: true })
+const { Schema, model } = mongoose;
 
-export default mongoose.model("Message", messageSchema);
+const messageSchema = new Schema(
+  {
+  content: { type: String, required: true }, // message text
+  senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  receiverId: { type: Schema.Types.ObjectId, ref: 'User' }, // optional for one-to-one
+  conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation' }, // for group/one-to-one
+  timestamp: { type: Date, default: Date.now },
+  replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
+  quotedContent: { type: String },
+  },
+  { timestamps: true }
+);
+
+export default model("Message", messageSchema);

@@ -46,6 +46,17 @@ io.on("connection", (socket) => {
     console.log("Socket disconnected:", socket.id, "UserId:", userId);
     io.emit("onlineUsers", Object.keys(userSocketMap));
   });
+
+  socket.on('sendMessage', async ({ content, senderId, replyTo }) => {
+    let quotedContent = '';
+    if (replyTo) {
+      const quotedMsg = await Message.findById(replyTo);
+      if (quotedMsg) quotedContent = quotedMsg.content;
+    }
+    const message = new Message({ content, senderId, replyTo, quotedContent });
+    await message.save();
+    io.to(conversationId).emit('newMessage', message);
+  });
 });
 
 const getSocketId = (userId) =>{

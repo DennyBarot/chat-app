@@ -59,9 +59,15 @@ const Message = ({ messageDetails, onReply }) => {
         {/* Quoted message block */}
         {messageDetails.quotedMessage && (
           <div className="bg-indigo-50 border-l-4 border-indigo-400 mb-2 px-3 py-2 text-sm rounded-md shadow-sm flex flex-col">
-            <span className="font-semibold text-indigo-700">{messageDetails.quotedMessage.senderName}:</span>
-            <span className="text-indigo-900">{messageDetails.quotedMessage.content}</span>
-            {messageDetails.quotedMessage.replyTo && <span className="italic text-xs ml-2 text-indigo-500">(Nested reply)</span>}
+            <span className="font-semibold text-indigo-700">
+              {messageDetails.quotedMessage.senderName || 'Unknown'}:
+            </span>
+            <span className="text-indigo-900">
+              {messageDetails.quotedMessage.content || '[No content]'}
+            </span>
+            {messageDetails.quotedMessage.replyTo && (
+              <span className="italic text-xs ml-2 text-indigo-500">(Nested reply)</span>
+            )}
           </div>
         )}
         {/* Main message */}

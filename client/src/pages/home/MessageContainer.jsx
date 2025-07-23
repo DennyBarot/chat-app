@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import User from "./User";
 import Message from "./Message";
 import DateSeparator from "./DateSeparator";
@@ -15,7 +15,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const { selectedUser } = useSelector((state) => state.userReducer);
   const socket = useSocket();
 
-  // ...existing code...
   const { messages } = useSelector((state) => state.messageReducer);
   // Filter messages for the selected user if messages is an array of all messages
   const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
@@ -26,6 +25,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
     : messages;
   const location = useLocation();
   const messagesEndRef = useRef(null);
+
+  // 1. Add replyMessage state
+  const [replyMessage, setReplyMessage] = useState(null);
+
+  // 2. Handler to set reply message
+  const handleReply = (message) => setReplyMessage(message);
 
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
@@ -125,7 +130,14 @@ const MessageContainer = ({ onBack, isMobile }) => {
                   if (item.type === "date-separator") {
                     return <DateSeparator key={item.id} label={item.label} />;
                   } else if (item.type === "message") {
-                    return <Message key={item.id} messageDetails={item.messageDetails} />;
+                    // 3. Pass onReply to Message
+                    return (
+                      <Message
+                        key={item.id}
+                        messageDetails={item.messageDetails}
+                        onReply={handleReply}
+                      />
+                    );
                   }
                   return null;
                 })}
@@ -135,7 +147,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
           </div>
 
           {/* Send Message */}
-          <SendMessage />
+          {/* 4. Pass replyMessage and onCancelReply to SendMessage */}
+          <SendMessage
+            replyMessage={replyMessage}
+            onCancelReply={() => setReplyMessage(null)}
+          />
         </>
       ) : (
         <div className="h-full flex items-center justify-center flex-col gap-5 bg-gradient-to-br from-indigo-50 to-white p-8">

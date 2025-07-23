@@ -18,10 +18,12 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
         recieverId: selectedUser?._id,
         message,
         timestamp: new Date().toISOString(),
+        replyTo: replyMessage?._id, // <-- Add this line
       })
     );
     setMessage("");
     setIsSubmitting(false);
+    if (replyMessage) onCancelReply(); // Optionally clear reply after sending
   };
 
   const handleSend = () => {

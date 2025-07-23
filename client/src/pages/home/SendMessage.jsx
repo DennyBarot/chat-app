@@ -35,12 +35,20 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
   return (
     <div className="p-4 bg-white border-t border-slate-200">
       {replyMessage && (
-        <div className="quoted-reply">
-          <div className="quoted-content">
-            <strong>Replying to:</strong> {replyMessage.content}
-            {replyMessage.replyTo && <span> (Nested reply)</span>}
+        <div className="bg-indigo-50 border-l-4 border-indigo-400 mb-2 px-3 py-2 text-sm rounded-md shadow flex items-center justify-between">
+          <div>
+            <span className="font-semibold text-indigo-700">Replying to:</span>
+            <span className="text-indigo-900 ml-1">{replyMessage.content}</span>
+            {replyMessage.replyTo && (
+              <span className="italic text-xs ml-2 text-indigo-500">(Nested reply)</span>
+            )}
           </div>
-          <button onClick={onCancelReply}>Cancel</button>
+          <button
+            onClick={onCancelReply}
+            className="ml-4 px-2 py-1 text-xs bg-white border border-indigo-300 rounded hover:bg-indigo-100 transition"
+          >
+            Cancel
+          </button>
         </div>
       )}
       <div className="flex gap-3 items-center">

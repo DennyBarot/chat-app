@@ -23,19 +23,10 @@ const Message = ({ messageDetails }) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  // Add reply UI: click to reply
-  const handleReply = () => {
-    if (window.setReplyToMessage) {
-      window.setReplyToMessage(messageDetails);
-    }
-  };
-
   return (
     <div
       ref={messageRef}
       className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4`}
-      onDoubleClick={handleReply}
-      style={{ cursor: 'pointer' }}
     >
       {!isSentByMe && (
         <div className="flex-shrink-0 mr-3">
@@ -48,13 +39,8 @@ const Message = ({ messageDetails }) => {
           </div>
         </div>
       )}
+      
       <div className={`max-w-[70%]`}>
-        {/* Show quoted message if this is a reply */}
-        {messageDetails.replyToMessage && (
-          <div className="bg-indigo-50 border-l-4 border-indigo-400 px-3 py-1 mb-1 text-xs text-slate-700 rounded">
-            Replying to: {messageDetails.replyToMessage.message}
-          </div>
-        )}
         <div 
           className={`px-4 py-2 rounded-2xl ${
             isSentByMe 
@@ -68,6 +54,7 @@ const Message = ({ messageDetails }) => {
           {formatTime(createdAt)}
         </div>
       </div>
+      
       {isSentByMe && (
         <div className="flex-shrink-0 ml-3">
           <div className="w-8 h-8 rounded-full overflow-hidden">

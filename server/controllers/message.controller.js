@@ -25,11 +25,19 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         await conversation.save(); 
     }
 
+    const replyTo = req.body.replyTo || null;
     const newMessage = await Message.create({
         senderId,
         receiverId,
         message,
+        replyTo,
     });
+
+    // Populate replyToMessage for response
+    let populatedMessage = newMessage;
+    if (replyTo) {
+        populatedMessage = await Message.findById(newMessage._id).populate({ path: 'replyTo', select: 'message senderId receiverId createdAt' });
+    }
 
     const createdAt = newMessage.createdAt;
 
@@ -40,23 +48,22 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     const receiverSocketId = getSocketId(receiverId);
     const senderSocketId = getSocketId(senderId);
 
-    
     if (receiverSocketId) {
-        io.to(receiverSocketId).emit("newMessage", newMessage);
+        io.to(receiverSocketId).emit("newMessage", populatedMessage);
     }
     if (senderSocketId && senderSocketId !== receiverSocketId) {
-        io.to(senderSocketId).emit("newMessage", newMessage);
+        io.to(senderSocketId).emit("newMessage", populatedMessage);
     }
 
     console.log("sendMessage: receiverId:", receiverId);
     console.log("sendMessage: current userSocketMap keys:", Object.keys(userSocketMap));
     const socketId = getSocketId(receiverId)
     console.log("sendMessage: Emitting newMessage to socketId:", socketId);
-    io.to(socketId).emit("newMessage", newMessage);
+    io.to(socketId).emit("newMessage", populatedMessage);
 
     res.status(200).json({
         success: true,
-        responseData: newMessage,
+        responseData: populatedMessage,
     });
 });
 

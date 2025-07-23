@@ -56,7 +56,7 @@ export const messageSlice = createSlice({
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
      
-      const messages = action.payload?.responseData?.messages ?? [];
+      const messages = Array.isArray(action.payload) ? action.payload : [];
       const uniqueMessagesMap = new Map();
       messages.forEach((msg) => {
         uniqueMessagesMap.set(msg._id, msg);

@@ -91,3 +91,9 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
 };
 
 export default SendMessage;
+
+const newMsg = action.payload?.responseData || action.payload;
+const filteredOldMessages = oldMessages.filter(
+  (msg) => msg._id !== newMsg?._id
+);
+state.messages = [...filteredOldMessages, newMsg];

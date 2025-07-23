@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from "react-redux";
 
 const Message = ({ messageDetails, onReply }) => {
+  const [showMenu, setShowMenu] = useState(false);
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
     (state) => state.userReducer
@@ -15,7 +16,7 @@ const Message = ({ messageDetails, onReply }) => {
 
   const createdAt = messageDetails?.createdAt;
   const isSentByMe = userProfile?._id === messageDetails?.senderId;
-  
+
   // Format time
   const formatTime = (timestamp) => {
     if (!timestamp) return "Invalid time";
@@ -27,6 +28,9 @@ const Message = ({ messageDetails, onReply }) => {
     <div
       ref={messageRef}
       className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4`}
+      onMouseEnter={() => setShowMenu(true)}
+      onMouseLeave={() => setShowMenu(false)}
+      style={{ position: 'relative' }}
     >
       {!isSentByMe && (
         <div className="flex-shrink-0 mr-3">
@@ -39,8 +43,7 @@ const Message = ({ messageDetails, onReply }) => {
           </div>
         </div>
       )}
-      
-      <div className={`max-w-[70%]`}>
+      <div className={`max-w-[70%] relative`}>
         {/* Quoted message block */}
         {messageDetails.quotedMessage && (
           <div className="bg-gray-100 border-l-4 border-gray-400 mb-1 px-2 py-1 text-sm">
@@ -50,20 +53,29 @@ const Message = ({ messageDetails, onReply }) => {
           </div>
         )}
         {/* Main message */}
-        <div 
+        <div
           className={`px-4 py-2 rounded-2xl ${
-            isSentByMe 
-              ? 'bg-indigo-600 text-white rounded-tr-none' 
+            isSentByMe
+              ? 'bg-indigo-600 text-white rounded-tr-none'
               : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'
           }`}
+          style={{ position: 'relative' }}
         >
           <p className="whitespace-pre-wrap break-words">{messageDetails?.message}</p>
+          {/* Reply option menu */}
+          {showMenu && (
+            <button
+              className="absolute top-2 right-2 bg-white border border-gray-300 rounded px-2 py-1 text-xs shadow hover:bg-gray-100 z-10"
+              onClick={() => onReply(messageDetails)}
+            >
+              Reply
+            </button>
+          )}
         </div>
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
           {formatTime(createdAt)}
         </div>
       </div>
-      
       {isSentByMe && (
         <div className="flex-shrink-0 ml-3">
           <div className="w-8 h-8 rounded-full overflow-hidden">

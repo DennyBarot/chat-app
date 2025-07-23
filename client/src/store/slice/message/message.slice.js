@@ -30,18 +30,19 @@ export const messageSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-  
     builder.addCase(sendMessageThunk.pending, (state, action) => {
       state.buttonLoading = true;
       state.sendMessageStatus = 'pending';
     });
     builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
       const oldMessages = state.messages ?? [];
-      
+      // Support both {responseData: {...}} and direct message object
+      const newMsg = action.payload?.responseData || action.payload;
+      if (!newMsg?._id) return;
       const filteredOldMessages = oldMessages.filter(
-        (msg) => msg._id !== action.payload?.responseData?._id
+        (msg) => msg._id !== newMsg._id
       );
-      state.messages = [...filteredOldMessages, action.payload?.responseData];
+      state.messages = [...filteredOldMessages, newMsg];
       state.buttonLoading = false;
       state.sendMessageStatus = 'fulfilled';
     });
@@ -55,8 +56,12 @@ export const messageSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
-     
-      const messages = Array.isArray(action.payload) ? action.payload : [];
+      // Support both {responseData: [...]} and direct array
+      const messages = Array.isArray(action.payload?.responseData)
+        ? action.payload.responseData
+        : Array.isArray(action.payload)
+        ? action.payload
+        : [];
       const uniqueMessagesMap = new Map();
       messages.forEach((msg) => {
         uniqueMessagesMap.set(msg._id, msg);

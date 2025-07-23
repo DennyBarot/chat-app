@@ -66,7 +66,7 @@ const Message = ({ messageDetails, onReply }) => {
               {messageDetails.quotedMessage.content || '[No content]'}
             </span>
             {messageDetails.quotedMessage.replyTo && (
-              <span className="italic text-xs ml-2 text-indigo-500">(Nested reply)</span>
+              <span className="italic text-xs ml-2 text-indigo-500"></span>
             )}
           </div>
         )}

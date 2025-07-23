@@ -41,7 +41,7 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
             <span className="font-semibold text-indigo-700">Replying to:</span>
             <span className="text-indigo-900 ml-1">{replyMessage.content}</span>
             {replyMessage.replyTo && (
-              <span className="italic text-xs ml-2 text-indigo-500">(Nested reply)</span>
+              <span className="italic text-xs ml-2 text-indigo-500"></span>
             )}
           </div>
           <button

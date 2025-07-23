@@ -48,9 +48,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
   useEffect(() => {
     console.log("MessageContainer.jsx: messages updated, re-rendering", messages);
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" }); // Instantly scroll to bottom
     }
-  }, [messages]);
+  }, [messages, selectedUser]);
 
   // Helper to get date label for a message date
   const getDateLabel = (dateString) => {

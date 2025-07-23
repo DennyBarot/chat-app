@@ -79,7 +79,9 @@ const Message = ({ messageDetails, onReply }) => {
           }`}
           style={{ position: 'relative' }}
         >
-          <p className="whitespace-pre-wrap break-words">{messageDetails?.message}</p>
+          <p className="whitespace-pre-wrap break-words min-w-[80px]">
+            {messageDetails?.content || '[No content]'}
+          </p>
         </div>
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
           {formatTime(createdAt)}

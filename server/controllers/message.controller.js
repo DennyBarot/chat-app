@@ -119,7 +119,7 @@ export const getMessages = async (req, res) => {
   const formatted = messages.map(msg => ({
     ...msg.toObject(),
     quotedMessage: msg.replyTo ? {
-      content: msg.replyTo.content || msg.replyTo.message || '[No content]',
+      content: msg.replyTo.content || '[No content]',
       senderName: (msg.replyTo.senderId?.fullName || msg.replyTo.senderId?.username || 'Unknown'),
       replyTo: msg.replyTo.replyTo,
     } : null,

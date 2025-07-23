@@ -30,11 +30,14 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         senderId,
         receiverId,
         message,
-        replyTo, // <-- pass this from frontend
+        replyTo,
     });
 
     // Populate replyToMessage for response
-    const populatedMessage = await Message.findById(newMessage._id).populate('replyTo');
+    let populatedMessage = newMessage;
+    if (replyTo) {
+        populatedMessage = await Message.findById(newMessage._id).populate({ path: 'replyTo', select: 'message senderId receiverId createdAt' });
+    }
 
     const createdAt = newMessage.createdAt;
 

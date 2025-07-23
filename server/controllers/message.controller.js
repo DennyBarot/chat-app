@@ -111,13 +111,16 @@ export const createMessage = async (req, res) => {
 
 export const getMessages = async (req, res) => {
   const messages = await Message.find({ conversationId: req.params.id })
-    .populate('replyTo');
-  // Optionally, format quotedMessage for frontend
+    .populate({
+      path: 'replyTo',
+      populate: { path: 'senderId', select: 'fullName username' }
+    });
+
   const formatted = messages.map(msg => ({
     ...msg.toObject(),
     quotedMessage: msg.replyTo ? {
-      content: msg.replyTo.content || msg.replyTo.message, // fallback if needed
-      senderName: msg.replyTo.senderId?.fullName || msg.replyTo.senderId?.username || '', // adjust as needed
+      content: msg.replyTo.content || msg.replyTo.message || '[No content]',
+      senderName: (msg.replyTo.senderId?.fullName || msg.replyTo.senderId?.username || 'Unknown'),
       replyTo: msg.replyTo.replyTo,
     } : null,
   }));

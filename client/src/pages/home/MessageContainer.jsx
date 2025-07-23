@@ -15,7 +15,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const { selectedUser } = useSelector((state) => state.userReducer);
   const socket = useSocket();
 
-  const messages = useSelector((state) => state.messageReducer);
+  const messages = useSelector((state) => state.messageReducer.messages);
   // Filter messages for the selected user if messages is an array of all messages
   const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
     ? messages.filter(

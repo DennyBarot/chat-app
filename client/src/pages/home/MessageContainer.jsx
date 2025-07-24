@@ -20,7 +20,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
     ? messages.filter(
         (msg) =>
-          (msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id)
+          (msg.senderId?.toString() === selectedUser._id.toString() || msg.receiverId?.toString() === selectedUser._id.toString())
       )
     : messages;
   const location = useLocation();

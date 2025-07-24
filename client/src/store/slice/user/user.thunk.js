@@ -54,7 +54,7 @@ export const registerUserThunk = createAsyncThunk(
         password,
         gender,
       });
-      // Store token in localStorage for persistence after signup
+ 
       if (response.data?.responseData?.token) {
         localStorage.setItem('token', response.data.responseData.token);
       }

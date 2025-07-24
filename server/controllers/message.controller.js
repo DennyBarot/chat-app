@@ -72,29 +72,34 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
 
 export const getConversations = asyncHandler(async (req, res, next) => {
+  try {
     const userId = req.user._id;
 
     if (!userId) {
-        return next(new errorHandler("User ID is required", 400));
+      return next(new errorHandler("User ID is required", 400));
     }
     let conversations = await Conversation.find({
-        participants: userId,
+      participants: userId,
     })
-    .populate({
+      .populate({
         path: "participants",
         select: "username fullName email avatar",
-    })
-    .populate({
+      })
+      .populate({
         path: "messages",
         options: { sort: { createdAt: -1 } },
-        perDocumentLimit: 1, 
-    })
-    .sort({ updatedAt: -1 });
+        perDocumentLimit: 1,
+      })
+      .sort({ updatedAt: -1 });
 
     res.status(200).json({
-        success: true,
-        responseData: conversations,
+      success: true,
+      responseData: conversations,
     });
+  } catch (error) {
+    console.error("getConversations error:", error);
+    return next(new errorHandler(500, "Failed to get conversations"));
+  }
 });
 
 export const createMessage = async (req, res) => {

@@ -54,23 +54,30 @@ export const registerUserThunk = createAsyncThunk(
         password,
         gender,
       });
- 
-      if (response.data?.responseData?.token) {
-        localStorage.setItem('token', response.data.responseData.token);
+
+      const responseData = response.data?.responseData;
+
+      if (responseData?.token) {
+        localStorage.setItem('token', responseData.token);
       }
-      // After successful signup response:
-      localStorage.setItem("token", response.data.token);
-      dispatch(setUser(response.data.user));
+
+      if (responseData?.user) {
+        dispatch(setUser(responseData.user));
+      } else {
+        throw new Error("User data missing in response");
+      }
+
       toast.success("Account created successfully!!");
-      return response.data;
+      return responseData; // or return response.data if you need the whole thing
     } catch (error) {
-      console.error("Axios error:", error); 
+      console.error("Axios error:", error);
       const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
   }
 );
+
 
 export const logoutUserThunk = createAsyncThunk(
   "user/logout",

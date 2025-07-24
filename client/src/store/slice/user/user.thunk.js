@@ -18,7 +18,7 @@ export const loginUserThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -36,7 +36,7 @@ export const forgotPasswordUserThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -65,7 +65,7 @@ export const registerUserThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -83,7 +83,7 @@ export const logoutUserThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); // Log the full error response
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -115,7 +115,7 @@ export const getOtherUsersThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -136,7 +136,7 @@ export const updateUserProfileThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error);
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
@@ -151,7 +151,7 @@ export const getAllUsersThunk = createAsyncThunk(
       return response.data;
     } catch (error) {
       console.error("Axios error:", error);
-      const errorOutput = error?.response?.data?.errMessage || error.message;
+      const errorOutput = String(error?.response?.data?.errMessage || error.message || "Unknown error");
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }

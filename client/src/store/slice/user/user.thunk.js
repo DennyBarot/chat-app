@@ -5,7 +5,7 @@ import { setUser } from './user.slice';
 
 export const loginUserThunk = createAsyncThunk(
   "user/login",
-  async ({ email, password }, { rejectWithValue }) => {
+  async ({ email, password }, { rejectWithValue, dispatch }) => {
     try {
       const response = await axiosInstance.post("/user/login", {
         email,
@@ -15,6 +15,8 @@ export const loginUserThunk = createAsyncThunk(
       if (response.data?.responseData?.token) {
         localStorage.setItem('token', response.data.responseData.token);
       }
+      // Dispatch getUserProfileThunk to load user profile after login
+      await dispatch(getUserProfileThunk());
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 

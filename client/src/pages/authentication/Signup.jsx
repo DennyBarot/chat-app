@@ -39,10 +39,10 @@ const Signup = () => {
   }
 
   try {
-    const response = await dispatch(registerUserThunk(signupData)).unwrap(); // 
+    const response = await dispatch(registerUserThunk(signupData));
 
     console.log("Signup successful:", response);
-    toast.success("Welcome, " + response?.user?.fullName || "User");
+    toast.success("Welcome, " + response?.payload?.user?.fullName || "User");
     navigate("/"); 
   } catch (error) {
     console.error("Signup error:", error);

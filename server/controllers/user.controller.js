@@ -52,7 +52,7 @@ export const register = asyncHandler(async (req, res, next) => {
     .json({
       success: true,
       responseData: {
-        newUser,
+        user: newUser,
         token,
       },
     });

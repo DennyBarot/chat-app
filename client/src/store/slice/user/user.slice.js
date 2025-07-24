@@ -1,4 +1,4 @@
-import { createSlice, createSelector } from '@reduxjs/toolkit';
+import { createSlice, createSelector, createAction } from '@reduxjs/toolkit';
 import {
   getOtherUsersThunk,
   getUserProfileThunk,
@@ -126,7 +126,7 @@ export const userSlice = createSlice({
   },
 });
 
-export const { setSelectedUser } = userSlice.actions;
+export const { setSelectedUser, setUser } = userSlice.actions;
 
 
 export const selectAllUsers = createSelector(

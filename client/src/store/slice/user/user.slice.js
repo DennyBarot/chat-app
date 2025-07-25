@@ -37,7 +37,7 @@ export const userSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(loginUserThunk.fulfilled, (state, action) => {
-      state.userProfile = action.payload?.responseData?.user;
+      state.userProfile = action.payload?.user;
       state.isAuthenticated = true;
       state.buttonLoading = false;
     });
@@ -62,7 +62,7 @@ export const userSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(registerUserThunk.fulfilled, (state, action) => {
-      state.userProfile = action.payload?.responseData?.user;
+      state.userProfile = action.payload?.user;
       state.isAuthenticated = true;
       state.buttonLoading = false;
     });
@@ -90,9 +90,9 @@ export const userSlice = createSlice({
       state.screenLoading = true;
     });
     builder.addCase(getUserProfileThunk.fulfilled, (state, action) => {
+      state.userProfile = action.payload?.responseData;
       state.isAuthenticated = true;
       state.screenLoading = false;
-      state.userProfile = action.payload?.responseData;
     });
     builder.addCase(getUserProfileThunk.rejected, (state) => {
       state.screenLoading = false;

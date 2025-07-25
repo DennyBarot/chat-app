@@ -124,10 +124,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   }
 
   const conversation = await Conversation.findOne({
-    $and: [
-      { participants: { $elemMatch: { $eq: userId } } },
-      { participants: { $elemMatch: { $eq: otherParticipantId } } }
-    ]
+    participants: { $all: [userId, otherParticipantId] },
   });
 
   if (!conversation) {

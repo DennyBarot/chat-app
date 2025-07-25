@@ -57,6 +57,8 @@ export const registerUserThunk = createAsyncThunk(
       if (response.data?.responseData?.token) {
         localStorage.setItem('token', response.data.responseData.token);
       }
+          localStorage.setItem("token", response.data.token);
+      dispatch(setUser(response.data.user));
       toast.success("Account created successfully!!");
       return response.data;
     

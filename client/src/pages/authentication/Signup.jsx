@@ -34,22 +34,23 @@ const Signup = () => {
   };
 
   const handleSignup = async () => {
-  if (!signupData.fullName || !signupData.username || !signupData.email || !signupData.password || !signupData.gender) {
-    return toast.error("All fields are required.");
-  }
+    console.log("Signup function called");
+    console.log("Signup data:", signupData);
 
-  try {
+    if (!signupData.fullName || !signupData.username || !signupData.email || !signupData.password || !signupData.gender) {
+      return toast.error("All fields are required.");
+    }
+
     const response = await dispatch(registerUserThunk(signupData));
-
-    console.log("Signup successful:", response);
-    toast.success("Welcome, " + response?.payload?.user?.fullName || "User");
-    navigate("/"); 
-  } catch (error) {
-    console.error("Signup error:", error);
-    toast.error("Signup failed: " + error);
-  }
-};
-
+    // console.log("Response from dispatch:", response); 
+    // console.log("Response from signup:", response); 
+    // console.log("Response:", response);
+    if (response?.payload?.success) {
+      // console.error("Error during signup:", response.error); 
+      // console.log("Signup successful:", response.payload);
+      navigate("/");
+    }
+  };
 
   return (
     <div className='flex justify-center place-items-center p-6 h-screen bg-orange-400'>

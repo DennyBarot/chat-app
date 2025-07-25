@@ -77,7 +77,7 @@ export const registerUserThunk = createAsyncThunk(
     }
   }
 );
-//yo
+
 
 export const logoutUserThunk = createAsyncThunk(
   "user/logout",

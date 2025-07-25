@@ -6,7 +6,7 @@ export const loginUserThunk = createAsyncThunk(
   "user/login",
   async ({ email, password }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post("/user/login", {
+      const response = await axiosInstance.post("/api/v1/user/login", {
         email,
         password,
       });
@@ -28,7 +28,7 @@ export const forgotPasswordUserThunk = createAsyncThunk(
   "user/forgotPassword",
   async ({ email }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post("/user/forgot-password", {
+      const response = await axiosInstance.post("/api/v1/user/forgot-password", {
         email,
       });
       toast.success("Password reset link sent successfully!!");
@@ -46,7 +46,7 @@ export const registerUserThunk = createAsyncThunk(
   "user/signup",
   async ({ fullName, username, email, password, gender }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post("/user/register", {
+      const response = await axiosInstance.post("/api/v1/user/register", {
         username,
         fullName,
         email,
@@ -76,7 +76,7 @@ export const logoutUserThunk = createAsyncThunk(
   "user/logout",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post("/user/logout");
+      const response = await axiosInstance.post("/api/v1/user/logout");
       // Clear token from localStorage on logout
       localStorage.removeItem('token');
       toast.success("Logout successful!!");
@@ -94,7 +94,7 @@ export const getUserProfileThunk = createAsyncThunk(
   "user/getProfile",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/user/get-profile");
+      const response = await axiosInstance.get("/api/v1/user/get-profile");
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); // Log the full error response
@@ -111,7 +111,7 @@ export const getOtherUsersThunk = createAsyncThunk(
   "user/getOtherUsers",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/user/get-other-users");
+      const response = await axiosInstance.get("/api/v1/user/get-other-users");
       return response.data;
     } catch (error) {
       console.error("Axios error:", error); 
@@ -126,7 +126,7 @@ export const updateUserProfileThunk = createAsyncThunk(
   "user/updateProfile",
   async ({ fullName, username, avatar }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.put("/user/update-profile", {
+      const response = await axiosInstance.put("/api/v1/user/update-profile", {
         fullName,
         username,
         avatar, 
@@ -147,7 +147,7 @@ export const getAllUsersThunk = createAsyncThunk(
   "user/getAllUsers",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/user/get-all-users");
+      const response = await axiosInstance.get("/api/v1/user/get-all-users");
       return response.data;
     } catch (error) {
       console.error("Axios error:", error);

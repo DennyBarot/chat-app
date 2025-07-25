@@ -90,9 +90,9 @@ export const userSlice = createSlice({
       state.screenLoading = true;
     });
     builder.addCase(getUserProfileThunk.fulfilled, (state, action) => {
-      state.userProfile = action.payload?.responseData;
       state.isAuthenticated = true;
       state.screenLoading = false;
+      state.userProfile = action.payload?.responseData;
     });
     builder.addCase(getUserProfileThunk.rejected, (state) => {
       state.screenLoading = false;

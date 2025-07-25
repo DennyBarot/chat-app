@@ -56,7 +56,6 @@ export const messageSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
-      console.log("getMessageThunk.fulfilled payload:", action.payload);
       // Support both {responseData: [...]} and direct array
       const messages = Array.isArray(action.payload?.responseData)
         ? action.payload.responseData

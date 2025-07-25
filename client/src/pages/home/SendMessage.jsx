@@ -15,7 +15,7 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
 
     setIsSubmitting(true);
     const response = await axiosInstance.post(
-      `/message/send/${selectedUser?._id}`,
+      `/api/v1/message/send/${selectedUser?._id}`,
       {
         message,
         timestamp: new Date().toISOString(),

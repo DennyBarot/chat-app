@@ -3,7 +3,7 @@ import { asyncHandler } from '../utilities/asyncHandlerUtility.js';
 import { errorHandler } from '../utilities/errorHandlerUtility.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { transporter , mailOptions } from '../utilities/email.js';
+import { transporter, mailOptions } from '../utilities/email.js';
 
 export const register = asyncHandler(async (req, res, next) => {
   const { username, fullName, email, password, gender } = req.body;
@@ -21,8 +21,8 @@ export const register = asyncHandler(async (req, res, next) => {
   const avatarType = gender.toLowerCase() === "male" ? "boy" : "girl";
 
   const avatar = `https://avatar.iran.liara.run/public/${avatarType}?username=${username}`;
-//yooo
-  console.log("Gender value:", gender); 
+  //yooo
+  console.log("Gender value:", gender);
   const newUser = await User.create({
 
     username,
@@ -105,12 +105,12 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   const mailData = email;
   const frontendUrl = process.env.FRONTEND_URL || 'https://chat-app-frontend-ngqc.onrender.com';
 
-  console.log("Frontend URL:", frontendUrl); 
+  console.log("Frontend URL:", frontendUrl);
 
   const mail = await transporter.sendMail({
     ...mailOptions,
     to: mailData,
-    text: `Please use the following link to reset your password: ${frontendUrl}/reset-password`, 
+    text: `Please use the following link to reset your password: ${frontendUrl}/reset-password`,
     html: `<p>Click <a style="color: blue" href='${frontendUrl}/reset-password?email=${mailData}'>here</a> to reset your password.</p>`,
   });
 
@@ -125,14 +125,14 @@ export const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body; 
+  const { email, password } = req.body;
   if (!email || !password) {
-      return next(errorHandler(400, "Email and password are required"));
+    return next(errorHandler(400, "Email and password are required"));
   }
 
   const user = await User.findOne({ email });
   if (!user) {
-      return next(errorHandler(400, "User not found"));
+    return next(errorHandler(400, "User not found"));
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -140,8 +140,8 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   await user.save();
 
   res.status(200).json({
-      success: true,
-      message: "Password reset successfully",
+    success: true,
+    message: "Password reset successfully",
   });
 });
 

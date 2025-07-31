@@ -44,7 +44,7 @@ export const forgotPasswordUserThunk = createAsyncThunk(
 
 export const registerUserThunk = createAsyncThunk(
   "user/signup",
-  async ({ fullName, username, email, password, gender }, { rejectWithValue }) => {
+  async ({ fullName, username, email, password, gender }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axiosInstance.post("/api/v1/user/register", {
         username,
@@ -57,7 +57,7 @@ export const registerUserThunk = createAsyncThunk(
       if (response.data?.responseData?.token) {
         localStorage.setItem('token', response.data.responseData.token);
       }
-          localStorage.setItem("token", response.data.token);
+     
       dispatch(setUser(response.data.user));
       toast.success("Account created successfully!!");
       return response.data;

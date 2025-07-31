@@ -1,40 +1,57 @@
 import "./App.css";
-import React from "react";  
-import {Toaster} from "react-hot-toast";
+import React, { useEffect } from "react";
+import { Toaster } from "react-hot-toast";
 import { useDispatch } from "react-redux";
 import { getUserProfileThunk } from "./store/slice/user/user.thunk";
-import { useEffect } from "react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import Home from "./pages/home/Home.jsx"; 
+import Login from "./pages/authentication/Login.jsx";
+import Signup from "./pages/authentication/Signup.jsx";
+import ForgotPassword from './pages/authentication/ForgotPassword.jsx';
+import ResetPassword from './pages/authentication/ResetPassword.jsx';
+import ProtectedRoute from './components/ProtectedRoutes.jsx';
+import { SocketProvider } from './context/SocketContext.jsx';
+
+const router = createBrowserRouter([
+  {
+    path: "/",
+    element: (
+      <ProtectedRoute>
+        <Home />
+      </ProtectedRoute>
+    ),
+  },
+  { path: "/login", element: <Login /> },
+  { path: "/forgot-password", element: <ForgotPassword /> },
+  { path: "/reset-password", element: <ResetPassword /> },
+  { path: "/signup", element: <Signup /> },
+]);
 
 function App() {
-
-    
   const dispatch = useDispatch();
 
   useEffect(() => {
     (async () => {
-      // Prevent profile retrieval on login and signup pages
-      if (window.location.pathname === '/login' || window.location.pathname === '/signup') {
+      if (window.location.pathname === "/login" || window.location.pathname === "/signup") {
         return;
       }
-      // Check if token exists in cookies or localStorage before dispatching
-      const token = document.cookie.split('; ').find(row => row.startsWith('token='))?.split('=')[1] || localStorage.getItem('token');
+      const token =
+        document.cookie.split("; ").find((row) => row.startsWith("token="))?.split("=")[1] ||
+        localStorage.getItem("token");
       if (!token) {
-        // If no token, set screenLoading to false to allow redirect
-        dispatch({ type: 'user/setScreenLoadingFalse' });
+        dispatch({ type: "user/setScreenLoadingFalse" });
         return;
       }
       await dispatch(getUserProfileThunk());
     })();
-  }, []);
- 
- return (
-    <>
-   
-   <Toaster position="top-right" reverseOrder={false}
-/>
-       
-    </>
+  }, [dispatch]);
+
+  return (
+    <SocketProvider>
+      <Toaster position="top-right" reverseOrder={false} />
+      <RouterProvider router={router} />
+    </SocketProvider>
   );
 }
 
-export default App
+export default App;

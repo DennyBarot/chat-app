@@ -31,6 +31,10 @@ export const userSlice = createSlice({
     setScreenLoadingFalse: (state) => {
       state.screenLoading = false;
     },
+    setUser: (state, action) => {
+      state.userProfile = action.payload;
+      state.isAuthenticated = true;
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(loginUserThunk.pending, (state) => {
@@ -126,7 +130,8 @@ export const userSlice = createSlice({
   },
 });
 
-export const { setSelectedUser } = userSlice.actions;
+export const { setSelectedUser, setUser } = userSlice.actions;
+
 
 
 export const selectAllUsers = createSelector(

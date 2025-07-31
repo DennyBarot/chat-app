@@ -21,7 +21,7 @@ export const register = asyncHandler(async (req, res, next) => {
   const avatarType = gender.toLowerCase() === "male" ? "boy" : "girl";
 
   const avatar = `https://avatar.iran.liara.run/public/${avatarType}?username=${username}`;
-
+//yooo
   console.log("Gender value:", gender); 
   const newUser = await User.create({
 

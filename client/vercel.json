@@ -3,6 +3,10 @@
     {
       "source": "/socket.io/:path*",
       "destination": "https://chat-app-production-4c98.up.railway.app/socket.io/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/"
     }
   ]
 }

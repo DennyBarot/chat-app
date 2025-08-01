@@ -43,7 +43,7 @@ const Home = () => {
     });
     const handleNewMessage = (newMessage) => {
       console.log("Home.jsx: Received newMessage socket event:", newMessage);
-      dispatch(setNewMessage(newMessage));
+      dispatch(setNewMessage(newMessage, { selectedUserId: selectedUser?._id }));
 
       if (selectedUser && selectedUser._id) {
         console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);

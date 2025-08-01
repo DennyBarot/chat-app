@@ -13,21 +13,36 @@ export const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
-    setNewMessage: (state, action) => {
-      const oldMessages = state.messages ?? [];
+setNewMessage: (state, action) => {
+  const oldMessages = state.messages ?? [];
+  const selectedUserId = action.meta?.selectedUserId;
 
-      // Check if the new message already exists
-      const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
-      if (!messageExists) {
-        state.messages = [...oldMessages, action.payload];
-      }
-      // If message exists, replace it to update
-      else {
-        state.messages = oldMessages.map(msg =>
-          msg._id === action.payload._id ? action.payload : msg
-        );
-      }
-    },
+  // Only add or update message if it belongs to the selected user
+  if (selectedUserId) {
+    const msg = action.payload;
+    const belongsToSelectedUser =
+      msg.senderId === selectedUserId || msg.receiverId === selectedUserId;
+    if (!belongsToSelectedUser) {
+      return; // Ignore messages not related to selected user
+    }
+  }
+
+  // Check if the new message already exists
+  const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
+  if (!messageExists) {
+    state.messages = [...oldMessages, action.payload];
+  }
+  // If message exists, replace it to update
+  else {
+    state.messages = oldMessages.map(msg =>
+      msg._id === action.payload._id ? action.payload : msg
+    );
+  }
+},
+
+clearMessages: (state) => {
+  state.messages = null;
+},
   },
   extraReducers: (builder) => {
     builder.addCase(sendMessageThunk.pending, (state, action) => {

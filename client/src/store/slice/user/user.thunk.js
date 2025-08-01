@@ -58,8 +58,8 @@ export const registerUserThunk = createAsyncThunk(
         localStorage.setItem('token', response.data.responseData.token);
       }
      
-      dispatch(setUser(response.data.user));
-      toast.success("Account created successfully!!");
+      // dispatch(setUser(response.data.user)); // Removed because setUser action does not exist in user slice
+      toast.success("Account created successfully! Please login with email and password");
       return response.data;
     
     } catch (error) {

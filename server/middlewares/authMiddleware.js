@@ -3,10 +3,11 @@ import jwt from 'jsonwebtoken';
 import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
 
 export const isAuthenticated = asyncHandler(async (req, res, next) => {
-const token = req.cookies.token || req.headers["authorization"]?.replace("Bearer ", "");
+const header = req.headers["authorization"];
+const token = req.cookies.token || (header && header.replace(/^Bearer\s+/i, ''));
 console.log("Token received:", token); 
     if (!token) {
-        console.error("No token found in request");
+        
         return next(new errorHandler(401, "Not authorized"));
     }
 let tokenData;

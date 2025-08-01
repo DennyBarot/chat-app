@@ -7,6 +7,7 @@ import { logoutUserThunk } from "../../store/slice/user/user.thunk";
 import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
+import { disconnectSocket } from "../../store/slice/socket/socket.slice";
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,12 +22,24 @@ const UserSidebar = ({ onUserSelect }) => {
 
   const socket = useSocket();
 
-  const handleLogout = async () => {
-    await dispatch(logoutUserThunk());
-  };
+const handleLogout = async () => {
+  try {
+    const resultAction = await dispatch(logoutUserThunk());
+
+    if (logoutUserThunk.fulfilled.match(resultAction)) {
+    
+      dispatch(disconnectSocket());
+    } else {
+    
+      console.error("Logout failed", resultAction.error);
+    }
+  } catch (error) {
+    console.error("Unexpected error during logout:", error);
+  }
+};
 
   const handleSelectUser = (user) => {
-    // console.log("UserSidebar: User selected:", user);
+ 
     dispatch(setSelectedUser(user));
     setIsAddUserModalOpen(false);
     if (onUserSelect) {
@@ -36,11 +49,10 @@ const UserSidebar = ({ onUserSelect }) => {
 
   useEffect(() => {
     if (!socket || !userProfile?._id) {
-      // console.log("UserSidebar: Socket not available or user not authenticated");
+  
       return;
     }
-
-    // console.log("UserSidebar: Setting up newMessage listener");
+;
 
     socket.on("newMessage", (data) => {
       console.log("UserSidebar: Received newMessage event:", data);
@@ -92,7 +104,7 @@ const UserSidebar = ({ onUserSelect }) => {
           updatedAt: conv.updatedAt,
         };
       }).filter(Boolean);
-      // Sort users by last message time (most recent first)
+    
       usersList = usersList.sort((a, b) => {
         const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
         const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
@@ -117,6 +129,9 @@ const UserSidebar = ({ onUserSelect }) => {
           conversationId: conv._id,
         };
       });
+
+      setUsers(usersList.filter(Boolean));
+
       } else {
         setUsers([]);
       }

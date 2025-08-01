@@ -9,10 +9,8 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const senderId = req.user._id;
   const message = req.body.message;
   const timestamp = req.body.timestamp;
-  const replyTo = req.body.replyTo; // <-- get replyTo
+  const replyTo = req.body.replyTo;
 
-  console.log("sendMessage req.body:", req.body);
-  console.log("sendMessage req.user:", req.user);
 
   if (!senderId || !receiverId || !message) {
       return next(new errorHandler("any field is missing.", 400));
@@ -35,10 +33,15 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       content: message, // <-- fix here
       timestamp,
       replyTo,
+      conversationId: conversation._id,
+      timestamp: new Date(),
   });
 
   // Populate replyTo for frontend
-  const populatedMessage = await Message.findById(newMessage._id).populate('replyTo');
+  const populatedMessage = await Message.findById(newMessage._id).populate({
+    path: 'replyTo',
+    populate: { path: 'senderId', select: 'fullName username' },
+  });
 
   const createdAt = newMessage.createdAt;
 
@@ -50,9 +53,9 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const senderSocketId = getSocketId(senderId);
 
   
-  if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", populatedMessage);
-  }
+  // if (receiverSocketId) {
+  //     io.to(receiverSocketId).emit("newMessage", populatedMessage);
+  // }
   if (senderSocketId && senderSocketId !== receiverSocketId) {
       io.to(senderSocketId).emit("newMessage", populatedMessage);
   }

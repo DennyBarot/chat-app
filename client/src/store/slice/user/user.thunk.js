@@ -10,7 +10,7 @@ export const loginUserThunk = createAsyncThunk(
         email,
         password,
       });
-      // Store token in localStorage for persistence
+     
       if (response.data?.responseData?.token) {
         localStorage.setItem('token', response.data.responseData.token);
       }
@@ -53,12 +53,11 @@ export const registerUserThunk = createAsyncThunk(
         password,
         gender,
       });
-      // Store token in localStorage for persistence after signup
+ 
       if (response.data?.responseData?.token) {
         localStorage.setItem('token', response.data.responseData.token);
       }
      
-      dispatch(setUser(response.data.user));
       toast.success("Account created successfully!!");
       return response.data;
     
@@ -77,12 +76,12 @@ export const logoutUserThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post("/api/v1/user/logout");
-      // Clear token from localStorage on logout
+     
       localStorage.removeItem('token');
       toast.success("Logout successful!!");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
+      console.error("Axios error:", error); // 
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);

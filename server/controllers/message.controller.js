@@ -32,6 +32,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const newMessage = await Message.create({
       senderId,
       receiverId,
+      conversationId: conversation._id,
       content: message, // <-- fix here
       timestamp,
       replyTo,

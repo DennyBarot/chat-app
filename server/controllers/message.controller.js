@@ -109,8 +109,25 @@ export const createMessage = async (req, res) => {
   res.status(201).json(message);
 };
 
-export const getMessages = async (req, res) => {
-  const messages = await Message.find({ conversationId: req.params.id })
+export const getMessages = asyncHandler(async (req, res, next) => {
+  const userId = req.user._id;
+  const otherParticipantId = req.params.otherParticipantId;
+
+  if (!userId || !otherParticipantId) {
+    return next(new errorHandler("User ID and other participant ID are required", 400));
+  }
+
+  // Find conversation between the two participants
+  const conversation = await Conversation.findOne({
+    participants: { $all: [userId, otherParticipantId] },
+  });
+
+  if (!conversation) {
+    // No conversation found, return empty array
+    return res.status(200).json([]);
+  }
+
+  const messages = await Message.find({ conversationId: conversation._id })
     .populate({
       path: 'replyTo',
       populate: { path: 'senderId', select: 'fullName username' }
@@ -125,4 +142,4 @@ export const getMessages = async (req, res) => {
     } : null,
   }));
   res.json(formatted);
-};
+});

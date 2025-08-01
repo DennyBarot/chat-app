@@ -24,7 +24,7 @@ const io = new Server(server, {
 
 const userSocketMap = {};
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
   // console.log("Socket connected:", socket.id, "UserId:", userId);
 
@@ -54,17 +54,7 @@ io.on("connection", (socket) => {
   });
   
   
-
-  socket.on('sendMessage', async ({ content, senderId, replyTo }) => {
-    let quotedContent = '';
-    if (replyTo) {
-      const quotedMsg = await Message.findById(replyTo);
-      if (quotedMsg) quotedContent = quotedMsg.content;
-    }
-    const message = new Message({ content, senderId, replyTo, quotedContent,conversationId  });
-    await message.save();
-    io.to(conversationId).emit('newMessage', message);
-  });
+  // Removed incomplete 'sendMessage' event handler to avoid confusion and errors
 });
 
 const getSocketIds = (userId) => userSocketMap[userId] || [];

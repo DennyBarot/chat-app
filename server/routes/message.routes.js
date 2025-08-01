@@ -5,7 +5,7 @@ import {sendMessage,getMessages, getConversations} from '../controllers/message.
 const router =  express.Router();
 
 router.post('/send/:receiverId', isAuthenticated, sendMessage);
-router.get('/get-messages/:conversationId', isAuthenticated, getMessages);
+router.get('/get-messages/:otherParticipantId', isAuthenticated, getMessages);
 router.get('/get-conversations', isAuthenticated, getConversations);
 
 export default router;

@@ -19,8 +19,7 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
       {
         message,
         timestamp: new Date().toISOString(),
-        replyTo: replyMessage?._id,
-         conversationId: selectedUser.conversationId,
+        replyTo: replyMessage?._id, // <-- Add this line
       }
     );
     setMessage("");

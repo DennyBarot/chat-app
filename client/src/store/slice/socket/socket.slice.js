@@ -22,18 +22,9 @@ export const socketSlice = createSlice({
     setOnlineUsers: (state, action) => {
       state.onlineUsers = action.payload;
     },
-   
-    disconnectSocket: (state) => {
-  if (state.socket) {
-    state.socket.disconnect();
-    state.socket = null;
-  }
-  state.onlineUsers = null;
-},
-
   },
 });
 
-export const { initializeSocket, setOnlineUsers,disconnectSocket } = socketSlice.actions;
+export const { initializeSocket, setOnlineUsers } = socketSlice.actions;
 
 export default socketSlice.reducer;

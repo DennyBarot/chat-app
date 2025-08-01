@@ -108,7 +108,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
       {selectedUser ? (
         <>
           {/* Header */}
-          <div className="p-4 border-b border-slate-200 bg-purple-400 shadow-sm ">
+          <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm ">
             <User userDetails={selectedUser} />
           </div>
 

@@ -4,11 +4,9 @@ dotenv.config();
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
-import Message from '../models/messageModel.js';
-import Conversation from '../models/conversationModel.js';
-
 
 const app = express();
+
 const server = http.createServer(app);
 
 const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
@@ -22,38 +20,32 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
 });
 
-const userSocketMap = {};
+
+
+
+
+const userSocketMap = {
+    // userId : socketId,
+}
+
+export { io, app, server, getSocketId, userSocketMap };
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
-  // console.log("Socket connected:", socket.id, "UserId:", userId);
+  console.log("Socket connected:", socket.id, "UserId:", userId);
 
-   if (!userId) {
-    socket.disconnect(true);
-    return;
-  }
-    userSocketMap[userId] = userSocketMap[userId] || [];
-    userSocketMap[userId].push(socket.id);
-  // console.log("UserSocketMap updated:", userSocketMap);
+  if (!userId) return;
+
+  userSocketMap[userId] = socket.id;
+  console.log("UserSocketMap updated:", userSocketMap);
 
   io.emit("onlineUsers", Object.keys(userSocketMap))
 
-    // Join this user's current conversation rooms (fetch from DB)
-  const conversations = await Conversation.find({ participants: userId });
-  conversations.forEach(conv => {
-    socket.join(conv._id.toString());
-  });
-
-    socket.on("disconnect", () => {
-    if (!userSocketMap[userId]) return;
-    userSocketMap[userId] = userSocketMap[userId].filter(id => id !== socket.id);
-    if (userSocketMap[userId].length === 0) {
-      delete userSocketMap[userId];
-    }
+  socket.on("disconnect", () => {
+    delete userSocketMap[userId];
+    console.log("Socket disconnected:", socket.id, "UserId:", userId);
     io.emit("onlineUsers", Object.keys(userSocketMap));
   });
-  
-  
 
   socket.on('sendMessage', async ({ content, senderId, replyTo }) => {
     let quotedContent = '';
@@ -61,13 +53,13 @@ io.on("connection", (socket) => {
       const quotedMsg = await Message.findById(replyTo);
       if (quotedMsg) quotedContent = quotedMsg.content;
     }
-    const message = new Message({ content, senderId, replyTo, quotedContent,conversationId  });
+    const message = new Message({ content, senderId, replyTo, quotedContent });
     await message.save();
     io.to(conversationId).emit('newMessage', message);
   });
 });
 
-const getSocketIds = (userId) => userSocketMap[userId] || [];
-
-export { io, app, server, getSocketIds, userSocketMap };
+const getSocketId = (userId) =>{
+    return userSocketMap[userId];
+}
 

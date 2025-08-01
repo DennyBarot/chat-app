@@ -9,8 +9,8 @@ export const store = configureStore({
     messageReducer,
     socketReducer,
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
+  middleware: (getDefaultMiddlware) =>
+    getDefaultMiddlware({
       serializableCheck: {
         ignoredPaths: ["socketReducer.socket"],
       },

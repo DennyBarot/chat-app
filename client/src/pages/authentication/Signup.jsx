@@ -42,9 +42,12 @@ const Signup = () => {
     }
 
     const response = await dispatch(registerUserThunk(signupData));
-  
+    // console.log("Response from dispatch:", response); 
+    // console.log("Response from signup:", response); 
+    // console.log("Response:", response);
     if (response?.payload?.success) {
-      toast.success("Signup successful!");
+      // console.error("Error during signup:", response.error); 
+      // console.log("Signup successful:", response.payload);
       navigate("/");
     }
   };
@@ -61,7 +64,7 @@ const Signup = () => {
               <circle cx="12" cy="7" r="4"></circle>
             </g>
           </svg>
-          <input type="text" required placeholder="Username" pattern="[A-Za-z][A-Za-z0-9\-]*" minLength="3" maxLength="30" onChange={handleInputChange} title="Only letters, numbers or dash" name='username' />
+          <input type="input" required placeholder="Username" pattern="[A-Za-z][A-Za-z0-9\-]*" minLength="3" maxLength="30" onChange={handleInputChange} title="Only letters, numbers or dash" name='username' />
         </label>
         <input type="text" placeholder="Full Name" className="FullName input input-bordered flex items-center gap-2 w-full" required name='fullName' onChange={handleInputChange} />
 

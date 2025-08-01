@@ -44,7 +44,7 @@ const Home = () => {
     const handleNewMessage = (newMessage) => {
       console.log("Home.jsx: Received newMessage socket event:", newMessage);
       dispatch(setNewMessage(newMessage));
-
+      // Always fetch messages for the selected user for true real-time updates
       if (selectedUser && selectedUser._id) {
         console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
@@ -54,7 +54,6 @@ const Home = () => {
     };
     socket.on("newMessage", handleNewMessage);
     return () => {
-      socket.off("onlineUsers");
       socket.off("newMessage", handleNewMessage);
    
     };
@@ -82,6 +81,10 @@ const Home = () => {
     }
   }, [isMobile, selectedUser]);
 
+  const handleUserSelect = (user) => {
+    // This can be used if you want to handle user select locally
+    // But since selectedUser is from Redux, this might not be necessary
+  };
 
   const handleBackToSidebar = () => {
     dispatch(setSelectedUser(null));

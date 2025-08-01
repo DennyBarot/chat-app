@@ -17,12 +17,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   const messages = useSelector((state) => state.messageReducer.messages);
   // Filter messages for the selected user if messages is an array of all messages
-  const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
-    ? messages.filter(
-        (msg) =>
-          (msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id)
-      )
-    : messages;
+ const conversationMessages = useSelector((state) => state.messageReducer.messages);
+// it should already correspond to this conversationId!
+
   const location = useLocation();
   const messagesEndRef = useRef(null);
 
@@ -33,9 +30,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const handleReply = (message) => setReplyMessage(message);
 
   useEffect(() => {
-    if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
+    if (selectedUser && selectedUser.conversationId && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      dispatch(getMessageThunk({ conversationId: selectedUser.conversationId }));
     }
   }, [selectedUser, location]);
 

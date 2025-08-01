@@ -99,8 +99,9 @@ const handleLogout = async () => {
         }
         return {
           ...otherUser,
+          conversationId: conv._id, 
           lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
-          conversationId: conv._id,
+          
           updatedAt: conv.updatedAt,
         };
       }).filter(Boolean);

@@ -2,7 +2,7 @@ import Message from "../models/messageModel.js";
 import Conversation from "../models/conversationModel.js";
 import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
 import { errorHandler } from "../utilities/errorHandlerUtility.js";
-import {getSocketIds, io, userSocketMap} from '../socket/socket.js';
+import {getSocketId, io, userSocketMap} from '../socket/socket.js';
 
 export const sendMessage = asyncHandler(async (req, res, next) => {
   const receiverId = req.params.receiverId;
@@ -10,6 +10,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const message = req.body.message;
   const timestamp = req.body.timestamp;
   const replyTo = req.body.replyTo;
+
 
   if (!senderId || !receiverId || !message) {
       return next(new errorHandler("any field is missing.", 400));
@@ -48,23 +49,22 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       conversation.messages.push(newMessage._id);
       await conversation.save();
   }
-  const receiverSocketIds = getSocketIds(receiverId);
-  const senderSocketIds = getSocketIds(senderId);
+  const receiverSocketId = getSocketId(receiverId);
+  const senderSocketId = getSocketId(senderId);
 
   
-  // if (receiverSocketIds.length > 0) {
-  //     receiverSocketIds.forEach(socketId => io.to(socketId).emit("newMessage", populatedMessage));
+  // if (receiverSocketId) {
+  //     io.to(receiverSocketId).emit("newMessage", populatedMessage);
   // }
-  if (senderSocketIds.length > 0 && JSON.stringify(senderSocketIds) !== JSON.stringify(receiverSocketIds)) {
-      senderSocketIds.forEach(socketId => io.to(socketId).emit("newMessage", populatedMessage));
+  if (senderSocketId && senderSocketId !== receiverSocketId) {
+      io.to(senderSocketId).emit("newMessage", populatedMessage);
   }
 
   console.log("sendMessage: receiverId:", receiverId);
   console.log("sendMessage: current userSocketMap keys:", Object.keys(userSocketMap));
-  receiverSocketIds.forEach(socketId => {
-    console.log("sendMessage: Emitting newMessage to socketId:", socketId);
-    io.to(socketId).emit("newMessage", newMessage);
-  });
+  const socketId = getSocketId(receiverId)
+  console.log("sendMessage: Emitting newMessage to socketId:", socketId);
+  io.to(socketId).emit("newMessage", newMessage);
 
   res.status(200).json({
       success: true,

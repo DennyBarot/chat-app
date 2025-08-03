@@ -47,8 +47,8 @@ const Signup = () => {
     // console.log("Response from signup:", response); 
     // console.log("Response:", response);
     if (response?.payload?.success) {
-      toast.success("Account created successfully! Please login with email and password");
-      navigate("/login");
+      // toast.success("Account created successfully! Please login with email and password");
+      // navigate("/login");
     }
   };
 

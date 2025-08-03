@@ -44,7 +44,7 @@ export const forgotPasswordUserThunk = createAsyncThunk(
 
 export const registerUserThunk = createAsyncThunk(
   "user/signup",
-  async ({ fullName, username, email, password, gender }, { dispatch, rejectWithValue }) => {
+  async ({ fullName, username, email, password, gender }, {  rejectWithValue }) => {
     try {
       const response = await axiosInstance.post("/api/v1/user/register", {
         username,

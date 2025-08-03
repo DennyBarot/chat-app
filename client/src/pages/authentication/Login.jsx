@@ -16,8 +16,11 @@ const Login = () => {
    });
 
    useEffect(() => {
-      if (isAuthenticated) navigate("/");
-   }, [isAuthenticated]);
+      // Redirect authenticated users away from login page
+      if (isAuthenticated) {
+         navigate("/", { replace: true });
+      }
+   }, [isAuthenticated, navigate]);
 
 
    const [isPasswordVisible, setIsPasswordVisible] = useState(false);

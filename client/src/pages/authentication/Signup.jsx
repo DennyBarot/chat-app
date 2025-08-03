@@ -18,8 +18,11 @@ const Signup = () => {
   });
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/");
-  }, [isAuthenticated]);
+    // Redirect authenticated users away from signup page
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
@@ -54,7 +57,7 @@ const Signup = () => {
 
   return (
     <div className='flex justify-center place-items-center p-6 h-screen bg-orange-400'>
-      <div className='max-w-[30rem] w-full flex flex-col fplace-item-center gap-5 bg-orange-500 p-6 rounded-2xl'>
+      <div className='max-w-[30rem] w-full flex flex-col place-item-center gap-5 bg-orange-500 p-6 rounded-2xl'>
         <h2 className="text-2xl ">Sign Up </h2>
 
         <label className="input validator input-bordered flex items-center gap-2 w-full ">

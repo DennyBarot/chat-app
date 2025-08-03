@@ -1,12 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 
 const ResetPassword = () => {
+    const navigate = useNavigate();
+    const { isAuthenticated } = useSelector((state) => state.userReducer);
     const params = new URLSearchParams(window.location.search);
     const emailParam = params.get('email');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        // Redirect authenticated users away from reset password page
+        if (isAuthenticated) {
+            navigate("/", { replace: true });
+        }
+    }, [isAuthenticated, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

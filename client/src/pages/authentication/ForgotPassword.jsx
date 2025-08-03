@@ -10,6 +10,13 @@ const ForgotPassword = () => {
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector((state) => state.userReducer);
 
+  useEffect(() => {
+    // Redirect authenticated users away from forgot password page
+    if (isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
    const [EmailData, setEmailData] = useState({
       email: '',
       

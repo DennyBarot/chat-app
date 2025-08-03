@@ -4,6 +4,7 @@ import { registerUserThunk } from '../../store/slice/user/user.thunk';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from "react-hot-toast";
+
 const Signup = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();

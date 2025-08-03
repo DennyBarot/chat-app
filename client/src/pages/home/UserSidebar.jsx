@@ -1,4 +1,4 @@
- import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -21,12 +21,19 @@ const UserSidebar = ({ onUserSelect }) => {
 
   const socket = useSocket();
 
+  const sidebarRef = useRef(null);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    // Load saved width from localStorage or default to 320px (20rem)
+    const savedWidth = localStorage.getItem("sidebarWidth");
+    return savedWidth ? parseInt(savedWidth, 10) : 320;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
   const handleLogout = async () => {
     await dispatch(logoutUserThunk());
   };
 
   const handleSelectUser = (user) => {
-    // console.log("UserSidebar: User selected:", user);
     dispatch(setSelectedUser(user));
     setIsAddUserModalOpen(false);
     if (onUserSelect) {
@@ -36,26 +43,19 @@ const UserSidebar = ({ onUserSelect }) => {
 
   useEffect(() => {
     if (!socket || !userProfile?._id) {
-      // console.log("UserSidebar: Socket not available or user not authenticated");
       return;
     }
 
-    // console.log("UserSidebar: Setting up newMessage listener");
-
     socket.on("newMessage", (data) => {
-      console.log("UserSidebar: Received newMessage event:", data);
       dispatch(getConversationsThunk());
     });
 
-    // Listen for socketReconnect event to refresh conversations
     const handleSocketReconnect = () => {
-      // console.log("UserSidebar: Handling socketReconnect event");
       dispatch(getConversationsThunk());
     };
     window.addEventListener("socketReconnect", handleSocketReconnect);
 
     return () => {
-      // console.log("UserSidebar: Removing newMessage listener");
       socket.off("newMessage");
       window.removeEventListener("socketReconnect", handleSocketReconnect);
     };
@@ -74,7 +74,6 @@ const UserSidebar = ({ onUserSelect }) => {
       return;
     }
     if (conversations.length > 0) {
-      // Map users from conversations
       let usersList = conversations.map((conv) => {
         if (!Array.isArray(conv.participants)) {
           return null;
@@ -92,7 +91,6 @@ const UserSidebar = ({ onUserSelect }) => {
           updatedAt: conv.updatedAt,
         };
       }).filter(Boolean);
-      // Sort users by last message time (most recent first)
       usersList = usersList.sort((a, b) => {
         const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
         const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
@@ -108,54 +106,103 @@ const UserSidebar = ({ onUserSelect }) => {
     if (!searchValue) {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
-        const otherUser = conv.participants.find(
-          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
-        );
-        return {
-          ...otherUser,
-          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
-          conversationId: conv._id,
-        };
-      });
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
+            conversationId: conv._id,
+          };
+        });
       } else {
         setUsers([]);
       }
     } else {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
-        const otherUser = conv.participants.find(
-          (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
-        );
-        return {
-          ...otherUser,
-          lastMessage: conv.messages[0] || null,
-          conversationId: conv._id,
-        };
-      });
-      const filteredUsers = usersList.filter((user) => {
-        return (
-          (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-          (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-          (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
-        );
-      });
-      setUsers(filteredUsers);
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages[0] || null,
+            conversationId: conv._id,
+          };
+        });
+        const filteredUsers = usersList.filter((user) => {
+          return (
+            (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
+          );
+        });
+        setUsers(filteredUsers);
       } else {
         setUsers([]);
       }
     }
   }, [searchValue, conversations, userProfile]);
 
+  // Resizing handlers
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = e.clientX;
+      if (newWidth >= 200 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleTouchMove = (e) => {
+      if (!isResizing) return;
+      const touch = e.touches[0];
+      const newWidth = touch.clientX;
+      if (newWidth >= 200 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const stopResizing = () => {
+      if (isResizing) {
+        setIsResizing(false);
+        localStorage.setItem("sidebarWidth", sidebarWidth.toString());
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("touchmove", handleTouchMove);
+    window.addEventListener("mouseup", stopResizing);
+    window.addEventListener("touchend", stopResizing);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("mouseup", stopResizing);
+      window.removeEventListener("touchend", stopResizing);
+    };
+  }, [isResizing, sidebarWidth]);
+
   return (
-    <div className="w-full max-w-xs sm:w-80 h-full flex flex-col bg-white shadow-lg z-10">
+    <div
+      ref={sidebarRef}
+      className="h-full flex flex-col bg-white shadow-lg z-10"
+      style={{ width: sidebarWidth }}
+    >
       {/* Header */}
-      <div className="p-4 border-b border-slate-200">
+      <div className="p-4 border-b border-slate-200 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-indigo-700 flex items-center">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 mr-2" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
           </svg>
           CHAT APP
         </h1>
+        <div
+          className="w-1 cursor-col-resize h-full bg-indigo-200 hover:bg-indigo-400"
+          onMouseDown={() => setIsResizing(true)}
+          onTouchStart={() => setIsResizing(true)}
+          title="Resize sidebar"
+        />
       </div>
 
       {/* Search */}

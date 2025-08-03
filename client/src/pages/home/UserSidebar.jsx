@@ -147,7 +147,7 @@ const UserSidebar = ({ onUserSelect }) => {
   }, [searchValue, conversations, userProfile]);
 
   return (
-    <div className="w-80 h-full flex flex-col bg-white shadow-lg z-10">
+    <div className="w-full max-w-xs sm:w-80 h-full flex flex-col bg-white shadow-lg z-10">
       {/* Header */}
       <div className="p-4 border-b border-slate-200">
         <h1 className="text-2xl font-bold text-indigo-700 flex items-center">

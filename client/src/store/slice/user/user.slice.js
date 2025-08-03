@@ -62,8 +62,6 @@ export const userSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(registerUserThunk.fulfilled, (state, action) => {
-      state.userProfile = action.payload?.responseData?.user;
-      state.isAuthenticated = true;
       state.buttonLoading = false;
     });
     builder.addCase(registerUserThunk.rejected, (state) => {

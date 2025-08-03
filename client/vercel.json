@@ -5,8 +5,8 @@
       "destination": "https://chat-app-production-4c98.up.railway.app/socket.io/:path*"
     },
     {
-      "source": "/(.*)",
-      "destination": "/"
+      "source": "/((?!api/|_next/|static/|images/|favicon.ico|sw.js).*)",
+      "destination": "/index.html"
     }
   ]
 }

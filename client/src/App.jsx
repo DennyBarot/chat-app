@@ -32,7 +32,7 @@ function App() {
 
   useEffect(() => {
     (async () => {
-      if (window.location.pathname === "/login" || window.location.pathname === "/signup") {
+      if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/signup")) {
         return;
       }
       const token =

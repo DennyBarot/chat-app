@@ -1,5 +1,3 @@
-
-
 import React, { useEffect, useState } from "react";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
@@ -15,20 +13,6 @@ const Home = () => {
   const { isAuthenticated, userProfile, selectedUser } = useSelector(
     (state) => state.userReducer
   );
-
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem("darkMode");
-    return saved === "true" || false;
-  });
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    localStorage.setItem("darkMode", darkMode);
-  }, [darkMode]);
 
   React.useEffect(() => {
     console.log("Home.jsx: selectedUser changed:", selectedUser);
@@ -107,32 +91,7 @@ const Home = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 dark:bg-gray-900 overflow-hidden transition-colors">
-      <header className="p-4 border-b border-slate-300 dark:border-gray-700 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 flex items-center transition-colors">
-          CHAT APP
-        </h1>
-        <button
-          onClick={() => setDarkMode((prev) => !prev)}
-          className="p-2 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
-          title="Toggle dark mode"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 text-slate-600 dark:text-yellow-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-            />
-          </svg>
-        </button>
-      </header>
+    <div className="flex h-screen bg-slate-100 overflow-hidden">
       {(!isMobile || !showMessageContainer) && (
         <UserSidebar />
       )}

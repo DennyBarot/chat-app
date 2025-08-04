@@ -13,7 +13,7 @@ export default {
   ],
 
   daisyui: {
-    themes: ["cupcake","Default","Retro","cyberpunk","valentine","aqua"],
+    themes: ["cupcake","Default","dark","Retro","cyberpunk","valentine","aqua"],
 },
 }
 

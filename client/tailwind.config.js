@@ -4,6 +4,7 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  darkMode: 'class',
   theme: {
     extend: {},
   },
@@ -14,6 +15,7 @@ export default {
 
   daisyui: {
     themes: ["cupcake","Default","Retro","cyberpunk","valentine","aqua"],
-},
+    darkTheme: "dark",
+  },
 }
 

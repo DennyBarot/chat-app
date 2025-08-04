@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { registerUserThunk } from '../../store/slice/user/user.thunk';
-
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from "react-hot-toast";
 
@@ -9,6 +8,7 @@ const Signup = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state) => state.userReducer);
+
   const [signupData, setSignupData] = useState({
     username: '',
     fullName: '',
@@ -17,107 +17,145 @@ const Signup = () => {
     gender: '',
   });
 
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
   useEffect(() => {
-    // Redirect authenticated users away from signup page
     if (isAuthenticated) {
       navigate("/", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-
-  const togglePasswordVisibility = () => {
-    setIsPasswordVisible(prev => !prev);
-  };
-
   const handleInputChange = (e) => {
-    setSignupData((prev) => ({
+    setSignupData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
   };
 
-  const handleSignup = async () => {
-    console.log("Signup function called");
-    console.log("Signup data:", signupData);
+  const togglePasswordVisibility = () => {
+    setIsPasswordVisible(prev => !prev);
+  };
 
+  const handleSignup = async () => {
     if (!signupData.fullName || !signupData.username || !signupData.email || !signupData.password || !signupData.gender) {
       return toast.error("All fields are required.");
     }
 
     const response = await dispatch(registerUserThunk(signupData));
-    // console.log("Response from dispatch:", response); 
-    // console.log("Response from signup:", response); 
-    // console.log("Response:", response);
     if (response?.payload?.success) {
-      // toast.success("Account created successfully! Please login with email and password");
-      // navigate("/login");
+      toast.success("Account created! Please log in.");
+      navigate("/login");
+    } else {
+      toast.error(response?.payload || "Signup failed.");
     }
   };
 
   return (
-    <div className='flex justify-center place-items-center p-6 h-screen bg-orange-400'>
-      <div className='max-w-[30rem] w-full flex flex-col place-item-center gap-5 bg-orange-500 p-6 rounded-2xl'>
-        <h2 className="text-2xl ">Sign Up </h2>
+    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
+      <div className="w-full max-w-md bg-gray-850 p-8 rounded-xl shadow-xl space-y-6 text-white">
+        <h2 className="text-3xl font-semibold text-center text-amber-400">Create Account</h2>
 
-        <label className="input validator input-bordered flex items-center gap-2 w-full ">
-          <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-              <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </g>
-          </svg>
-          <input type="input" required placeholder="Username" pattern="[A-Za-z][A-Za-z0-9\-]*" minLength="3" maxLength="30" onChange={handleInputChange} title="Only letters, numbers or dash" name='username' />
-        </label>
-        <input type="text" placeholder="Full Name" className="FullName input input-bordered flex items-center gap-2 w-full" required name='fullName' onChange={handleInputChange} />
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Username</label>
+            <input
+              type="text"
+              name="username"
+              placeholder="Enter a username"
+              pattern="[A-Za-z][A-Za-z0-9\-]*"
+              minLength="3"
+              maxLength="30"
+              required
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            />
+          </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Full Name</label>
+            <input
+              type="text"
+              name="fullName"
+              placeholder="Full Name"
+              required
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            />
+          </div>
 
-        <label className="input validator input-bordered flex items-center gap-2 w-full ">
-          <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-              <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-            </g>
-          </svg>
-          <input type="email" placeholder="mail@site.com" onChange={handleInputChange} name='email' required />
-        </label>
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Email</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="you@example.com"
+              required
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            />
+          </div>
 
-        <label className="input validator input-bordered flex items-center gap-2 w-full">
-          <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-            <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-              <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"></path>
-              <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle>
-            </g>
-          </svg>
-          <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 end-0 flex items-center z-20 px-3 cursor-pointer text-gray-400 rounded-e-md focus:outline-hidden focus:text-blue-600 dark:text-neutral-600 dark:focus:text-blue-500">
-            <svg className="shrink-0 size-3.5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
-              <path className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-              <path className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-              <line className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} x1="2" x2="22" y1="2" y2="22"></line>
-              <path className={isPasswordVisible ? "hs-password-active:block" : "hidden"} d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-              <circle className={isPasswordVisible ? "hs-password-active:block" : "hidden"} cx="12" cy="12" r="3"></circle>
-            </svg>
+          <div className="relative">
+            <label className="block text-sm font-medium text-gray-300">Password</label>
+            <input
+              type={isPasswordVisible ? "text" : "password"}
+              name="password"
+              placeholder="••••••••"
+              required
+              onChange={handleInputChange}
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              className="absolute top-[2.25rem] right-3 text-gray-400 hover:text-amber-400"
+            >
+              {isPasswordVisible ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-4-9-7s4-7 9-7c1.054 0 2.065.18 3 .508M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3l18 18" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Gender</label>
+            <select
+              name="gender"
+              required
+              onChange={handleInputChange}
+              defaultValue=""
+              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+            >
+              <option value="" disabled>Pick a gender</option>
+              <option>Male</option>
+              <option>Female</option>
+            </select>
+          </div>
+
+          <button
+            onClick={handleSignup}
+            className="w-full py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-md transition duration-200"
+          >
+            Sign Up
           </button>
-          <input type={isPasswordVisible ? "text" : "password"} name='password' required placeholder="Password" onChange={handleInputChange} />
-        </label>
+        </div>
 
-
-        <select defaultValue="Pick an Gender" name='gender' onChange={handleInputChange} className="gender select select-warning w-full">
-
-          <option disabled={true}>Pick an Gender </option>
-          <option>Male</option>
-          <option>Female</option>
-        </select>
-
-        <button className="btn btn-soft btn-error bg-amber-600 text-red-600" onClick={handleSignup}>Sign up</button>
-
-        <p>
-          already have an account?<Link to="/login" className='text-blue-500'> Login</Link>
-        </p>
+        <div className="text-sm text-center text-gray-400">
+          Already have an account?
+          <Link to="/login" className="text-amber-400 hover:underline ml-1">
+            Login
+          </Link>
+        </div>
       </div>
     </div>
   );
-}
+};
 
 export default Signup;

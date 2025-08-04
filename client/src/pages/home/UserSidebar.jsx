@@ -20,7 +20,6 @@ const UserSidebar = ({ onUserSelect }) => {
   const [users, setUsers] = useState([]);
 
   const socket = useSocket();
-  const { toggleDarkMode } = useTheme();
 
   const handleLogout = async () => {
     await dispatch(logoutUserThunk());

@@ -5,29 +5,18 @@ import { useDispatch, useSelector } from 'react-redux';
 import { loginUserThunk } from '../../store/slice/user/user.thunk';
 
 const Login = () => {
-
    const navigate = useNavigate();
    const dispatch = useDispatch();
    const { isAuthenticated } = useSelector((state) => state.userReducer);
 
-   const [loginData, setLoginData] = useState({
-      email: '',
-      password: ''
-   });
+   const [loginData, setLoginData] = useState({ email: '', password: '' });
+   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
    useEffect(() => {
-      // Redirect authenticated users away from login page
       if (isAuthenticated) {
          navigate("/", { replace: true });
       }
    }, [isAuthenticated, navigate]);
-
-
-   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-
-   const togglePasswordVisibility = () => {
-      setIsPasswordVisible(prev => !prev);
-   };
 
    const handleInputChange = (e) => {
       setLoginData((prev) => ({
@@ -46,52 +35,83 @@ const Login = () => {
             toast.error(response?.payload || "Login failed");
          }
       } catch (error) {
-         console.error("Login error:", error);
          toast.error(error?.message || "Login failed");
       }
-   }
+   };
+
+   const togglePasswordVisibility = () => {
+      setIsPasswordVisible((prev) => !prev);
+   };
 
    return (
-      <div className='flex justify-center place-items-center p-6 h-screen bg-green-200'>
-         <div className='max-w-[30rem] w-full flex flex-col fplace-item-center gap-5 bg-green-300 p-6 rounded-2xl'>
-            <h2 className="text-2xl ">Login </h2>
-            <label className="input validator input-bordered flex items-center gap-2 w-full ">
-               <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-                     <rect width="20" height="16" x="2" y="4" rx="2"></rect>
-                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path>
-                  </g>
-               </svg>
-               <input type="email" placeholder="name@gmail.com" name='email' onChange={handleInputChange} />
-            </label>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+         <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-md space-y-6">
+            <h2 className="text-3xl font-semibold text-center text-gray-800">Login</h2>
 
-            <label className="input validator input-bordered flex items-center gap-2 w-full">
-               <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                  <g strokeLinejoin="round" strokeLinecap="round" strokeWidth="2.5" fill="none" stroke="currentColor">
-                     <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"></path>
-                     <circle cx="16.5" cy="7.5" r=".5" fill="currentColor"></circle>
-                  </g>
-               </svg>
-               <button type="button" onClick={togglePasswordVisibility} className="absolute inset-y-0 end-0 flex items-center z-20 px-3 cursor-pointer text-gray-400 rounded-e-md focus:outline-hidden focus:text-blue-600 dark:text-neutral-600 dark:focus:text-blue-500">
-                  <svg className="shrink-0 size-3.5" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                     <path className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path>
-                     <path className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path>
-                     <path className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path>
-                     <line className={isPasswordVisible ? "hidden" : "hs-password-active:hidden"} x1="2" x2="22" y1="2" y2="22"></line>
-                     <path className={isPasswordVisible ? "hs-password-active:block" : "hidden"} d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                     <circle className={isPasswordVisible ? "hs-password-active:block" : "hidden"} cx="12" cy="12" r="3"></circle>
-                  </svg>
+            <div className="space-y-4">
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <div className="relative">
+                     <input
+                        type="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                     />
+                  </div>
+               </div>
+
+               <div>
+                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  <div className="relative">
+                     <input
+                        type={isPasswordVisible ? "text" : "password"}
+                        name="password"
+                        placeholder="••••••••"
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                     />
+                     <button
+                        type="button"
+                        onClick={togglePasswordVisibility}
+                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                     >
+                        {isPasswordVisible ? (
+                           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                           </svg>
+                        ) : (
+                           <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-4-9-7s4-7 9-7c1.054 0 2.065.18 3 .508M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3l18 18" />
+                           </svg>
+                        )}
+                     </button>
+                  </div>
+               </div>
+
+               <button
+                  onClick={handleLogin}
+                  className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md transition duration-200"
+               >
+                  Login
                </button>
-               <input type={isPasswordVisible ? "text" : "password"} name='password' required placeholder="Password" onChange={handleInputChange} />
-            </label>
+            </div>
 
+            <div className="text-sm text-center text-gray-600">
+               Don't have an account?
+               <Link to="/signup" className="text-blue-500 hover:underline ml-1">
+                  Sign Up
+               </Link>
+            </div>
 
-            <button onClick={handleLogin} className="btn btn-dash btn-success" >Login</button>
-
-            <p>
-               Don't have an account?<Link to="/signup" className='text-blue-500'> Sign Up</Link>
-               <Link to="/forgot-password" className='text-blue-500 ml-5'>Forgot Password </Link>
-            </p>
+            <div className="text-sm text-center">
+               <Link to="/forgot-password" className="text-blue-500 hover:underline">
+                  Forgot Password?
+               </Link>
+            </div>
          </div>
       </div>
    );

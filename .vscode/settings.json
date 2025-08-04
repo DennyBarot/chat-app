@@ -1,3 +1,4 @@
 {
-    "diffEditor.codeLens": true
+    "diffEditor.codeLens": true,
+    "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }

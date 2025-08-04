@@ -11,7 +11,6 @@ import ForgotPassword from './pages/authentication/ForgotPassword.jsx';
 import ResetPassword from './pages/authentication/ResetPassword.jsx';
 import ProtectedRoute from './components/ProtectedRoutes.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
-import { ThemeProvider } from './context/ThemeContext.jsx';
 
 const router = createBrowserRouter([
   {
@@ -48,14 +47,11 @@ function App() {
   }, [dispatch]);
 
   return (
-    <ThemeProvider>
-      <SocketProvider>
-        <Toaster position="top-right" reverseOrder={false} />
-        <RouterProvider router={router} />
-      </SocketProvider>
-    </ThemeProvider>
+    <SocketProvider>
+      <Toaster position="top-right" reverseOrder={false} />
+      <RouterProvider router={router} />
+    </SocketProvider>
   );
 }
-
 
 export default App;

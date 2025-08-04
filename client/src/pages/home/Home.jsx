@@ -91,7 +91,7 @@ const Home = () => {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden">
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">
       {(!isMobile || !showMessageContainer) && (
         <UserSidebar />
       )}

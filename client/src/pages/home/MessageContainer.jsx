@@ -92,7 +92,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 relative">
+    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-800 relative">
+
       {isMobile && (
         <button
           onClick={onBack}

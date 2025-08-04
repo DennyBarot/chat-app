@@ -159,9 +159,8 @@ const UserSidebar = ({ onUserSelect }) => {
         </h1>
         <button
           onClick={() => {
-            const html = document.documentElement;
-            html.classList.toggle('dark');
-            localStorage.setItem('darkMode', html.classList.contains('dark'));
+            const { toggleDarkMode } = useTheme();
+            toggleDarkMode();
           }}
           className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           title="Toggle dark mode"

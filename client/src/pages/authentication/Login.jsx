@@ -43,39 +43,37 @@ const Login = () => {
       setIsPasswordVisible((prev) => !prev);
    };
 
-   return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-         <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-md space-y-6">
-            <h2 className="text-3xl font-semibold text-center text-gray-800">Login</h2>
+     return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">
+         <div className="w-full max-w-md bg-gray-800 p-8 rounded-xl shadow-xl space-y-6">
+            <h2 className="text-3xl font-semibold text-center text-gray-100">Login</h2>
 
             <div className="space-y-4">
                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <div className="relative">
-                     <input
-                        type="email"
-                        name="email"
-                        placeholder="you@example.com"
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                     />
-                  </div>
+                  <label className="block text-sm font-medium text-gray-300">Email</label>
+                  <input
+                     type="email"
+                     name="email"
+                     placeholder="you@example.com"
+                     onChange={handleInputChange}
+                     className="w-full px-4 py-2 border border-gray-700 bg-gray-900 text-white rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
                </div>
 
                <div>
-                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  <label className="block text-sm font-medium text-gray-300">Password</label>
                   <div className="relative">
                      <input
                         type={isPasswordVisible ? "text" : "password"}
                         name="password"
                         placeholder="••••••••"
                         onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        className="w-full px-4 py-2 border border-gray-700 bg-gray-900 text-white rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                      />
                      <button
                         type="button"
                         onClick={togglePasswordVisibility}
-                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                        className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-white"
                      >
                         {isPasswordVisible ? (
                            <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -100,15 +98,15 @@ const Login = () => {
                </button>
             </div>
 
-            <div className="text-sm text-center text-gray-600">
+            <div className="text-sm text-center text-gray-400">
                Don't have an account?
-               <Link to="/signup" className="text-blue-500 hover:underline ml-1">
+               <Link to="/signup" className="text-blue-400 hover:underline ml-1">
                   Sign Up
                </Link>
             </div>
 
             <div className="text-sm text-center">
-               <Link to="/forgot-password" className="text-blue-500 hover:underline">
+               <Link to="/forgot-password" className="text-blue-400 hover:underline">
                   Forgot Password?
                </Link>
             </div>

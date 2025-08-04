@@ -159,10 +159,7 @@ const UserSidebar = ({ onUserSelect }) => {
           CHAT APP
         </h1>
         <button
-          onClick={() => {
-            const { toggleDarkMode } = useTheme();
-            toggleDarkMode();
-          }}
+          onClick={toggleDarkMode}
           className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           title="Toggle dark mode"
         >

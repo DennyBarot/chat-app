@@ -2,6 +2,7 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { markConversationReadThunk } from "../../store/slice/message/message.thunk";
+import { updateUnreadCountLocally } from "../../store/slice/message/message.slice";
 
 const User = ({ userDetails }) => {
   const dispatch = useDispatch();
@@ -9,14 +10,23 @@ const User = ({ userDetails }) => {
   const { onlineUsers } = useSelector(state => state.socketReducer);
   const isUserOnline = onlineUsers?.includes(userDetails?._id);
 
-  const handleUserClick = () => {
-    // Mark conversation as read when selecting a user
-    if (userDetails?.conversationId && userDetails?.unreadCount > 0) {
-      dispatch(markConversationReadThunk(userDetails.conversationId));
-    }
-    dispatch(setSelectedUser(userDetails));
-  };
+  // Add immediate unread count reset when user is selected
+const handleUserClick = () => {
+  // Immediate local update
+  dispatch(updateUnreadCountLocally({ 
+    conversationId: userDetails.conversationId, 
+    unreadCount: 0 
+  }));
+  
+  // Mark as read on server
+  if (userDetails?.conversationId) {
+    dispatch(markConversationReadThunk(userDetails.conversationId));
+  }
+  
+  dispatch(setSelectedUser(userDetails));
+};
 
+  
   // Format timestamp for last message
   const formatTime = (timestamp) => {
     if (!timestamp) return "";

@@ -55,14 +55,7 @@ const User = ({ userDetails }) => {
           {userDetails?.lastMessage && (
             <span className="text-xs text-slate-500 whitespace-nowrap ml-2">
               {formatTime(userDetails?.lastMessage?.createdAt)}
-              {userDetails.unreadCount > 0 && (
-  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-600 text-white">
-    {userDetails.unreadCount}
-  </span>
-)}
-
             </span>
-            
           )}
         </div>
         

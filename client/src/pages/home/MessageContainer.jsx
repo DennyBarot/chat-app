@@ -36,7 +36,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-     dispatch(markConversationReadThunk(selectedUser.conversationId));
     }
   }, [selectedUser, location]);
 

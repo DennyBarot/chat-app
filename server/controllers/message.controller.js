@@ -46,10 +46,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   if (newMessage) {
       conversation.messages.push(newMessage._id);
       await conversation.save();
-      
-      await Conversation.findByIdAndUpdate(conversation._id, {
-  $inc: { [`unreadCounts.${receiverId}`]: 1 }
-});
   }
   const receiverSocketId = getSocketId(receiverId);
   const senderSocketId = getSocketId(senderId);
@@ -100,10 +96,6 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         success: true,
         responseData: conversations,
     });
-    conversations.forEach(conv => {
-    conv.unreadCount = conv.unreadCounts?.get(userId.toString()) || 0;
-});
-
 });
 
 export const createMessage = async (req, res) => {
@@ -129,9 +121,8 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   // Find conversation between the two participants
   const conversation = await Conversation.findOne({
     participants: { $all: [userId, otherParticipantId] },
-    
   });
-    
+
   if (!conversation) {
     // No conversation found, return empty array
     return res.status(200).json([]);

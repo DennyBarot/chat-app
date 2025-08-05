@@ -25,7 +25,7 @@ const ThemeToggle = () => {
       title="Toggle dark mode"
       className="ml-3 px-2 py-1 rounded transition-colors bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"
     >
-      {isDark ? "🌙" : "☀️"}
+      {isDark ? "Dark Mode 🌙" : "Light Mode ☀️"}
     </button>
   );
 };

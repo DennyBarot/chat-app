@@ -167,7 +167,7 @@ const UserSidebar = ({ onUserSelect }) => {
           <input
             type="search"
             placeholder="Search conversations..."
-            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-slate-100 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
           />

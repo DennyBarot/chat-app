@@ -34,7 +34,7 @@ const User = ({ userDetails }) => {
   return (
     <div
       onClick={handleUserClick}
-      className={`flex gap-3 items-center p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-indigo-50 ${
+      className={`flex gap-3 items-center p-3 rounded-lg cursor-pointer transition-all duration-200hover:bg-indigo-50 dark:hover:bg-slate-700 ${
         userDetails?._id === selectedUser?._id ? "bg-indigo-100" : ""
       }`}
     >

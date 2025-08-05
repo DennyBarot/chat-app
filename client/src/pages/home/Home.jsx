@@ -93,7 +93,9 @@ const Home = () => {
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">
       {(!isMobile || !showMessageContainer) && (
+        <div className={`transition-all duration-300 ${isMobile ? "w-full" : "w-80"}`}>
         <UserSidebar />
+          </div>
       )}
       {(!isMobile || showMessageContainer) && (
         <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />

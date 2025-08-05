@@ -60,18 +60,9 @@ export const getConversationsThunk = createAsyncThunk(
 
 export const markConversationReadThunk = createAsyncThunk(
   'message/markRead',
-  async (conversationId, { rejectWithValue, getState }) => {
+  async (conversationId, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
-      
-      // Emit socket event for read status
-      const state = getState();
-      const userId = state.userReducer.user?._id;
-      if (userId) {
-        // You would need to access socket here, but since we can't import it directly,
-        // this would typically be handled in the component or context
-      }
-      
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response.data.errMessage || error.message);

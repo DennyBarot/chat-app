@@ -37,17 +37,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-      dispatch(markConversationReadThunk(selectedUser.conversationId));
-      
-      // Emit socket event for read status
-      if (socket && selectedUser.conversationId) {
-        socket.emit("markAsRead", { 
-          conversationId: selectedUser.conversationId, 
-          userId: selectedUser._id 
-        });
-      }
+     dispatch(markConversationReadThunk(selectedUser.conversationId));
     }
-  }, [selectedUser, location, socket]);
+  }, [selectedUser, location]);
 
   useEffect(() => {
     if (!socket || !selectedUser || !selectedUser._id) return;

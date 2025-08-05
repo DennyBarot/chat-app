@@ -98,11 +98,11 @@ export const getConversations = asyncHandler(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        responseData: conversations.map(conv => ({
-            ...conv.toObject(),
-            unreadCount: conv.unreadCounts?.get(userId.toString()) || 0
-        }))
+        responseData: conversations,
     });
+    conversations.forEach(conv => {
+    conv.unreadCount = conv.unreadCounts?.get(userId.toString()) || 0;
+});
 
 });
 
@@ -152,23 +152,4 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     } : null,
   }));
   res.json(formatted);
-});
-
-export const markConversationRead = asyncHandler(async (req, res, next) => {
-    const userId = req.user._id;
-    const conversationId = req.params.conversationId;
-
-    if (!userId || !conversationId) {
-        return next(new errorHandler("User ID and conversation ID are required", 400));
-    }
-
-    await Conversation.findByIdAndUpdate(
-        conversationId,
-        { $set: { [`unreadCounts.${userId}`]: 0 } }
-    );
-
-    res.status(200).json({
-        success: true,
-        message: "Conversation marked as read"
-    });
 });

@@ -57,11 +57,6 @@ io.on("connection", (socket) => {
     await message.save();
     io.to(conversationId).emit('newMessage', message);
   });
-
-  socket.on("markAsRead", ({ conversationId, userId }) => {
-    // Broadcast to other participants in the conversation
-    socket.to(conversationId).emit("conversationRead", { conversationId, userId });
-  });
 });
 
 const getSocketId = (userId) =>{

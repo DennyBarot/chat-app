@@ -8,7 +8,6 @@ import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
-import { markConversationReadThunk } from "../../store/slice/message/message.thunk";
 
 const MessageContainer = ({ onBack, isMobile }) => {
   

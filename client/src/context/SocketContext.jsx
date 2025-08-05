@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
 import { updateUnreadCountLocally } from "../store/slice/message/message.slice";
-import { useDispatch } from "react-redux";
 
 const SocketContext = createContext(null);
 

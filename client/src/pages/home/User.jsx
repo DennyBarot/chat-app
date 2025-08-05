@@ -40,8 +40,8 @@ const User = ({ userDetails }) => {
     >
       <div className="relative">
         <div className={`avatar ${isUserOnline ? 'online' : ''}`}>
-            <div className="w-12 h-12 rounded-full">
-              <img src={userDetails?.avatar} alt={userDetails?.fullName} className="object-cover rounded-full" />
+            <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center">
+              <img src={userDetails?.avatar} alt={userDetails?.fullName} className="w-full h-full object-cover rounded-full" />
             </div>
         </div>
         {isUserOnline && (

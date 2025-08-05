@@ -54,14 +54,6 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("updateUnreadCounts", ({ conversationId, unreadCount }) => {
     dispatch(updateUnreadCountLocally({ conversationId, unreadCount }));
   });
-  // In SocketContext.jsx
-newSocket.on("conversationRead", ({ conversationId, userId }) => {
-  dispatch(updateUnreadCountLocally({ 
-    conversationId, 
-    unreadCount: 0 
-  }));
-});
-
 
     setSocket(newSocket, dispatch);
 

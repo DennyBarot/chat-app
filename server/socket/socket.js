@@ -19,7 +19,7 @@ const io = new Server(server, {
   },
   transports: ['websocket', 'polling'],
 });
- 
+
 
 
 
@@ -58,21 +58,10 @@ io.on("connection", (socket) => {
     io.to(conversationId).emit('newMessage', message);
   });
 
-
-  // In server/socket/socket.js
-socket.on("markAsRead", ({ conversationId, userId }) => {
-  // Update server unread count
-  conversationId.findByIdAndUpdate(conversationId, {
-    $set: { [`unreadCounts.${userId}`]: 0 }
+  socket.on("markAsRead", ({ conversationId, userId }) => {
+    // Broadcast to other participants in the conversation
+    socket.to(conversationId).emit("conversationRead", { conversationId, userId });
   });
-  
-  // Broadcast to other participants
-  socket.to(conversationId).emit("conversationRead", { 
-    conversationId, 
-    userId 
-  });
-});
-
 });
 
 const getSocketId = (userId) =>{

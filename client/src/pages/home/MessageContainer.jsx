@@ -9,6 +9,7 @@ import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { markConversationReadThunk } from "../../store/slice/message/message.thunk";
+import { updateUnreadCountLocally } from "../../store/slice/message/message.slice";
 
 const MessageContainer = ({ onBack, isMobile }) => {
   

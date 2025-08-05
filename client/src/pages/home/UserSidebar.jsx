@@ -201,8 +201,8 @@ const UserSidebar = ({ onUserSelect }) => {
       <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="avatar">
-            <div className="w-10 h-10 rounded-full ring-2 ring-indigo-500 ring-offset-2">
-              <img src={userProfile?.avatar} alt={userProfile?.fullName} />
+            <div className="w-10 h-10 rounded-full ring-2 ring-indigo-500 ring-offset-2 overflow-hidden">
+              <img src={userProfile?.avatar} alt={userProfile?.fullName}   className="w-full h-full object-cover rounded-full"/>
             </div>
           </div>
           <div className="truncate">

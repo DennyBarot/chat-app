@@ -198,7 +198,7 @@ const UserSidebar = ({ onUserSelect }) => {
       </div>
 
       {/* User Profile Bar */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
+      <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="avatar">
             <div className="w-10 h-10 rounded-full ring-2 ring-indigo-500 ring-offset-2">
@@ -206,15 +206,15 @@ const UserSidebar = ({ onUserSelect }) => {
             </div>
           </div>
           <div className="truncate">
-            <p className="font-medium text-slate-800 truncate">{userProfile?.fullName}</p>
-            <p className="text-xs text-slate-500">@{userProfile?.username}</p>
+            <p className="font-medium text-slate-800 dark:text-slate-100 truncate">{userProfile?.fullName}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-300">@{userProfile?.username}</p>
           </div>
         </div>
         
         <div className="flex gap-2">
           <button 
             onClick={() => setIsAddUserModalOpen(true)} 
-            className="p-2 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+            className="p-2 rounded-full bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-100 hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors"
             title="Add new conversation"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -224,7 +224,7 @@ const UserSidebar = ({ onUserSelect }) => {
           
           <button 
             onClick={() => setIsModalOpen(true)} 
-            className="p-2 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+            className="p-2 rounded-full bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-100 hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors"
             title="Edit profile"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -234,7 +234,7 @@ const UserSidebar = ({ onUserSelect }) => {
           
           <button 
             onClick={handleLogout} 
-            className="p-2 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+            className="p-2 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
             title="Logout"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">

@@ -28,6 +28,12 @@ export const messageSlice = createSlice({
         );
       }
     },
+       updateUnreadCountLocally: (state, action) => {
+      const { conversationId, unreadCount } = action.payload;
+      state.conversations = state.conversations.map(conv =>
+        conv._id === conversationId ? { ...conv, unreadCount } : conv
+      );
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(sendMessageThunk.pending, (state, action) => {

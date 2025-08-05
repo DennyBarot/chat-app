@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
+import { updateUnreadCountLocally } from "../store/slice/message/message.slice";
 
 const SocketContext = createContext(null);
 
@@ -9,6 +10,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
+  const dispatch = useDispatch();
   const { userProfile } = useSelector((state) => state.userReducer);
   const [socket, setSocket] = useState(null);
 
@@ -47,8 +49,12 @@ export const SocketProvider = ({ children }) => {
     const event = new Event("socketReconnect");
     window.dispatchEvent(event);
   });
+  
+    newSocket.on("updateUnreadCounts", ({ conversationId, unreadCount }) => {
+    dispatch(updateUnreadCountLocally({ conversationId, unreadCount }));
+  });
 
-    setSocket(newSocket);
+    setSocket(newSocket, dispatch);
 
     return () => {
       newSocket.disconnect();

@@ -77,9 +77,11 @@ export const messageSlice = createSlice({
     builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
       state.conversations = action.payload?.responseData ?? [];
     });
+
+    
   },
 });
 
-export const {setNewMessage} = messageSlice.actions;
+export const {setNewMessage,updateUnreadCountLocally} = messageSlice.actions;
 
 export default messageSlice.reducer;

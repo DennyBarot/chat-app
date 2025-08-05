@@ -97,7 +97,6 @@ const UserSidebar = ({ onUserSelect }) => {
           lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
           updatedAt: conv.updatedAt,
-          unreadCount: conv.unreadCount || 0,
         };
       }).filter(Boolean);
       // Sort users by last message time (most recent first)
@@ -123,7 +122,6 @@ const UserSidebar = ({ onUserSelect }) => {
           ...otherUser,
           lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
-          unreadCount: conv.unreadCount || 0,
         };
       });
       } else {

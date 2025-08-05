@@ -2,7 +2,7 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 
-const User = ({ userDetails }) => {
+const User = ({ userDetails, unreadCount }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
   const { onlineUsers } = useSelector(state => state.socketReducer);
@@ -46,6 +46,11 @@ const User = ({ userDetails }) => {
         </div>
         {isUserOnline && (
           <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>
+        )}
+        {unreadCount > 0 && (
+          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+            {unreadCount}
+          </span>
         )}
       </div>
       

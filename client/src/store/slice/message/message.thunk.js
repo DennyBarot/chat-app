@@ -9,7 +9,7 @@ export const sendMessageThunk = createAsyncThunk(
       const response = await axiosInstance.post(`/api/v1/message/send/${recieverId}`, {
         message,
         timestamp,
-        replyTo, // <-- add this
+        replyTo,
       });
       // After sending message, refresh conversations
       await dispatch(getConversationsThunk());
@@ -48,6 +48,40 @@ export const getConversationsThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.get("/api/v1/message/get-conversations");
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      const errorOutput = error?.response?.data?.errMessage;
+      toast.error(errorOutput);
+      return rejectWithValue(errorOutput);
+    }
+  }
+);
+
+// New thunks for unread count functionality
+export const getUnreadCountThunk = createAsyncThunk(
+  "message/getUnreadCount",
+  async ({ conversationId }, { rejectWithValue }) => {
+    try {
+      const endpoint = conversationId 
+        ? `/api/v1/message/unread-count/${conversationId}`
+        : '/api/v1/message/unread-count';
+      const response = await axiosInstance.get(endpoint);
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      const errorOutput = error?.response?.data?.errMessage;
+      toast.error(errorOutput);
+      return rejectWithValue(errorOutput);
+    }
+  }
+);
+
+export const markMessagesAsReadThunk = createAsyncThunk(
+  "message/markMessagesAsRead",
+  async ({ conversationId }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
       return response.data;
     } catch (error) {
       console.error(error);

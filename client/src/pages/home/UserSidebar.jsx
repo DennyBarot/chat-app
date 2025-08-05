@@ -55,6 +55,12 @@ const UserSidebar = ({ onUserSelect }) => {
     };
     window.addEventListener("socketReconnect", handleSocketReconnect);
 
+    // Listen for conversation read updates
+    socket.on("conversationRead", (data) => {
+      console.log("UserSidebar: Received conversationRead event:", data);
+      dispatch(getConversationsThunk());
+    });
+
     return () => {
       // console.log("UserSidebar: Removing newMessage listener");
       socket.off("newMessage");

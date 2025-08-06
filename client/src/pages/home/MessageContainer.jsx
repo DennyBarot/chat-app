@@ -58,25 +58,25 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [selectedUser, location]);
 
   useEffect(() => {
-    if (!socket || !selectedUser || !selectedUser._id) return;
-    
+    if (!socket || !selectedUser || !selectedUser._id || !selectedConversationId) return;
+
     const handleNewMessage = (newMessage) => {
-      console.log("MessageContainer.jsx: Received newMessage event, fetching messages for:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-    };
-    
-    try {
-      socket.on("newMessage", handleNewMessage);
-    } catch (error) {
-      console.error("Socket error in MessageContainer:", error);
-    }
-    
-    return () => {
-      if (socket && socket.off) {
-        socket.off("newMessage", handleNewMessage);
+      // Only process if the message belongs to the current conversation
+      if (newMessage.conversationId === selectedConversationId) {
+        console.log(
+          "MessageContainer.jsx: Received newMessage for current chat, fetching messages and marking as read."
+        );
+        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
     };
-  }, [socket, selectedUser, dispatch]);
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, selectedUser, dispatch, selectedConversationId]);
   useEffect(() => {
     console.log("MessageContainer.jsx: messages updated, re-rendering", messages);
     if (messagesEndRef.current) {
@@ -147,7 +147,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
         <>
           {/* Header */}
           <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm  dark:from-slate-800 dark:to-slate-900 ">
-            <User userDetails={selectedUser}   />
+            <User userDetails={selectedUser} showUnreadCount={false} />
           </div>
 
           {/* Messages */}

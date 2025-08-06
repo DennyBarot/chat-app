@@ -46,27 +46,23 @@ const UserSidebar = ({ onUserSelect }) => {
 
   useEffect(() => {
     if (!socket || !userProfile?._id) {
-      // console.log("UserSidebar: Socket not available or user not authenticated");
       return;
     }
 
-    // console.log("UserSidebar: Setting up newMessage listener");
-
-    socket.on("newMessage", (data) => {
-      console.log("UserSidebar: Received newMessage event:", data);
+    const handleNewMessage = (data) => {
+      // Refetch conversations to update unread counts
       dispatch(getConversationsThunk());
-    });
+    };
 
-    // Listen for socketReconnect event to refresh conversations
+    socket.on("newMessage", handleNewMessage);
+
     const handleSocketReconnect = () => {
-      // console.log("UserSidebar: Handling socketReconnect event");
       dispatch(getConversationsThunk());
     };
     window.addEventListener("socketReconnect", handleSocketReconnect);
 
     return () => {
-      // console.log("UserSidebar: Removing newMessage listener");
-      socket.off("newMessage");
+      socket.off("newMessage", handleNewMessage);
       window.removeEventListener("socketReconnect", handleSocketReconnect);
     };
   }, [dispatch, socket, userProfile]);

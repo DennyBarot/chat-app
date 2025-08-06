@@ -1,15 +1,19 @@
 import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
-
+import { markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 const User = ({ userDetails, showUnreadCount = true }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
-  const { onlineUsers } = useSelector(state => state.socketReducer);
+    const { onlineUsers } = useSelector((state) => state.socketReducer);
+
   const isUserOnline = onlineUsers?.includes(userDetails?._id);
 
   const handleUserClick = () => {
     dispatch(setSelectedUser(userDetails));
+     if (userDetails?.conversationId) {
+      dispatch(markMessagesReadThunk({ conversationId: userDetails.conversationId }));
+    }
   };
 
   // Format timestamp for last message

@@ -57,6 +57,61 @@ io.on("connection", (socket) => {
     await message.save();
     io.to(conversationId).emit('newMessage', message);
   });
+
+  socket.on('markMessageRead', async ({ messageId, userId, conversationId }) => {
+    try {
+      // Update the message as read
+      const message = await Message.findById(messageId);
+      if (message && !message.readBy.includes(userId)) {
+        message.readBy.push(userId);
+        await message.save();
+        
+        // Emit to sender that message has been read
+        const senderSocketId = getSocketId(message.senderId);
+        if (senderSocketId) {
+          io.to(senderSocketId).emit('messageRead', {
+            messageId,
+            readBy: userId,
+            readAt: new Date()
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error marking message as read:', error);
+    }
+  });
+
+  socket.on('markConversationRead', async ({ conversationId, userId }) => {
+    try {
+      // Mark all unread messages in conversation as read
+      const messages = await Message.find({
+        conversationId,
+        readBy: { $ne: userId }
+      });
+
+      const updatedMessages = [];
+      for (const message of messages) {
+        message.readBy.push(userId);
+        await message.save();
+        updatedMessages.push(message._id);
+      }
+
+      // Emit to sender(s) that messages have been read
+      const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
+      uniqueSenderIds.forEach(senderId => {
+        const senderSocketId = getSocketId(senderId);
+        if (senderSocketId) {
+          io.to(senderSocketId).emit('messagesRead', {
+            messageIds: updatedMessages,
+            readBy: userId,
+            readAt: new Date()
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Error marking conversation as read:', error);
+    }
+  });
 });
 
 const getSocketId = (userId) =>{

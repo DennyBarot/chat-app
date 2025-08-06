@@ -9,7 +9,7 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
-  const { userProfile } = useSelector((state) => state.userReducer);
+  const { userProfile } = useSelector((state) => state.userReducer || {});
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {

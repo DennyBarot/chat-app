@@ -3,7 +3,7 @@ import User from "./User";
 import Message from "./Message";
 import DateSeparator from "./DateSeparator";
 import { useDispatch, useSelector } from "react-redux";
-import { getMessageThunk, markMessagesReadThunk } from "../../store/slice/message/message.thunk";
+import { getMessagesThunk, markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
@@ -53,7 +53,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      dispatch(getMessagesThunk({ otherParticipantId: selectedUser._id }));
     }
   }, [selectedUser, location]);
 
@@ -66,7 +66,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
         console.log(
           "MessageContainer.jsx: Received newMessage for current chat, fetching messages and marking as read."
         );
-        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+        dispatch(getMessagesThunk({ otherParticipantId: selectedUser._id }));
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
     };

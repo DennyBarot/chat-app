@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from "react-redux";
+import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
 
 const Message = ({ messageDetails, onReply }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -23,6 +24,10 @@ const Message = ({ messageDetails, onReply }) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  // Determine if message is read by receiver
+  const messageRead = isMessageRead(messageDetails, userProfile?._id);
+  const readTime = getReadTime(messageDetails, userProfile?._id);
 
   return (
     <div
@@ -86,6 +91,11 @@ const Message = ({ messageDetails, onReply }) => {
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
           {formatTime(createdAt)}
         </div>
+        {isSentByMe && messageRead && (
+          <div className="text-xs mt-1 text-right mr-1 text-green-600 font-semibold">
+            {getRelativeTime(readTime)}
+          </div>
+        )}
       </div>
       {isSentByMe && (
         <div className="flex-shrink-0 ml-3">

@@ -4,9 +4,9 @@ dotenv.config();
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import Message from "../models/messageModel.js";
 
 const app = express();
-
 const server = http.createServer(app);
 
 const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
@@ -19,10 +19,6 @@ const io = new Server(server, {
   },
   transports: ['websocket', 'polling'],
 });
-
-
-
-
 
 const userSocketMap = {
     // userId : socketId,
@@ -60,13 +56,11 @@ io.on("connection", (socket) => {
 
   socket.on('markMessageRead', async ({ messageId, userId, conversationId }) => {
     try {
-      // Update the message as read
       const message = await Message.findById(messageId);
       if (message && !message.readBy.includes(userId)) {
         message.readBy.push(userId);
         await message.save();
         
-        // Emit to sender that message has been read
         const senderSocketId = getSocketId(message.senderId);
         if (senderSocketId) {
           io.to(senderSocketId).emit('messageRead', {
@@ -83,7 +77,6 @@ io.on("connection", (socket) => {
 
   socket.on('markConversationRead', async ({ conversationId, userId }) => {
     try {
-      // Mark all unread messages in conversation as read
       const messages = await Message.find({
         conversationId,
         readBy: { $ne: userId }
@@ -96,7 +89,6 @@ io.on("connection", (socket) => {
         updatedMessages.push(message._id);
       }
 
-      // Emit to sender(s) that messages have been read
       const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
       uniqueSenderIds.forEach(senderId => {
         const senderSocketId = getSocketId(senderId);
@@ -112,9 +104,41 @@ io.on("connection", (socket) => {
       console.error('Error marking conversation as read:', error);
     }
   });
+
+  socket.on('viewConversation', async ({ conversationId, userId }) => {
+    try {
+      const messages = await Message.find({
+        conversationId,
+        senderId: { $ne: userId },
+        readBy: { $ne: userId }
+      });
+
+      if (messages.length > 0) {
+        const updatedMessages = [];
+        for (const message of messages) {
+          message.readBy.push(userId);
+          await message.save();
+          updatedMessages.push(message._id);
+        }
+
+        const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
+        uniqueSenderIds.forEach(senderId => {
+          const senderSocketId = getSocketId(senderId);
+          if (senderSocketId) {
+            io.to(senderSocketId).emit('messagesRead', {
+              messageIds: updatedMessages,
+              readBy: userId,
+              readAt: new Date()
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error viewing conversation:', error);
+    }
+  });
 });
 
-const getSocketId = (userId) =>{
+const getSocketId = (userId) => {
     return userSocketMap[userId];
 }
-

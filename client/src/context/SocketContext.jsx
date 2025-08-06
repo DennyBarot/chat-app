@@ -42,6 +42,18 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
+    newSocket.on("messageRead", (data) => {
+      console.log("Message read event received:", data);
+      const event = new CustomEvent("messageRead", { detail: data });
+      window.dispatchEvent(event);
+    });
+
+    newSocket.on("messagesRead", (data) => {
+      console.log("Messages read event received:", data);
+      const event = new CustomEvent("messagesRead", { detail: data });
+      window.dispatchEvent(event);
+    });
+
     //reconnect event to handle reconnections
     newSocket.io.on("reconnect", () => {
       const event = new Event("socketReconnect");

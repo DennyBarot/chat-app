@@ -31,12 +31,25 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   // 2. Handler to set reply message
   const handleReply = (message) => setReplyMessage(message);
-   useEffect(() => {
-  if (selectedConversationId) {
-    axios.post(`/api/v1/message/mark-read/${selectedConversationId}`);
-    // Optionally, refetch conversations after marking as read
-  }
-}, [selectedConversationId]);
+  const { conversations } = useSelector((state) => state.messageReducer);
+  
+  // Get conversation ID for the selected user
+  const selectedConversationId = React.useMemo(() => {
+    if (!selectedUser || !conversations) return null;
+    
+    const conversation = conversations.find(conv => 
+      conv.participants.some(p => p._id === selectedUser._id)
+    );
+    return conversation?._id;
+  }, [selectedUser, conversations]);
+
+  useEffect(() => {
+    if (selectedConversationId) {
+      // Use the markMessagesReadThunk instead of direct axios call
+      dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+    }
+  }, [selectedConversationId, dispatch]);
+
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);

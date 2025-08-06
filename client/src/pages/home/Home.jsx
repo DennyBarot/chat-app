@@ -3,7 +3,7 @@ import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
 import {initializeSocket, setOnlineUsers,} from "../../store/slice/socket/socket.slice";
-import { setNewMessage } from "../../store/slice/message/message.slice";
+import { updateConversation } from "../../store/slice/message/message.slice";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getMessageThunk } from "../../store/slice/message/message.thunk";
 import { getConversationsThunk } from "../../store/slice/message/message.thunk";
@@ -43,7 +43,7 @@ const Home = () => {
     });
     const handleNewMessage = (newMessage) => {
       console.log("Home.jsx: Received newMessage socket event:", newMessage);
-      dispatch(setNewMessage(newMessage));
+      dispatch(updateConversation(newMessage));
       // Always fetch messages for the selected user for true real-time updates
       if (selectedUser && selectedUser._id) {
         console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);

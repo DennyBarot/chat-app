@@ -44,11 +44,17 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [selectedUser, conversations]);
 
   useEffect(() => {
-    if (selectedConversationId) {
+    if (selectedConversationId && socket) {
+      // Emit viewConversation event to trigger real-time seen updates
+      socket.emit('viewConversation', { 
+        conversationId: selectedConversationId, 
+        userId: userProfile?._id 
+      });
+      
       // Use the markMessagesReadThunk instead of direct axios call
       dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
     }
-  }, [selectedConversationId, dispatch]);
+  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
 
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {

@@ -31,8 +31,8 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    if (!isAuthenticated) return;
-    dispatch(initializeSocket(userProfile?._id));
+    if (!isAuthenticated || !userProfile?._id) return;
+    dispatch(initializeSocket(userProfile._id));
     dispatch(getConversationsThunk());
   }, [isAuthenticated, userProfile?._id]);
 

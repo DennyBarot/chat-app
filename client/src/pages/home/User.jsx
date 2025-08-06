@@ -2,7 +2,7 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 
-const User = ({ userDetails }) => {
+const User = ({ userDetails, showUnreadCount = true }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
   const { onlineUsers } = useSelector(state => state.socketReducer);
@@ -66,7 +66,7 @@ const User = ({ userDetails }) => {
               {userDetails?.lastMessage?.message}
             </p>
           )}
-          {userDetails?.unreadCount > 0 && (
+          {showUnreadCount && userDetails?.unreadCount > 0 && (
             <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
               {userDetails.unreadCount}
             </span>

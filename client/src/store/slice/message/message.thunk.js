@@ -1,5 +1,5 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import axiosInstance from "../../../components/utilities/axiosInstance";
+import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const getConversationsThunk = createAsyncThunk(
     "message/getConversations",

@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import {initializeSocket, setOnlineUsers,} from "../../store/slice/socket/socket.slice";
 import { updateConversation } from "../../store/slice/message/message.slice";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
-import { getMessageThunk } from "../../store/slice/message/message.thunk";
+import { getMessagesThunk } from "../../store/slice/message/message.thunk";
 import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 
 const Home = () => {
@@ -46,10 +46,10 @@ const Home = () => {
       dispatch(updateConversation(newMessage));
       // Always fetch messages for the selected user for true real-time updates
       if (selectedUser && selectedUser._id) {
-        console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);
-        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+        console.log("Home.jsx: Dispatching getMessagesThunk for selectedUser:", selectedUser._id);
+        dispatch(getMessagesThunk(selectedUser._id));
       } else {
-        console.log("Home.jsx: No selectedUser or _id, not dispatching getMessageThunk");
+        console.log("Home.jsx: No selectedUser or _id, not dispatching getMessagesThunk");
       }
     };
     socket.on("newMessage", handleNewMessage);

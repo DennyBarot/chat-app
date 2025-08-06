@@ -1,4 +1,4 @@
- import React, { useEffect,  useState } from "react";
+ import React, { useEffect, useState } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -8,8 +8,6 @@ import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import ThemeToggle from "../../components/ThemeToggle";
-import { updateConversation } from "../../store/slice/message/message.slice";
-
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,8 +73,6 @@ const UserSidebar = ({ onUserSelect }) => {
     }
     dispatch(getConversationsThunk());
   }, [dispatch, userProfile]);
-
-  
 
   useEffect(() => {
     if (!userProfile?._id) {
@@ -258,8 +254,6 @@ const UserSidebar = ({ onUserSelect }) => {
       <AddUserModal isOpen={isAddUserModalOpen} onClose={() => setIsAddUserModalOpen(false)} onSelectUser={handleSelectUser} />
     </div>
   );
-  
-  
 };
 
 export default UserSidebar;

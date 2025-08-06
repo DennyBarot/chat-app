@@ -1,86 +1,99 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getConversationsThunk, getMessagesThunk, markMessagesReadThunk, sendMessageThunk } from "./message.thunk";
+import { getMessageThunk, sendMessageThunk, getConversationsThunk, markMessagesReadThunk } from "./message.thunk";
 
 const initialState = {
-    loading: false,
-    error: null,
-    conversations: [],
-    messages: [],
+  buttonLoading: false,
+  screenLoading: false,
+  messages: null,
+  conversations: [],
+  sendMessageStatus: 'idle', 
 };
 
-const messageSlice = createSlice({
-    name: "message",
-    initialState,
-    reducers: {
-        updateConversation: (state, action) => {
-            const newMessage = action.payload;
-            const conversation = state.conversations.find(
-                (conv) => conv._id === newMessage.conversationId
-            );
-            if (conversation) {
-                conversation.messages.unshift(newMessage);
-                conversation.updatedAt = newMessage.createdAt;
-            }
-        },
+export const messageSlice = createSlice({
+  name: "message",
+  initialState,
+  reducers: {
+    setNewMessage: (state, action) => {
+      const oldMessages = state.messages ?? [];
+ builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
+      state.conversations = action.payload?.responseData ?? [];
+    });
+
+      // Check if the new message already exists
+      const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
+      if (!messageExists) {
+        state.messages = [...oldMessages, action.payload];
+      }
+      // If message exists, replace it to update
+      else {
+        state.messages = oldMessages.map(msg =>
+          msg._id === action.payload._id ? action.payload : msg
+          
+        );
+      }
     },
-    extraReducers: (builder) => {
-        builder
-            .addCase(getConversationsThunk.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(getConversationsThunk.fulfilled, (state, action) => {
-                state.loading = false;
-                state.conversations = action.payload;
-            })
-            .addCase(getConversationsThunk.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
-            .addCase(getMessagesThunk.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(getMessagesThunk.fulfilled, (state, action) => {
-                state.loading = false;
-                state.messages = action.payload;
-            })
-            .addCase(getMessagesThunk.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
-            .addCase(sendMessageThunk.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(sendMessageThunk.fulfilled, (state, action) => {
-                state.loading = false;
-                state.messages.push(action.payload);
-            })
-            .addCase(sendMessageThunk.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            })
-            .addCase(markMessagesReadThunk.pending, (state) => {
-                state.loading = true;
-                state.error = null;
-            })
-            .addCase(markMessagesReadThunk.fulfilled, (state, action) => {
-                state.loading = false;
-                const { conversationId } = action.payload;
-                const conversation = state.conversations.find(
-                    (conv) => conv._id === conversationId
-                );
-                if (conversation) {
-                    conversation.unreadCount = 0;
-                }
-            })
-            .addCase(markMessagesReadThunk.rejected, (state, action) => {
-                state.loading = false;
-                state.error = action.payload;
-            });
-    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(sendMessageThunk.pending, (state, action) => {
+      state.buttonLoading = true;
+      state.sendMessageStatus = 'pending';
+    });
+    builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
+      const oldMessages = state.messages ?? [];
+      // Support both {responseData: {...}} and direct message object
+      const newMsg = action.payload?.responseData || action.payload;
+      if (!newMsg?._id) return;
+      const filteredOldMessages = oldMessages.filter(
+        (msg) => msg._id !== newMsg._id
+      );
+      state.messages = [...filteredOldMessages, newMsg];
+      state.buttonLoading = false;
+      state.sendMessageStatus = 'fulfilled';
+    });
+    builder.addCase(sendMessageThunk.rejected, (state, action) => {
+      state.buttonLoading = false;
+      state.sendMessageStatus = 'rejected';
+    });
+      builder.addCase(markMessagesReadThunk.fulfilled, (state, action) => {
+      const { conversationId } = action.meta.arg;
+      const conversation = state.conversations.find(c => c._id === conversationId);
+      if (conversation) {
+        const updatedMessages = state.messages.map(msg => 
+          msg.conversationId === conversationId ? { ...msg, read: true } : msg
+        );
+        state.messages = updatedMessages;
+      }
+    });
+
+    // get messages
+    builder.addCase(getMessageThunk.pending, (state, action) => {
+      state.buttonLoading = true;
+    });
+    builder.addCase(getMessageThunk.fulfilled, (state, action) => {
+      // Support both {responseData: [...]} and direct array
+      const messages = Array.isArray(action.payload?.responseData)
+        ? action.payload.responseData
+        : Array.isArray(action.payload)
+        ? action.payload
+        : [];
+      const uniqueMessagesMap = new Map();
+      messages.forEach((msg) => {
+        uniqueMessagesMap.set(msg._id, msg);
+      });
+      state.messages = Array.from(uniqueMessagesMap.values());
+      state.buttonLoading = false;
+    });
+    builder.addCase(getMessageThunk.rejected, (state, action) => {
+      state.buttonLoading = false;
+    });
+
+    // get conversations
+    builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
+      state.conversations = action.payload?.responseData ?? [];
+    });
+  },
 });
 
-export const { updateConversation } = messageSlice.actions;
+export const {setNewMessage} = messageSlice.actions;
+
 export default messageSlice.reducer;

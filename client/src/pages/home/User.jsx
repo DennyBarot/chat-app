@@ -2,7 +2,7 @@ import React from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { markMessagesReadThunk } from "../../store/slice/message/message.thunk";
-const User = ({ userDetails, showUnreadCount = true, onSelect }) => {
+const User = ({ userDetails, showUnreadCount = true }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
     const { onlineUsers } = useSelector((state) => state.socketReducer);
@@ -11,11 +11,8 @@ const User = ({ userDetails, showUnreadCount = true, onSelect }) => {
 
   const handleUserClick = () => {
     dispatch(setSelectedUser(userDetails));
-     if (userDetails?.conversationId && userDetails.unreadCount > 0) {
+     if (userDetails?.conversationId) {
       dispatch(markMessagesReadThunk({ conversationId: userDetails.conversationId }));
-    }
-    if (onSelect) {
-      onSelect(userDetails);
     }
   };
 

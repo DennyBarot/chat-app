@@ -6,7 +6,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const [showMenu, setShowMenu] = useState(false);
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
-    (state) => state.userReducer || {}
+    (state) => state.userReducer || { userProfile: null, selectedUser: null }
   );
 
   useEffect(() => {

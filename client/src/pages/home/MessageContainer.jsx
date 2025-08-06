@@ -3,7 +3,7 @@ import User from "./User";
 import Message from "./Message";
 import DateSeparator from "./DateSeparator";
 import { useDispatch, useSelector } from "react-redux";
-import { getMessageThunk } from "../../store/slice/message/message.thunk";
+import { getMessageThunk, markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";

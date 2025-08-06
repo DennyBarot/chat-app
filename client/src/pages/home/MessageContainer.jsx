@@ -59,13 +59,22 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   useEffect(() => {
     if (!socket || !selectedUser || !selectedUser._id) return;
+    
     const handleNewMessage = (newMessage) => {
       console.log("MessageContainer.jsx: Received newMessage event, fetching messages for:", selectedUser._id);
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
     };
-    socket.on("newMessage", handleNewMessage);
+    
+    try {
+      socket.on("newMessage", handleNewMessage);
+    } catch (error) {
+      console.error("Socket error in MessageContainer:", error);
+    }
+    
     return () => {
-      socket.off("newMessage", handleNewMessage);
+      if (socket && socket.off) {
+        socket.off("newMessage", handleNewMessage);
+      }
     };
   }, [socket, selectedUser, dispatch]);
   useEffect(() => {

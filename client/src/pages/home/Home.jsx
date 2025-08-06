@@ -61,15 +61,15 @@ const Home = () => {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      console.warn("Home.jsx: getMessageThunk not dispatched, user not authenticated");
+      console.warn("Home.jsx: getMessagesThunk not dispatched, user not authenticated");
       return;
     }
     if (selectedUser && selectedUser._id) {
       console.log("Home.jsx: selectedUser changed, fetching messages for:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      dispatch(getMessagesThunk(selectedUser._id));
     } else {
       // Prevent dispatch if selectedUser or _id is missing
-      console.warn("Home.jsx: getMessageThunk not dispatched, selectedUser or _id missing", selectedUser);
+      console.warn("Home.jsx: getMessagesThunk not dispatched, selectedUser or _id missing", selectedUser);
     }
   }, [selectedUser, dispatch]);
 

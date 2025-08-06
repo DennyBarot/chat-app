@@ -11,6 +11,7 @@ const messageSchema = new Schema(
   timestamp: { type: Date, default: Date.now },
   replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
   quotedContent: { type: String },
+  readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

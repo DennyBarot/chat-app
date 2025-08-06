@@ -89,6 +89,7 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         path: "messages",
         options: { sort: { createdAt: -1 } },
         perDocumentLimit: 1, 
+        populate: { path: 'readBy', select: '_id' },
     })
     .sort({ updatedAt: -1 });
 
@@ -144,4 +145,17 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     } : null,
   }));
   res.json(formatted);
+});
+
+export const markMessagesRead = asyncHandler(async (req, res, next) => {
+  const userId = req.user._id;
+  const { conversationId } = req.params;
+
+  // Find all unread messages in this conversation
+  await Message.updateMany(
+    { conversationId, readBy: { $ne: userId } },
+    { $addToSet: { readBy: userId } }
+  );
+
+  res.status(200).json({ success: true });
 });

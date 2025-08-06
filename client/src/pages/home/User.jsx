@@ -66,6 +66,11 @@ const User = ({ userDetails }) => {
               {userDetails?.lastMessage?.message}
             </p>
           )}
+          {userDetails?.unreadCount > 0 && (
+            <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600 rounded-full">
+              {userDetails.unreadCount}
+            </span>
+          )}
         </div>
       </div>
     </div>

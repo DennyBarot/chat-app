@@ -31,7 +31,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   // 2. Handler to set reply message
   const handleReply = (message) => setReplyMessage(message);
-
+   useEffect(() => {
+  if (selectedConversationId) {
+    axios.post(`/api/v1/message/mark-read/${selectedConversationId}`);
+    // Optionally, refetch conversations after marking as read
+  }
+}, [selectedConversationId]);
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);

@@ -34,6 +34,15 @@ const UserSidebar = ({ onUserSelect }) => {
       onUserSelect(user);
     }
   };
+  const calculateUnreadCount = (conversation, currentUserId) => {
+    if (!conversation?.messages || !Array.isArray(conversation.messages)) return 0;
+    
+    return conversation.messages.filter(
+      msg =>
+        msg.senderId !== currentUserId && // Only count messages not sent by current user
+        (!msg.readBy || !msg.readBy.some(u => u._id === currentUserId))
+    ).length;
+  };
 
   useEffect(() => {
     if (!socket || !userProfile?._id) {
@@ -91,6 +100,7 @@ const UserSidebar = ({ onUserSelect }) => {
           lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
           updatedAt: conv.updatedAt,
+          unreadCount: calculateUnreadCount(conv, userProfile._id),
         };
       }).filter(Boolean);
       // Sort users by last message time (most recent first)

@@ -41,7 +41,10 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("disconnect", () => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
-
+    socket.on("newMessage", (newMessage) => {
+  // Update conversation list and unread counts
+  dispatch(updateConversationWithNewMessage(newMessage));
+});
     //reconnect event to handle reconnections
   newSocket.io.on("reconnect", () => {
     const event = new Event("socketReconnect");

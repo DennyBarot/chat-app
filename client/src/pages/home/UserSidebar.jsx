@@ -78,14 +78,14 @@ const UserSidebar = ({ onUserSelect }) => {
   
 
   useEffect(() => {
-    if (!userProfile?._id) {
+    if (!userProfile?._id || !Array.isArray(conversations)) {
       setUsers([]);
       return;
     }
     if (conversations.length > 0) {
       // Map users from conversations
       let usersList = conversations.map((conv) => {
-        if (!Array.isArray(conv.participants)) {
+        if (!conv || !Array.isArray(conv.participants)) {
           return null;
         }
         const otherUser = conv.participants.find(
@@ -96,7 +96,7 @@ const UserSidebar = ({ onUserSelect }) => {
         }
         return {
           ...otherUser,
-          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
+          lastMessage: conv.messages && Array.isArray(conv.messages) && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
           updatedAt: conv.updatedAt,
           unreadCount: calculateUnreadCount(conv, userProfile._id),

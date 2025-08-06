@@ -5,7 +5,7 @@ export const getConversationsThunk = createAsyncThunk(
     "message/getConversations",
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.get("/messages/conversations");
+            const response = await axiosInstance.get("/messages/get-conversations");
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response.data);
@@ -15,9 +15,9 @@ export const getConversationsThunk = createAsyncThunk(
 
 export const getMessagesThunk = createAsyncThunk(
     "message/getMessages",
-    async (conversationId, { rejectWithValue }) => {
+    async (otherParticipantId, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.get(`/messages/${conversationId}`);
+            const response = await axiosInstance.get(`/messages/get-messages/${otherParticipantId}`);
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response.data);

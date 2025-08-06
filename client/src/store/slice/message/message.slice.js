@@ -6,7 +6,6 @@ const initialState = {
   screenLoading: false,
   messages: null,
   conversations: [],
-  unreadCounts: {}, // new state for unread counts, key: conversationId, value: count
   sendMessageStatus: 'idle', 
 };
 
@@ -29,14 +28,6 @@ export const messageSlice = createSlice({
         );
       }
     },
-    setUnreadCount: (state, action) => {
-      const { conversationId, count } = action.payload;
-      state.unreadCounts[conversationId] = count;
-    },
-    clearUnreadCount: (state, action) => {
-      const conversationId = action.payload;
-      delete state.unreadCounts[conversationId];
-    }
   },
   extraReducers: (builder) => {
     builder.addCase(sendMessageThunk.pending, (state, action) => {
@@ -85,22 +76,6 @@ export const messageSlice = createSlice({
     // get conversations
     builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
       state.conversations = action.payload?.responseData ?? [];
-    });
-
-    // unread count
-    builder.addCase(getUnreadCountThunk.fulfilled, (state, action) => {
-      if (action.payload?.responseData) {
-        if (Array.isArray(action.payload.responseData)) {
-          // multiple unread counts
-          action.payload.responseData.forEach(item => {
-            state.unreadCounts[item._id] = item.unreadCount;
-          });
-        } else {
-          // single unread count
-          const { conversationId, unreadCount } = action.payload.responseData;
-          state.unreadCounts[conversationId] = unreadCount;
-        }
-      }
     });
   },
 });

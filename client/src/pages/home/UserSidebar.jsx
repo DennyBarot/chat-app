@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
+ import React, { useEffect, useState } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
 import { useDispatch, useSelector } from "react-redux";
 import { logoutUserThunk } from "../../store/slice/user/user.thunk";
-import { getConversationsThunk, getUnreadCountThunk, markMessagesAsReadThunk } from "../../store/slice/message/message.thunk";
+import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import ThemeToggle from "../../components/ThemeToggle";
@@ -18,7 +18,6 @@ const UserSidebar = ({ onUserSelect }) => {
   const dispatch = useDispatch();
   const { userProfile } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
-  const unreadCounts = useSelector((state) => state.messageReducer.unreadCounts);
   const [users, setUsers] = useState([]);
 
   const socket = useSocket();
@@ -31,14 +30,6 @@ const UserSidebar = ({ onUserSelect }) => {
     // console.log("UserSidebar: User selected:", user);
     dispatch(setSelectedUser(user));
     setIsAddUserModalOpen(false);
-    
-    // Mark messages as read when selecting a conversation
-    if (user.conversationId) {
-      dispatch(markMessagesAsReadThunk({ conversationId: user.conversationId }));
-      // Clear unread count locally
-      dispatch({ type: 'message/clearUnreadCount', payload: user.conversationId });
-    }
-    
     if (onUserSelect) {
       onUserSelect(user);
     }
@@ -55,28 +46,18 @@ const UserSidebar = ({ onUserSelect }) => {
     socket.on("newMessage", (data) => {
       console.log("UserSidebar: Received newMessage event:", data);
       dispatch(getConversationsThunk());
-      // Refresh unread counts
-      dispatch(getUnreadCountThunk({}));
-    });
-
-    socket.on("messagesRead", (data) => {
-      console.log("UserSidebar: Received messagesRead event:", data);
-      // Refresh unread counts when messages are marked as read
-      dispatch(getUnreadCountThunk({}));
     });
 
     // Listen for socketReconnect event to refresh conversations
     const handleSocketReconnect = () => {
       // console.log("UserSidebar: Handling socketReconnect event");
       dispatch(getConversationsThunk());
-      dispatch(getUnreadCountThunk({}));
     };
     window.addEventListener("socketReconnect", handleSocketReconnect);
 
     return () => {
       // console.log("UserSidebar: Removing newMessage listener");
       socket.off("newMessage");
-      socket.off("messagesRead");
       window.removeEventListener("socketReconnect", handleSocketReconnect);
     };
   }, [dispatch, socket, userProfile]);
@@ -86,7 +67,6 @@ const UserSidebar = ({ onUserSelect }) => {
       return;
     }
     dispatch(getConversationsThunk());
-    dispatch(getUnreadCountThunk({}));
   }, [dispatch, userProfile]);
 
   useEffect(() => {
@@ -211,11 +191,7 @@ const UserSidebar = ({ onUserSelect }) => {
         ) : (
           <div className="space-y-1">
             {users.map((userDetails) => (
-              <User 
-                key={userDetails?._id} 
-                userDetails={userDetails} 
-                unreadCount={unreadCounts[userDetails.conversationId] || 0}
-              />
+              <User key={userDetails?._id} userDetails={userDetails} />
             ))}
           </div>
         )}

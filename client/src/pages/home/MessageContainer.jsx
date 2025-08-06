@@ -65,8 +65,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return format(date, "dd MMM yyyy");
   };
 
+  // Ensure we have an array to work with
+  const safeMessages = Array.isArray(filteredMessages) ? filteredMessages : [];
+  
   // Sort messages by timestamp ascending (oldest first)
-  const sortedMessages = [...filteredMessages].sort((a, b) => {
+  const sortedMessages = [...safeMessages].sort((a, b) => {
     const dateA = new Date(a.createdAt || a.timestamp);
     const dateB = new Date(b.createdAt || b.timestamp);
     return dateA - dateB;

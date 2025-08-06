@@ -93,9 +93,21 @@ export const getConversations = asyncHandler(async (req, res, next) => {
     })
     .sort({ updatedAt: -1 });
 
+    // Manually calculate unread count for each conversation
+    const conversationsWithUnreadCount = await Promise.all(conversations.map(async (conv) => {
+        const unreadCount = await Message.countDocuments({
+            conversationId: conv._id,
+            readBy: { $ne: userId }
+        });
+        return {
+            ...conv.toObject(),
+            unreadCount
+        };
+    }));
+
     res.status(200).json({
         success: true,
-        responseData: conversations,
+        responseData: conversationsWithUnreadCount,
     });
 });
 

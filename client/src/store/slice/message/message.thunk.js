@@ -60,9 +60,10 @@ export const getConversationsThunk = createAsyncThunk(
 
 export const markMessagesReadThunk = createAsyncThunk(
   "message/markRead",
-  async ({ conversationId }, { rejectWithValue }) => {
+  async ({ conversationId }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
+      dispatch(getConversationsThunk());
       return response.data;
     } catch (error) {
       console.error(error);

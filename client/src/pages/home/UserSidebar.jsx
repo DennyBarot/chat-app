@@ -52,7 +52,8 @@ const UserSidebar = ({ onUserSelect }) => {
     }
 
     const handleNewMessage = (data) => {
-      dispatch(updateConversation(data));
+      // Refetch conversations to update unread counts
+      dispatch(getConversationsThunk());
     };
 
     socket.on("newMessage", handleNewMessage);

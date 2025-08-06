@@ -65,12 +65,19 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return format(date, "dd MMM yyyy");
   };
 
+  // Sort messages by timestamp ascending (oldest first)
+  const sortedMessages = [...filteredMessages].sort((a, b) => {
+    const dateA = new Date(a.createdAt || a.timestamp);
+    const dateB = new Date(b.createdAt || b.timestamp);
+    return dateA - dateB;
+  });
+
   // Prepare messages with date separators
   const messagesWithSeparators = [];
   let lastDate = null;
 
-  if (messages && messages.length > 0) {
-    filteredMessages.forEach((message) => {
+  if (sortedMessages && sortedMessages.length > 0) {
+    sortedMessages.forEach((message) => {
       const messageDate = message.createdAt || message.timestamp;
       if (messageDate) {
         const currentDate = messageDate.split("T")[0];

@@ -132,7 +132,8 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     .populate({
       path: 'replyTo',
       populate: { path: 'senderId', select: 'fullName username' }
-    });
+    })
+    .sort({ createdAt: 1 }); // Sort by createdAt ascending (oldest first)
 
   const formatted = messages.map(msg => ({
     ...msg.toObject(),

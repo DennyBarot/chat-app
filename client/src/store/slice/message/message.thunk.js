@@ -5,7 +5,7 @@ export const getConversationsThunk = createAsyncThunk(
     "message/getConversations",
     async (_, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.get("/api/v1/message/get-conversations");
+            const response = await axiosInstance.get("/messages/get-conversations");
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response.data);
@@ -17,7 +17,7 @@ export const getMessagesThunk = createAsyncThunk(
     "message/getMessages",
     async (otherParticipantId, { rejectWithValue }) => {
         try {
-            const response = await axiosInstance.get(`/api/v1/message/get-messages/${otherParticipantId}`);
+            const response = await axiosInstance.get(`/messages/get-messages/${otherParticipantId}`);
             return response.data;
         } catch (error) {
             return rejectWithValue(error.response.data);
@@ -27,10 +27,10 @@ export const getMessagesThunk = createAsyncThunk(
 
 export const sendMessageThunk = createAsyncThunk(
     "message/sendMessage",
-    async ({ receiverId, message }, { rejectWithValue }) => {
+    async ({ conversationId, message }, { rejectWithValue }) => {
         try {
             const response = await axiosInstance.post(
-                `/api/v1/message/send/${receiverId}`,
+                `/messages/send/${conversationId}`,
                 { message }
             );
             return response.data;
@@ -44,7 +44,7 @@ export const markMessagesReadThunk = createAsyncThunk(
     "message/markMessagesRead",
     async ({ conversationId }, { rejectWithValue }) => {
         try {
-            await axiosInstance.put(`/api/v1/message/mark-read/${conversationId}`);
+            await axiosInstance.put(`/messages/read/${conversationId}`);
             return { conversationId };
         } catch (error) {
             return rejectWithValue(error.response.data);

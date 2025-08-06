@@ -41,20 +41,18 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("disconnect", () => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
-    socket.on("newMessage", (newMessage) => {
-  // Update conversation list and unread counts
-  dispatch(updateConversationWithNewMessage(newMessage));
-});
+
     //reconnect event to handle reconnections
-  newSocket.io.on("reconnect", () => {
-    const event = new Event("socketReconnect");
-    window.dispatchEvent(event);
-  });
+    newSocket.io.on("reconnect", () => {
+      const event = new Event("socketReconnect");
+      window.dispatchEvent(event);
+    });
 
     setSocket(newSocket);
 
     return () => {
       newSocket.disconnect();
+      setSocket(null);
     };
   }, [userProfile]);
 
@@ -64,3 +62,4 @@ export const SocketProvider = ({ children }) => {
     </SocketContext.Provider>
   );
 };
+

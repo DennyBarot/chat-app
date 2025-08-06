@@ -164,16 +164,25 @@ const MessageContainer = ({ onBack, isMobile }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                {messagesWithSeparators.map((item) => {
+                {messagesWithSeparators.map((item, index) => {
                   if (item.type === "date-separator") {
                     return <DateSeparator key={item.id} label={item.label} />;
                   } else if (item.type === "message") {
+                    // Find the last actual message (not date separator)
+                    const lastMessageIndex = messagesWithSeparators
+                      .map((item, idx) => ({ ...item, originalIndex: idx }))
+                      .filter(item => item.type === "message")
+                      .pop()?.originalIndex;
+                    
+                    const isLastMessage = index === lastMessageIndex;
+                    
                     // 3. Pass onReply to Message
                     return (
                       <Message
                         key={item.id}
                         messageDetails={item.messageDetails}
                         onReply={handleReply}
+                        isLastMessage={isLastMessage}
                       />
                     );
                   }

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from "react-redux";
 import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
 
-const Message = ({ messageDetails, onReply }) => {
+const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const [showMenu, setShowMenu] = useState(false);
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(

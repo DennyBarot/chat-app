@@ -3,7 +3,6 @@ import Conversation from "../models/conversationModel.js";
 import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
 import { errorHandler } from "../utilities/errorHandlerUtility.js";
 import {getSocketId, io, userSocketMap} from '../socket/socket.js';
-import mongoose from "mongoose";
 
 export const sendMessage = asyncHandler(async (req, res, next) => {
   const receiverId = req.params.receiverId;
@@ -15,24 +14,12 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   console.log("sendMessage req.body:", req.body);
   console.log("sendMessage req.user:", req.user);
 
-  // Validate and convert ObjectIds
-  if (!mongoose.Types.ObjectId.isValid(receiverId)) {
-    return next(new errorHandler("Invalid receiver ID format", 400));
-  }
-  
-  if (!mongoose.Types.ObjectId.isValid(senderId)) {
-    return next(new errorHandler("Invalid sender ID format", 400));
-  }
-
-  const receiverObjectId = new mongoose.Types.ObjectId(receiverId);
-  const senderObjectId = new mongoose.Types.ObjectId(senderId);
-
-  if (!senderObjectId || !receiverObjectId || !message) {
+  if (!senderId || !receiverId || !message) {
       return next(new errorHandler("any field is missing.", 400));
   }
 
   let conversation = await Conversation.findOne({
-      participants: { $all: [senderObjectId, receiverObjectId] },
+      participants: { $all: [senderId, receiverId] },
   });
 
   if (!conversation) {

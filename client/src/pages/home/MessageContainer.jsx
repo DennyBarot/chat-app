@@ -12,7 +12,7 @@ import { format, isToday, isTomorrow, parseISO } from "date-fns";
 const MessageContainer = ({ onBack, isMobile }) => {
   
   const dispatch = useDispatch();
-  const { selectedUser } = useSelector((state) => state.userReducer);
+  const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const socket = useSocket();
 
   const messages = useSelector((state) => state.messageReducer.messages);

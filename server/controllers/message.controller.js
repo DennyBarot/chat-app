@@ -43,12 +43,12 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   }
 
   const newMessage = await Message.create({
-      senderId: new mongoose.Types.ObjectId(senderId),
-      receiverId: new mongoose.Types.ObjectId(receiverId),
-      conversationId: new mongoose.Types.ObjectId(conversation._id),
-      content: message,
+      senderId,
+      receiverId,
+      conversationId: conversation._id,
+      content: message, // <-- fix here
       timestamp,
-      replyTo: replyTo ? new mongoose.Types.ObjectId(replyTo) : undefined,
+      replyTo,
   });
 
   // Populate replyTo for frontend
@@ -223,4 +223,3 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
     return next(new errorHandler("Failed to mark messages as read", 500));
   }
 });
-

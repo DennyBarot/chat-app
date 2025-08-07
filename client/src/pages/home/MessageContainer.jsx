@@ -56,6 +56,42 @@ const MessageContainer = ({ onBack, isMobile }) => {
     }
   }, [selectedConversationId, dispatch, socket, userProfile?._id]);
 
+  // Handle visibility change and focus events
+  useEffect(() => {
+    if (!selectedConversationId) return;
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden && selectedConversationId) {
+        // User returned to the tab, mark messages as read
+        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+        socket?.emit('viewConversation', { 
+          conversationId: selectedConversationId, 
+          userId: userProfile?._id 
+        });
+      }
+    };
+
+    const handleFocus = () => {
+      if (selectedConversationId) {
+        // Window gained focus, mark messages as read
+        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+        socket?.emit('viewConversation', { 
+          conversationId: selectedConversationId, 
+          userId: userProfile?._id 
+        });
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
+
   useEffect(() => {
     if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
       console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);

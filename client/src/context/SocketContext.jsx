@@ -58,6 +58,21 @@ export const SocketProvider = ({ children }) => {
     newSocket.io.on("reconnect", () => {
       const event = new Event("socketReconnect");
       window.dispatchEvent(event);
+      
+      // Re-emit viewConversation on reconnection
+      const userId = socket.handshake.query.userId;
+      if (userId) {
+        // Get current conversation from URL or state
+        const pathParts = window.location.pathname.split('/');
+        const conversationId = pathParts[pathParts.length - 1];
+        
+        if (conversationId && conversationId !== 'home') {
+          socket.emit('viewConversation', { 
+            conversationId, 
+            userId 
+          });
+        }
+      }
     });
 
     setSocket(newSocket);

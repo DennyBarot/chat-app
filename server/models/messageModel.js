@@ -4,19 +4,14 @@ const { Schema, model } = mongoose;
 
 const messageSchema = new Schema(
   {
-    content: { type: String, required: true },
-    senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    receiverId: { type: Schema.Types.ObjectId, ref: 'User' },
-    conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation' },
-    timestamp: { type: Date, default: Date.now },
-    replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
-    quotedContent: { type: String },
-    readBy: [{ 
-      userId: { type: Schema.Types.ObjectId, ref: 'User' },
-      readAt: { type: Date, default: Date.now }
-    }],
-    isRead: { type: Boolean, default: false },
-    readAt: { type: Date }
+  content: { type: String, required: true }, // message text
+  senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  receiverId: { type: Schema.Types.ObjectId, ref: 'User' }, // optional for one-to-one
+  conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation' }, // for group/one-to-one
+  timestamp: { type: Date, default: Date.now },
+  replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
+  quotedContent: { type: String },
+  readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }
 );

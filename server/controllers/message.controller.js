@@ -163,11 +163,50 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const { conversationId } = req.params;
 
-  // Find all unread messages in this conversation
-  await Message.updateMany(
-    { conversationId, readBy: { $ne: userId } },
-    { $addToSet: { readBy: userId } }
-  );
+  try {
+    // Find all unread messages in this conversation
+    const messages = await Message.find({
+      conversationId,
+      senderId: { $ne: userId }
+    });
 
-  res.status(200).json({ success: true });
+    const updatedMessages = [];
+    
+    for (const message of messages) {
+      const isAlreadyRead = message.readBy?.some(
+        read => read.userId?.toString() === userId.toString()
+      );
+      
+      if (!isAlreadyRead) {
+        message.readBy = message.readBy || [];
+        message.readBy.push({ userId, readAt: new Date() });
+        message.isRead = true;
+        await message.save();
+        updatedMessages.push(message._id);
+      }
+    }
+
+    // Emit socket event to notify senders
+    const { io } = await import('../socket/socket.js');
+    const { getSocketId } = await import('../socket/socket.js');
+    
+    for (const messageId of updatedMessages) {
+      const message = await Message.findById(messageId);
+      if (message) {
+        const senderSocketId = getSocketId(message.senderId);
+        if (senderSocketId) {
+          io.to(senderSocketId).emit('messageRead', {
+            messageId,
+            readBy: userId,
+            readAt: new Date()
+          });
+        }
+      }
+    }
+
+    res.status(200).json({ success: true, updatedCount: updatedMessages.length });
+  } catch (error) {
+    console.error('Error marking messages as read:', error);
+    return next(new errorHandler("Failed to mark messages as read", 500));
+  }
 });

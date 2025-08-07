@@ -37,7 +37,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
   if (!conversation) {
       conversation = new Conversation({
-          participants: [senderId, receiverId],
+          participants: [senderObjectId, receiverObjectId],
       });
       await conversation.save(); 
   }
@@ -102,7 +102,7 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         path: "messages",
         options: { sort: { createdAt: -1 } },
         perDocumentLimit: 1, 
-        populate: { path: 'readBy', select: '_id' },
+        populate: { path: 'readBy.userId', select: '_id' },
     })
     .sort({ updatedAt: -1 });
 
@@ -110,7 +110,8 @@ export const getConversations = asyncHandler(async (req, res, next) => {
     const conversationsWithUnreadCount = await Promise.all(conversations.map(async (conv) => {
         const unreadCount = await Message.countDocuments({
             conversationId: conv._id,
-            readBy: { $ne: userId }
+            senderId: { $ne: userId },
+            'readBy.userId': { $nin: [userId] }
         });
         return {
             ...conv.toObject(),
@@ -180,23 +181,17 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
     // Find all unread messages in this conversation
     const messages = await Message.find({
       conversationId,
-      senderId: { $ne: userId }
+      senderId: { $ne: userId },
+      'readBy.userId': { $nin: [userId] }
     });
 
     const updatedMessages = [];
     
     for (const message of messages) {
-      const isAlreadyRead = message.readBy?.some(
-        read => read.userId?.toString() === userId.toString()
-      );
-      
-      if (!isAlreadyRead) {
-        message.readBy = message.readBy || [];
-        message.readBy.push({ userId, readAt: new Date() });
-        message.isRead = true;
-        await message.save();
-        updatedMessages.push(message._id);
-      }
+      message.readBy.push({ userId, readAt: new Date() });
+      message.isRead = true;
+      await message.save();
+      updatedMessages.push(message._id);
     }
 
     // Emit socket event to notify senders
@@ -223,4 +218,6 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
     return next(new errorHandler("Failed to mark messages as read", 500));
   }
 });
+
+
 

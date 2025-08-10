@@ -50,6 +50,7 @@ io.on("connection", (socket) => {
       if (quotedMsg) quotedContent = quotedMsg.content;
     }
     const message = new Message({ content, senderId, replyTo, quotedContent, readBy: [senderId] });
+    console.log("!!!!!!!!!! NEW MESSAGE CREATED WITH readBy !!!!!!!!!", message);
     await message.save();
     io.to(conversationId).emit('newMessage', message);
   });

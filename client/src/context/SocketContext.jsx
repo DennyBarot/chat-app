@@ -60,7 +60,7 @@ export const SocketProvider = ({ children }) => {
       window.dispatchEvent(event);
       
       // Re-emit viewConversation on reconnection
-      const userId = socket.handshake.query.userId;
+      const userId = newSocket.handshake.query.userId;
       if (userId) {
         // Get current conversation from URL or state
         const pathParts = window.location.pathname.split('/');

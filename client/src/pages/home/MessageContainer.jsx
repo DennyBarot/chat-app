@@ -44,9 +44,10 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [selectedUser, conversations]);
 
   useEffect(() => {
-    if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
-      console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id })).then((action) => {
+    const markAsRead = async () => {
+      if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
+        const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+
         if (getMessageThunk.fulfilled.match(action) && action.payload) {
           const messages = Array.isArray(action.payload.responseData) ? action.payload.responseData : action.payload;
           if (messages && messages.length > 0) {
@@ -56,14 +57,15 @@ const MessageContainer = ({ onBack, isMobile }) => {
                 conversationId: conversationId, 
                 userId: userProfile?._id 
               });
-              dispatch(markMessagesReadThunk({ conversationId: conversationId })).then(() => {
-                dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-              });
+              await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
+              dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
             }
           }
         }
-      });
-    }
+      }
+    };
+
+    markAsRead();
   }, [selectedUser, location, dispatch, socket, userProfile?._id]);
 
   // Handle visibility change and focus events
@@ -271,4 +273,3 @@ const MessageContainer = ({ onBack, isMobile }) => {
 };
 
 export default MessageContainer;
-

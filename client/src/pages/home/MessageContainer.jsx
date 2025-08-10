@@ -44,17 +44,25 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [selectedUser, conversations]);
 
   useEffect(() => {
-    if (selectedConversationId && socket) {
-      // Emit viewConversation event to trigger real-time seen updates
-      socket.emit('viewConversation', { 
-        conversationId: selectedConversationId, 
-        userId: userProfile?._id 
+    if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
+      console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
+      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id })).then((action) => {
+        if (getMessageThunk.fulfilled.match(action) && action.payload) {
+          const messages = Array.isArray(action.payload.responseData) ? action.payload.responseData : action.payload;
+          if (messages && messages.length > 0) {
+            const conversationId = messages[0].conversationId;
+            if (conversationId && socket) {
+              socket.emit('viewConversation', { 
+                conversationId: conversationId, 
+                userId: userProfile?._id 
+              });
+              dispatch(markMessagesReadThunk({ conversationId: conversationId }));
+            }
+          }
+        }
       });
-      
-      // Use the markMessagesReadThunk instead of direct axios call
-      dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
     }
-  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
+  }, [selectedUser, location, dispatch, socket, userProfile?._id]);
 
   // Handle visibility change and focus events
   useEffect(() => {
@@ -90,14 +98,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
-
-  useEffect(() => {
-    if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
-      console.log("MessageContainer.jsx: Fetching messages for selectedUser:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-    }
-  }, [selectedUser, location]);
+  }, [selectedConversationId, dispatch, socket, userProfile?._id, messages]);
 
   useEffect(() => {
     if (!socket || !selectedUser || !selectedUser._id || !selectedConversationId) return;
@@ -268,3 +269,4 @@ const MessageContainer = ({ onBack, isMobile }) => {
 };
 
 export default MessageContainer;
+

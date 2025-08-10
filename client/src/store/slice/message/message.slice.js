@@ -15,10 +15,6 @@ export const messageSlice = createSlice({
   reducers: {
     setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
- builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
-      state.conversations = action.payload?.responseData ?? [];
-    });
-
       // Check if the new message already exists
       const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
       if (!messageExists) {
@@ -28,7 +24,6 @@ export const messageSlice = createSlice({
       else {
         state.messages = oldMessages.map(msg =>
           msg._id === action.payload._id ? action.payload : msg
-          
         );
       }
     },
@@ -53,16 +48,6 @@ export const messageSlice = createSlice({
     builder.addCase(sendMessageThunk.rejected, (state, action) => {
       state.buttonLoading = false;
       state.sendMessageStatus = 'rejected';
-    });
-      builder.addCase(markMessagesReadThunk.fulfilled, (state, action) => {
-      const { conversationId } = action.meta.arg;
-      const conversation = state.conversations.find(c => c._id === conversationId);
-      if (conversation) {
-        const updatedMessages = state.messages.map(msg => 
-          msg.conversationId === conversationId ? { ...msg, read: true } : msg
-        );
-        state.messages = updatedMessages;
-      }
     });
 
     // get messages

@@ -1,4 +1,4 @@
- import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -16,7 +16,7 @@ const UserSidebar = ({ onUserSelect }) => {
 
   const [searchValue, setSearchValue] = useState("");
   const dispatch = useDispatch();
-  const { userProfile } = useSelector((state) => state.userReducer);
+  const { userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
   const [users, setUsers] = useState([]);
 
@@ -36,7 +36,7 @@ const UserSidebar = ({ onUserSelect }) => {
   };
   const calculateUnreadCount = (conversation, currentUserId) => {
     if (!conversation?.messages || !Array.isArray(conversation.messages)) return 0;
-    
+
     return conversation.messages.filter(
       msg =>
         msg.senderId !== currentUserId && // Only count messages not sent by current user
@@ -115,38 +115,38 @@ const UserSidebar = ({ onUserSelect }) => {
     if (!searchValue) {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
-        const otherUser = conv.participants.find(
-          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
-        );
-        return {
-          ...otherUser,
-          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
-          conversationId: conv._id,
-        };
-      });
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
+            conversationId: conv._id,
+          };
+        });
       } else {
         setUsers([]);
       }
     } else {
       if (conversations.length > 0) {
         const usersList = conversations.map((conv) => {
-        const otherUser = conv.participants.find(
-          (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
-        );
-        return {
-          ...otherUser,
-          lastMessage: conv.messages[0] || null,
-          conversationId: conv._id,
-        };
-      });
-      const filteredUsers = usersList.filter((user) => {
-        return (
-          (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-          (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-          (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
-        );
-      });
-      setUsers(filteredUsers);
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages[0] || null,
+            conversationId: conv._id,
+          };
+        });
+        const filteredUsers = usersList.filter((user) => {
+          return (
+            (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
+          );
+        });
+        setUsers(filteredUsers);
       } else {
         setUsers([]);
       }
@@ -154,7 +154,7 @@ const UserSidebar = ({ onUserSelect }) => {
   }, [searchValue, conversations, userProfile]);
 
   return (
-   <div className=" h-full flex flex-col bg-white dark:bg-slate-900 shadow-lg z-10">
+    <div className=" h-full flex flex-col bg-white dark:bg-slate-900 shadow-lg z-10">
 
       {/* Header */}
       <div className="p-4 border-b border-slate-200 flex justify-between items-center">
@@ -208,7 +208,7 @@ const UserSidebar = ({ onUserSelect }) => {
         <div className="flex items-center gap-3">
           <div className="avatar">
             <div className="w-10 h-10 rounded-full ring-2 ring-indigo-500 ring-offset-2 overflow-hidden">
-              <img src={userProfile?.avatar} alt={userProfile?.fullName}   className="w-full h-full object-cover rounded-full"/>
+              <img src={userProfile?.avatar} alt={userProfile?.fullName} className="w-full h-full object-cover rounded-full" />
             </div>
           </div>
           <div className="truncate">
@@ -216,10 +216,10 @@ const UserSidebar = ({ onUserSelect }) => {
             <p className="text-xs text-slate-500 dark:text-slate-300">@{userProfile?.username}</p>
           </div>
         </div>
-        
+
         <div className="flex gap-2">
-          <button 
-            onClick={() => setIsAddUserModalOpen(true)} 
+          <button
+            onClick={() => setIsAddUserModalOpen(true)}
             className="p-2 rounded-full bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-100 hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors"
             title="Add new conversation"
           >
@@ -227,9 +227,9 @@ const UserSidebar = ({ onUserSelect }) => {
               <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
             </svg>
           </button>
-          
-          <button 
-            onClick={() => setIsModalOpen(true)} 
+
+          <button
+            onClick={() => setIsModalOpen(true)}
             className="p-2 rounded-full bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-100 hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors"
             title="Edit profile"
           >
@@ -237,9 +237,9 @@ const UserSidebar = ({ onUserSelect }) => {
               <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
             </svg>
           </button>
-          
-          <button 
-            onClick={handleLogout} 
+
+          <button
+            onClick={handleLogout}
             className="p-2 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
             title="Logout"
           >

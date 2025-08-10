@@ -50,7 +50,6 @@ io.on("connection", (socket) => {
       if (quotedMsg) quotedContent = quotedMsg.content;
     }
     const message = new Message({ content, senderId, replyTo, quotedContent, readBy: [senderId] });
-    console.log("!!!!!!!!!! NEW MESSAGE CREATED WITH readBy !!!!!!!!!", message);
     await message.save();
     io.to(conversationId).emit('newMessage', message);
   });
@@ -110,7 +109,6 @@ io.on("connection", (socket) => {
     try {
       const messages = await Message.find({
         conversationId,
-        senderId: { $ne: userId },
         readBy: { $ne: userId }
       });
 

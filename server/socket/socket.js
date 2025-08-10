@@ -107,11 +107,13 @@ io.on("connection", (socket) => {
 
   socket.on('viewConversation', async ({ conversationId, userId }) => {
     try {
+      console.log(`[viewConversation] Received for conversationId: ${conversationId}, userId: ${userId}`);
       const messages = await Message.find({
         conversationId,
         senderId: { $ne: userId },
         readBy: { $ne: userId }
       });
+      console.log(`[viewConversation] Found ${messages.length} unread messages.`);
 
       if (messages.length > 0) {
         const updatedMessages = [];
@@ -122,14 +124,20 @@ io.on("connection", (socket) => {
         }
 
         const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
+        console.log(`[viewConversation] Unique sender IDs to notify: ${uniqueSenderIds}`);
+
         uniqueSenderIds.forEach(senderId => {
           const senderSocketId = getSocketId(senderId);
+          console.log(`[viewConversation] Checking senderId: ${senderId}, found socketId: ${senderSocketId}`);
           if (senderSocketId) {
+            console.log(`[viewConversation] Emitting 'messagesRead' to socketId: ${senderSocketId}`);
             io.to(senderSocketId).emit('messagesRead', {
               messageIds: updatedMessages,
               readBy: userId,
               readAt: new Date()
             });
+          } else {
+            console.log(`[viewConversation] Could not find socketId for senderId: ${senderId}`);
           }
         });
       }

@@ -43,13 +43,13 @@ io.on("connection", (socket) => {
     io.emit("onlineUsers", Object.keys(userSocketMap));
   });
 
-  socket.on('sendMessage', async ({ content, senderId, replyTo }) => {
+  socket.on('sendMessage', async ({ content, senderId, replyTo, conversationId }) => {
     let quotedContent = '';
     if (replyTo) {
       const quotedMsg = await Message.findById(replyTo);
       if (quotedMsg) quotedContent = quotedMsg.content;
     }
-    const message = new Message({ content, senderId, replyTo, quotedContent });
+    const message = new Message({ content, senderId, replyTo, quotedContent, readBy: [senderId] });
     await message.save();
     io.to(conversationId).emit('newMessage', message);
   });
@@ -107,13 +107,11 @@ io.on("connection", (socket) => {
 
   socket.on('viewConversation', async ({ conversationId, userId }) => {
     try {
-      console.log(`[viewConversation] Received for conversationId: ${conversationId}, userId: ${userId}`);
       const messages = await Message.find({
         conversationId,
         senderId: { $ne: userId },
         readBy: { $ne: userId }
       });
-      console.log(`[viewConversation] Found ${messages.length} unread messages.`);
 
       if (messages.length > 0) {
         const updatedMessages = [];
@@ -124,20 +122,14 @@ io.on("connection", (socket) => {
         }
 
         const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
-        console.log(`[viewConversation] Unique sender IDs to notify: ${uniqueSenderIds}`);
-
         uniqueSenderIds.forEach(senderId => {
           const senderSocketId = getSocketId(senderId);
-          console.log(`[viewConversation] Checking senderId: ${senderId}, found socketId: ${senderSocketId}`);
           if (senderSocketId) {
-            console.log(`[viewConversation] Emitting 'messagesRead' to socketId: ${senderSocketId}`);
             io.to(senderSocketId).emit('messagesRead', {
               messageIds: updatedMessages,
               readBy: userId,
               readAt: new Date()
             });
-          } else {
-            console.log(`[viewConversation] Could not find socketId for senderId: ${senderId}`);
           }
         });
       }

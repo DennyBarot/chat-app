@@ -91,7 +91,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
           {formatTime(createdAt)}
         </div>
-        {isSentByMe && messageRead && isLastMessage && (
+        {isSentByMe && messageRead && (
           <div className="text-xs mt-1 text-right mr-1 text-green-600 font-semibold">
             {getRelativeTime(readTime)}
           </div>

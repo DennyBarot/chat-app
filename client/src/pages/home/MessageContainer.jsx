@@ -56,7 +56,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
                 conversationId: conversationId, 
                 userId: userProfile?._id 
               });
-              dispatch(markMessagesReadThunk({ conversationId: conversationId }));
+              dispatch(markMessagesReadThunk({ conversationId: conversationId })).then(() => {
+                dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+              });
             }
           }
         }

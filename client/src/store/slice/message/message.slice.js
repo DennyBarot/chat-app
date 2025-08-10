@@ -27,6 +27,21 @@ export const messageSlice = createSlice({
         );
       }
     },
+    messagesRead: (state, action) => {
+      const { messageIds, readBy, readAt } = action.payload;
+      if (!state.messages || !messageIds) return;
+
+      state.messages = state.messages.map(msg => {
+        if (messageIds.includes(msg._id)) {
+          const newReadBy = msg.readBy ? [...msg.readBy] : [];
+          if (!newReadBy.includes(readBy)) {
+            newReadBy.push(readBy);
+          }
+          return { ...msg, readBy: newReadBy, updatedAt: readAt };
+        }
+        return msg;
+      });
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(sendMessageThunk.pending, (state, action) => {
@@ -35,7 +50,6 @@ export const messageSlice = createSlice({
     });
     builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
       const oldMessages = state.messages ?? [];
-      // Support both {responseData: {...}} and direct message object
       const newMsg = action.payload?.responseData || action.payload;
       if (!newMsg?._id) return;
       const filteredOldMessages = oldMessages.filter(
@@ -55,7 +69,6 @@ export const messageSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
-      // Support both {responseData: [...]} and direct array
       const messages = Array.isArray(action.payload?.responseData)
         ? action.payload.responseData
         : Array.isArray(action.payload)
@@ -79,6 +92,6 @@ export const messageSlice = createSlice({
   },
 });
 
-export const {setNewMessage} = messageSlice.actions;
+export const {setNewMessage, messagesRead} = messageSlice.actions;
 
 export default messageSlice.reducer;

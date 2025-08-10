@@ -36,6 +36,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       content: message, // <-- fix here
       timestamp,
       replyTo,
+      readBy: [senderId],
   });
 
   // Populate replyTo for frontend

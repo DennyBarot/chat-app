@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Message from "../models/messageModel.js";
 import Conversation from "../models/conversationModel.js";
 import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
@@ -11,6 +12,11 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
   if (!senderId || !receiverId || !message) {
     return next(new errorHandler("All fields are required.", 400));
+  }
+
+  // Add validation for ObjectId
+  if (!mongoose.Types.ObjectId.isValid(senderId) || !mongoose.Types.ObjectId.isValid(receiverId)) {
+    return next(new errorHandler("Invalid sender or receiver ID.", 400));
   }
 
   // Validate replyTo message existence
@@ -110,7 +116,7 @@ export const getConversations = asyncHandler(async (req, res, next) => {
             $filter: {
               input: '$allMessagesForUnreadCount',
               as: 'msg',
-              cond: { $not: { $in: [userId, '$$msg.readBy'] } }
+              cond: { $not: { $in: [userId, { $ifNull: ['$msg.readBy', []] }] } }
             }
           }
         }

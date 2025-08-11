@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useSelector } from "react-redux";
 import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
 
-const Message = ({ messageDetails, onReply, isLastMessage }) => {
+const MessageComponent = ({ messageDetails, onReply, isLastInBlock }) => {
   const [showMenu, setShowMenu] = useState(false);
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
@@ -91,7 +91,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
           {formatTime(createdAt)}
         </div>
-        {isSentByMe && messageRead && isLastMessage && (
+        {isSentByMe && messageRead && isLastInBlock && (
           <div className="text-xs mt-1 text-right mr-1 text-green-600 font-semibold">
             {getRelativeTime(readTime)}
           </div>
@@ -112,5 +112,6 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
   );
 };
 
-export default Message;
+const Message = React.memo(MessageComponent);
 
+export default Message;

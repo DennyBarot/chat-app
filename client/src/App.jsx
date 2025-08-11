@@ -11,39 +11,41 @@ import ForgotPassword from './pages/authentication/ForgotPassword.jsx';
 import ResetPassword from './pages/authentication/ResetPassword.jsx';
 import ProtectedRoute from './components/ProtectedRoutes.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
+import { getToken } from './utils/authUtils.js';
+import { ROUTES } from './utils/routes.js';
 
 const router = createBrowserRouter([
   {
-    path: "/",
+    path: ROUTES.HOME,
     element: (
       <ProtectedRoute>
         <Home />
       </ProtectedRoute>
     ),
   },
-  { path: "/login", element: <Login /> },
-  { path: "/forgot-password", element: <ForgotPassword /> },
-  { path: "/reset-password", element: <ResetPassword /> },
-  { path: "/signup", element: <Signup /> },
+  { path: ROUTES.LOGIN, element: <Login /> },
+  { path: ROUTES.FORGOT_PASSWORD, element: <ForgotPassword /> },
+  { path: ROUTES.RESET_PASSWORD, element: <ResetPassword /> },
+  { path: ROUTES.SIGNUP, element: <Signup /> },
 ]);
 
 function App() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    (async () => {
-      if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/signup")) {
+    const fetchUserProfile = async () => {
+      if (window.location.pathname.startsWith(ROUTES.LOGIN) || window.location.pathname.startsWith(ROUTES.SIGNUP)) {
         return;
       }
-      const token =
-        document.cookie.split("; ").find((row) => row.startsWith("token="))?.split("=")[1] ||
-        localStorage.getItem("token");
+      const token = getToken();
       if (!token) {
         dispatch({ type: "user/setScreenLoadingFalse" });
         return;
       }
       await dispatch(getUserProfileThunk());
-    })();
+    };
+
+    fetchUserProfile();
   }, [dispatch]);
 
   return (

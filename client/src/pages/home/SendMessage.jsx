@@ -2,9 +2,8 @@ import React, { useState } from "react";
 import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
-import { axiosInstance } from "../../components/utilities/axiosInstance";
 
-const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
+const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
   const [message, setMessage] = useState("");
@@ -14,23 +13,16 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
     if (!message.trim()) return;
 
     setIsSubmitting(true);
-    const response = await axiosInstance.post(
-      `/api/v1/message/send/${selectedUser?._id}`,
-      {
+    await dispatch(
+      sendMessageThunk({
+        receiverId: selectedUser?._id,
         message,
-        timestamp: new Date().toISOString(),
-        replyTo: replyMessage?._id, // <-- Add this line
-      }
+        replyTo: replyMessage?._id,
+      })
     );
     setMessage("");
     setIsSubmitting(false);
-    if (replyMessage) onCancelReply(); // Optionally clear reply after sending
-  };
-
-  const handleSend = () => {
-    onSend(message, replyMessage?._id);
-    setMessage("");
-    onCancelReply();
+    if (replyMessage) onCancelReply();
   };
 
   return (
@@ -91,4 +83,3 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
 };
 
 export default SendMessage;
-

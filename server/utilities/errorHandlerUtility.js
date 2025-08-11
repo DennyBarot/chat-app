@@ -28,13 +28,4 @@ export const errorHandler = (err, req, res, next) => {
 
 // const errorMessage = `${new Date().toISOString()} - ${error.statusCode}: ${error.message}\n${error.stack}`; // Include stack trace for debugging
 
-//   fs.appendFileSync(logFilePath, errorMessage);
-// };
 
-// export const errorHandler = (err, req, res, next) => {
-//     logError(err); // Log the error
-//     res.status(err.statusCode || 500).json({
-//         success: false,
-//         message: err.message || 'Internal Server Error',
-//     });
-// };

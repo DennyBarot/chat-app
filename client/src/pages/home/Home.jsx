@@ -3,9 +3,7 @@ import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
 import {initializeSocket, setOnlineUsers,} from "../../store/slice/socket/socket.slice";
-import { setNewMessage } from "../../store/slice/message/message.slice";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
-import { getMessageThunk } from "../../store/slice/message/message.thunk";
 import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 
 const Home = () => {
@@ -14,10 +12,7 @@ const Home = () => {
     (state) => state.userReducer
   );
 
-  React.useEffect(() => {
-    console.log("Home.jsx: selectedUser changed:", selectedUser);
-  }, [selectedUser]);
-  const { socket, onlineUsers } = useSelector((state) => state.socketReducer);
+  const { socket } = useSelector((state) => state.socketReducer);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);
@@ -34,44 +29,21 @@ const Home = () => {
     if (!isAuthenticated || !userProfile?._id) return;
     dispatch(initializeSocket(userProfile._id));
     dispatch(getConversationsThunk());
-  }, [isAuthenticated, userProfile?._id]);
+  }, [isAuthenticated, userProfile?._id, dispatch]);
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("onlineUsers", (onlineUsers) => {
-      dispatch(setOnlineUsers(onlineUsers));
-    });
-    const handleNewMessage = (newMessage) => {
-      console.log("Home.jsx: Received newMessage socket event:", newMessage);
-      dispatch(setNewMessage(newMessage));
-      // Always fetch messages for the selected user for true real-time updates
-      if (selectedUser && selectedUser._id) {
-        console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);
-        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-      } else {
-        console.log("Home.jsx: No selectedUser or _id, not dispatching getMessageThunk");
-      }
-    };
-    socket.on("newMessage", handleNewMessage);
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-   
-    };
-  }, [socket, selectedUser, dispatch]);
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      console.warn("Home.jsx: getMessageThunk not dispatched, user not authenticated");
-      return;
-    }
-    if (selectedUser && selectedUser._id) {
-      console.log("Home.jsx: selectedUser changed, fetching messages for:", selectedUser._id);
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-    } else {
-      // Prevent dispatch if selectedUser or _id is missing
-      console.warn("Home.jsx: getMessageThunk not dispatched, selectedUser or _id missing", selectedUser);
-    }
-  }, [selectedUser, dispatch]);
+    const handleOnlineUsers = (onlineUsers) => {
+      dispatch(setOnlineUsers(onlineUsers));
+    };
+
+    socket.on("onlineUsers", handleOnlineUsers);
+
+    return () => {
+      socket.off("onlineUsers", handleOnlineUsers);
+    };
+  }, [socket, dispatch]);
 
   useEffect(() => {
     if (isMobile) {
@@ -81,32 +53,24 @@ const Home = () => {
     }
   }, [isMobile, selectedUser]);
 
-  const handleUserSelect = (user) => {
-    // This can be used if you want to handle user select locally
-    // But since selectedUser is from Redux, this might not be necessary
-  };
-
   const handleBackToSidebar = () => {
     dispatch(setSelectedUser(null));
   };
 
   return (
-  <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">
+      {(!isMobile || !showMessageContainer) && (
+        <div className={`${isMobile ? 'w-full' : 'w-80'} transition-all duration-300`}>
+          <UserSidebar />
+        </div>
+      )}
 
-  {(!isMobile || !showMessageContainer) && (
-    <div className={`${isMobile ? 'w-full' : 'w-80'} transition-all duration-300`}>
-      <UserSidebar />
+      {(!isMobile || showMessageContainer) && (
+        <div className={`flex-1 transition-all duration-300 ${isMobile ? 'w-full' : ''}`}>
+          <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />
+        </div>
+      )}
     </div>
-  )}
-
-  {(!isMobile || showMessageContainer) && (
-    <div className={`flex-1 transition-all duration-300 ${isMobile ? 'w-full' : ''}`}>
-      <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />
-    </div>
-  )}
-
-</div>
-
   );
 };
 

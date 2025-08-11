@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUsersThunk } from "../store/slice/user/user.thunk";
 import { selectAllUsers } from '../store/slice/user/user.slice';
@@ -6,8 +6,6 @@ import { selectAllUsers } from '../store/slice/user/user.slice';
 const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredUsers, setFilteredUsers] = useState([]);
-
   const allUsers = useSelector(selectAllUsers);
 
   useEffect(() => {
@@ -16,18 +14,17 @@ const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
     }
   }, [isOpen, dispatch, allUsers]);
 
-  useEffect(() => {
+  const filteredUsers = useMemo(() => {
     if (searchTerm.trim() === "") {
-      setFilteredUsers(allUsers);
+      return allUsers;
     } else {
       const lowerSearch = searchTerm.toLowerCase();
-      const filtered = allUsers.filter((user) => {
+      return allUsers.filter((user) => {
         return (
           (user.username?.toLowerCase() ?? "").includes(lowerSearch) ||
           (user.fullName?.toLowerCase() ?? "").includes(lowerSearch)
         );
       });
-      setFilteredUsers(filtered);
     }
   }, [searchTerm, allUsers]);
 

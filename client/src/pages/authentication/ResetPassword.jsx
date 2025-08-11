@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { axiosInstance } from '../../components/utilities/axiosInstance';
 
 const ResetPassword = () => {
     const navigate = useNavigate();
@@ -13,7 +13,6 @@ const ResetPassword = () => {
     const [message, setMessage] = useState('');
 
     useEffect(() => {
-        // Redirect authenticated users away from reset password page
         if (isAuthenticated) {
             navigate("/", { replace: true });
         }
@@ -27,8 +26,8 @@ const ResetPassword = () => {
         }
 
         try {
-            const response = await axios.post('https://chat-app-frontend-ngqc.onrender.com/api/v1/user/reset-password', {
-                email: emailParam, // Send email from URL parameter
+            const response = await axiosInstance.post('/api/v1/user/reset-password', {
+                email: emailParam,
                 password: newPassword,
             });
             setMessage(response.data.message);

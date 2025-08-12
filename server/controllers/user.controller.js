@@ -202,24 +202,10 @@ export const logout = asyncHandler(async (req, res, next) => {
 });
 
 export const getOtherUsers = asyncHandler(async (req, res, next) => {
-   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 50;
-  const skip = (page - 1) * limit;
-
-  const otherUsers = await User.find({ _id: { $ne: req.user._id } })
-  select('username fullName avatar createdAt')
-    .skip(skip)
-    .limit(limit)
-    .lean();
-  const total = await User.countDocuments({ _id: { $ne: req.user._id } });
-
-
+  const otherUsers = await User.find({ _id: { $ne: req.user._id } });
   res.status(200).json({
     success: true,
     responseData: otherUsers,
-    currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalUsers: total
   });
 });
 

@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUserProfileThunk } from '../store/slice/user/user.thunk';
-import { toast } from 'react-hot-toast';
-
 
 const ProfileUpdateModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
@@ -20,18 +18,6 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
       setAvatar(userProfile.avatar || '');
     }
   }, [userProfile, isOpen]);
-useEffect(() => {
-  if (!isOpen) {
-    setFullName('');
-    setUsername('');
-    setAvatar('');
-    setIsUploading(false);
-  } else if (userProfile) {
-    setFullName(userProfile.fullName || '');
-    setUsername(userProfile.username || '');
-    setAvatar(userProfile.avatar || '');
-  }
-}, [isOpen, userProfile]);
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
@@ -50,19 +36,11 @@ useEffect(() => {
     setAvatar('');
   };
 
- const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (!fullName || !username) {
-    toast.error('Full Name and Username are required');
-    return;
-  }
-  try {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     await dispatch(updateUserProfileThunk({ fullName, username, avatar }));
     onClose();
-  } catch (error) {
-    toast.error('Failed to update profile');
-  }
-};
+  };
 
   if (!isOpen) return null;
 
@@ -86,7 +64,7 @@ useEffect(() => {
           <div className="relative group">
             {avatar ? (
               <img 
-                src={avatar}
+                src={avatar} 
                 alt="Profile avatar" 
                 className="w-28 h-28 rounded-full object-cover border-4 border-indigo-100 shadow-md transition-all duration-300" 
               />

@@ -24,52 +24,71 @@ export const sendMessageThunk = createAsyncThunk(
 );
 
 export const getMessageThunk = createAsyncThunk(
-  "message/get",
+  'message/get',
   async ({ otherParticipantId }, { rejectWithValue }) => {
     if (!otherParticipantId) {
-      const errorOutput = "otherParticipantId is required";
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      const err = 'otherParticipantId is required';
+      toast.error(err);
+      return rejectWithValue(err);
     }
     try {
       const response = await axiosInstance.get(`/api/v1/message/get-messages/${otherParticipantId}`);
-      return response.data;
+      // Dedupe and validate messages (your backend should, but client defense is good)
+      const messages = Array.isArray(response.data?.responseData)
+        ? response.data.responseData
+        : Array.isArray(response.data)
+        ? response.data
+        : [];
+      return messages.filter(msg => msg?._id && msg?.content); // Basic validation
     } catch (error) {
-      console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      const errMessage = error?.response?.data?.errMessage || error.message || 'Failed to load messages';
+      console.error('[getMessageThunk]', error);
+      toast.error(errMessage);
+      return rejectWithValue([]); // Return empty array to prevent null state
     }
   }
 );
 
 export const getConversationsThunk = createAsyncThunk(
-  "message/getConversations",
+  'message/getConversations',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get("/api/v1/message/get-conversations");
-      return response.data;
+      const response = await axiosInstance.get('/api/v1/message/get-conversations');
+      // Basic validation and cleaning
+      const conversations = Array.isArray(response.data?.responseData)
+        ? response.data.responseData
+        : Array.isArray(response.data)
+        ? response.data
+        : [];
+      return conversations.filter(conv => conv?._id); // Remove null/undefined
     } catch (error) {
-      console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      const errMessage = error?.response?.data?.errMessage || error.message || 'Failed to load conversations';
+      console.error('[getConversationsThunk]', error);
+      toast.error(errMessage);
+      return rejectWithValue([]); // Return empty array to prevent null state
     }
   }
 );
 
+
 export const markMessagesReadThunk = createAsyncThunk(
-  "message/markRead",
+  'message/markRead',
   async ({ conversationId }, { dispatch, rejectWithValue }) => {
+    if (!conversationId) {
+      const err = 'conversationId is required';
+      toast.error(err);
+      return rejectWithValue(err);
+    }
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
-      dispatch(getConversationsThunk());
+      // Refresh conversations to update unread counts
+      await dispatch(getConversationsThunk());
       return response.data;
     } catch (error) {
-      console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      const errMessage = error?.response?.data?.errMessage || error.message || 'Failed to mark as read';
+      console.error('[markMessagesReadThunk]', error);
+      toast.error(errMessage);
+      return rejectWithValue(errMessage);
     }
   }
 );

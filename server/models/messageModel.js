@@ -10,8 +10,12 @@ const messageSchema = new Schema(
   conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation', index: true }, // for group/one-to-one
   timestamp: { type: Date, default: Date.now },
   replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
-  quotedContent: { type: String },
+  quotedContent: { type: String, maxlength: 200, },
   readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+   reactions: [{
+      userId: { type: Schema.Types.ObjectId, ref: "User" },
+      emoji: { type: String, required: true }
+    }],
   },
   { timestamps: true }
 );

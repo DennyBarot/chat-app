@@ -13,14 +13,23 @@ export const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
-    addMessage: (state, action) => {
-      if (!action.payload) return; // Handle undefined or null payload
-      state.messages = [...(state.messages ?? []), action.payload];
+    setNewMessage: (state, action) => {
+      const oldMessages = state.messages ?? [];
+      // Check if the new message already exists
+      const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
+      if (!messageExists) {
+        state.messages = [...oldMessages, action.payload];
+      }
+      // If message exists, replace it to update
+      else {
+        state.messages = oldMessages.map(msg =>
+          msg._id === action.payload._id ? action.payload : msg
+        );
+      }
     },
     messagesRead: (state, action) => {
-      if (!action.payload || !state.messages) return; // Handle undefined or null payload or messages
       const { messageIds, readBy, readAt } = action.payload;
-      if (!messageIds) return;
+      if (!state.messages || !messageIds) return;
 
       state.messages = state.messages.map(msg => {
         if (messageIds.includes(msg._id)) {
@@ -32,15 +41,6 @@ export const messageSlice = createSlice({
         }
         return msg;
       });
-    },
-    updateConversation: (state, action) => {
-      if (!action.payload || !action.payload.conversationId || !action.payload.newMessage) return; // Handle undefined or null payload or properties
-      const { conversationId, newMessage } = action.payload;
-      const conversationIndex = state.conversations.findIndex(conv => conv._id === conversationId);
-      if (conversationIndex !== -1) {
-        state.conversations[conversationIndex].messages.unshift(newMessage);
-        state.conversations[conversationIndex].updatedAt = new Date().toISOString();
-      }
     }
   },
   extraReducers: (builder) => {
@@ -49,19 +49,13 @@ export const messageSlice = createSlice({
       state.sendMessageStatus = 'pending';
     });
     builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
-      if (!action.payload) return; // Handle undefined or null payload
+      const oldMessages = state.messages ?? [];
       const newMsg = action.payload?.responseData || action.payload;
       if (!newMsg?._id) return;
-
-      const existingMessageIndex = (state.messages ?? []).findIndex(msg => msg._id === newMsg._id);
-
-      if (existingMessageIndex !== -1) {
-        // Replace existing message (e.g., placeholder with real message from server)
-        state.messages[existingMessageIndex] = newMsg;
-      } else {
-        // Add new message
-        state.messages = [...(state.messages ?? []), newMsg];
-      }
+      const filteredOldMessages = oldMessages.filter(
+        (msg) => msg._id !== newMsg._id
+      );
+      state.messages = [...filteredOldMessages, newMsg];
       state.buttonLoading = false;
       state.sendMessageStatus = 'fulfilled';
     });
@@ -98,6 +92,6 @@ export const messageSlice = createSlice({
   },
 });
 
-export const {addMessage, messagesRead, updateConversation} = messageSlice.actions;
+export const {setNewMessage, messagesRead} = messageSlice.actions;
 
 export default messageSlice.reducer;

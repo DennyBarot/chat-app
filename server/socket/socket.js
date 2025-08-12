@@ -5,10 +5,11 @@ import { Server } from "socket.io";
 import http from "http";
 import express from "express";
 import Message from "../models/messageModel.js";
-import { trimTrailingSlash } from "../utilities/stringUtils.js";
 
 const app = express();
 const server = http.createServer(app);
+
+const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
 
 const io = new Server(server, {
   cors: {
@@ -27,31 +28,30 @@ export { io, app, server, getSocketId, userSocketMap };
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
+  console.log("Socket connected:", socket.id, "UserId:", userId);
 
   if (!userId) return;
 
   userSocketMap[userId] = socket.id;
+  console.log("UserSocketMap updated:", userSocketMap);
 
   io.emit("onlineUsers", Object.keys(userSocketMap))
 
   socket.on("disconnect", () => {
     delete userSocketMap[userId];
+    console.log("Socket disconnected:", socket.id, "UserId:", userId);
     io.emit("onlineUsers", Object.keys(userSocketMap));
   });
 
   socket.on('sendMessage', async ({ content, senderId, replyTo, conversationId }) => {
-    try {
-      let quotedContent = '';
-      if (replyTo) {
-        const quotedMsg = await Message.findById(replyTo);
-        if (quotedMsg) quotedContent = quotedMsg.content;
-      }
-      const message = new Message({ content, senderId, replyTo, quotedContent, readBy: [senderId] });
-      await message.save();
-      io.to(conversationId).emit('newMessage', message);
-    } catch (error) {
-      console.error('Error sending message:', error);
+    let quotedContent = '';
+    if (replyTo) {
+      const quotedMsg = await Message.findById(replyTo);
+      if (quotedMsg) quotedContent = quotedMsg.content;
     }
+    const message = new Message({ content, senderId, replyTo, quotedContent, readBy: [senderId] });
+    await message.save();
+    io.to(conversationId).emit('newMessage', message);
   });
 
   socket.on('markMessageRead', async ({ messageId, userId, conversationId }) => {
@@ -77,31 +77,29 @@ io.on("connection", (socket) => {
 
   socket.on('markConversationRead', async ({ conversationId, userId }) => {
     try {
-      const messagesToUpdate = await Message.find({
+      const messages = await Message.find({
         conversationId,
         readBy: { $ne: userId }
       });
 
-      if (messagesToUpdate.length > 0) {
-        const messageIds = messagesToUpdate.map(msg => msg._id);
-
-        await Message.updateMany(
-          { _id: { $in: messageIds } },
-          { $addToSet: { readBy: userId } }
-        );
-
-        const uniqueSenderIds = [...new Set(messagesToUpdate.map(msg => msg.senderId.toString()))];
-        uniqueSenderIds.forEach(senderId => {
-          const senderSocketId = getSocketId(senderId);
-          if (senderSocketId) {
-            io.to(senderSocketId).emit('messagesRead', {
-              messageIds,
-              readBy: userId,
-              readAt: new Date()
-            });
-          }
-        });
+      const updatedMessages = [];
+      for (const message of messages) {
+        message.readBy.push(userId);
+        await message.save();
+        updatedMessages.push(message._id);
       }
+
+      const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
+      uniqueSenderIds.forEach(senderId => {
+        const senderSocketId = getSocketId(senderId);
+        if (senderSocketId) {
+          io.to(senderSocketId).emit('messagesRead', {
+            messageIds: updatedMessages,
+            readBy: userId,
+            readAt: new Date()
+          });
+        }
+      });
     } catch (error) {
       console.error('Error marking conversation as read:', error);
     }
@@ -109,28 +107,25 @@ io.on("connection", (socket) => {
 
   socket.on('viewConversation', async ({ conversationId, userId }) => {
     try {
-      const messagesToUpdate = await Message.find({
+      const messages = await Message.find({
         conversationId,
         readBy: { $ne: userId }
       });
 
-      if (messagesToUpdate.length > 0) {
-        const messageIds = messagesToUpdate.map(msg => msg._id);
+      if (messages.length > 0) {
+        const updatedMessages = [];
+        for (const message of messages) {
+          message.readBy.push(userId);
+          await message.save();
+          updatedMessages.push(message._id);
+        }
 
-        await Message.updateMany(
-          { _id: { $in: messageIds } },
-          { $addToSet: { readBy: userId } }
-        );
-
-        const participantsToNotify = new Set();
-        participantsToNotify.add(userId.toString());
-        messagesToUpdate.forEach(msg => participantsToNotify.add(msg.senderId.toString()));
-
-        participantsToNotify.forEach(participantId => {
-          const socketId = getSocketId(participantId);
-          if (socketId) {
-            io.to(socketId).emit('messagesRead', {
-              messageIds,
+        const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
+        uniqueSenderIds.forEach(senderId => {
+          const senderSocketId = getSocketId(senderId);
+          if (senderSocketId) {
+            io.to(senderSocketId).emit('messagesRead', {
+              messageIds: updatedMessages,
               readBy: userId,
               readAt: new Date()
             });

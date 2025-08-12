@@ -31,7 +31,8 @@ const ForgotPassword = () => {
  
    const handlePasswordForgot = async () => {  
     try {
-    await dispatch(forgotPasswordUserThunk(EmailData));
+    const response = await dispatch(forgotPasswordUserThunk(EmailData));
+    console.log("Response from dispatch:", response); 
     }
     catch (error) {
       console.error("Error during password reset:", error); 

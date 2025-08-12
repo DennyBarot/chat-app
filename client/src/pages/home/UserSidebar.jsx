@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -8,47 +8,50 @@ import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import ThemeToggle from "../../components/ThemeToggle";
-import { updateConversation } from "../../store/slice/message/message.slice";
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
+
   const [searchValue, setSearchValue] = useState("");
   const dispatch = useDispatch();
-  const { userProfile } = useSelector((state) => state.userReducer);
+  const { userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
-  const socket = useSocket();
+  const [users, setUsers] = useState([]);
 
-  useEffect(() => {
-    document.body.classList.toggle("modal-open", isModalOpen || isAddUserModalOpen);
-  }, [isModalOpen, isAddUserModalOpen]);
+  const socket = useSocket();
 
   const handleLogout = async () => {
     await dispatch(logoutUserThunk());
   };
 
   const handleSelectUser = (user) => {
+    // console.log("UserSidebar: User selected:", user);
     dispatch(setSelectedUser(user));
     setIsAddUserModalOpen(false);
     if (onUserSelect) {
       onUserSelect(user);
     }
   };
-
   const calculateUnreadCount = (conversation, currentUserId) => {
     if (!conversation?.messages || !Array.isArray(conversation.messages)) return 0;
+
     return conversation.messages.filter(
-      (msg) =>
-        msg.senderId !== currentUserId &&
-        (!msg.readBy || !msg.readBy.some((u) => u._id === currentUserId))
+      msg =>
+        msg.senderId !== currentUserId && // Only count messages not sent by current user
+        (!msg.readBy || !msg.readBy.some(u => u._id === currentUserId))
     ).length;
   };
 
   useEffect(() => {
-    if (!socket || !userProfile?._id) return;
+    if (!socket || !userProfile?._id) {
+      return;
+    }
 
     const handleNewMessage = (data) => {
-      dispatch(updateConversation(data));
+      // Refetch conversations to update unread counts
+      dispatch(getConversationsThunk());
     };
 
     socket.on("newMessage", handleNewMessage);
@@ -65,50 +68,90 @@ const UserSidebar = ({ onUserSelect }) => {
   }, [dispatch, socket, userProfile]);
 
   useEffect(() => {
-    if (userProfile?._id) {
-      dispatch(getConversationsThunk());
+    if (!userProfile?._id) {
+      return;
     }
+    dispatch(getConversationsThunk());
   }, [dispatch, userProfile]);
 
-  const users = useMemo(() => {
-    if (!userProfile?._id) return [];
-
-    let usersList = conversations
-      .map((conv) => {
-        if (!Array.isArray(conv.participants)) return null;
+  useEffect(() => {
+    if (!userProfile?._id) {
+      setUsers([]);
+      return;
+    }
+    if (conversations.length > 0) {
+      // Map users from conversations
+      let usersList = conversations.map((conv) => {
+        if (!Array.isArray(conv.participants)) {
+          return null;
+        }
         const otherUser = conv.participants.find(
-          (participant) => participant?._id !== userProfile._id
+          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
         );
-        if (!otherUser) return null;
-
+        if (!otherUser) {
+          return null;
+        }
         return {
           ...otherUser,
-          lastMessage: conv.messages?.[0] || null,
+          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
           conversationId: conv._id,
           updatedAt: conv.updatedAt,
           unreadCount: calculateUnreadCount(conv, userProfile._id),
         };
-      })
-      .filter(Boolean);
-
-    if (searchValue) {
-      usersList = usersList.filter((user) => {
-        const search = searchValue.toLowerCase();
-        return (
-          user.username?.toLowerCase().includes(search) ||
-          user.fullName?.toLowerCase().includes(search) ||
-          user.email?.toLowerCase().includes(search)
-        );
+      }).filter(Boolean);
+      // Sort users by last message time (most recent first)
+      usersList = usersList.sort((a, b) => {
+        const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
+        const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
+        return new Date(bTime) - new Date(aTime);
       });
+      setUsers(usersList);
+    } else {
+      setUsers([]);
     }
+  }, [conversations, userProfile]);
 
-    return usersList.sort((a, b) => {
-      const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
-      const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
-      return new Date(bTime) - new Date(aTime);
-    });
-  }, [conversations, userProfile, searchValue]);
-
+  useEffect(() => {
+    if (!searchValue) {
+      if (conversations.length > 0) {
+        const usersList = conversations.map((conv) => {
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
+            conversationId: conv._id,
+          };
+        });
+      } else {
+        setUsers([]);
+      }
+    } else {
+      if (conversations.length > 0) {
+        const usersList = conversations.map((conv) => {
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages[0] || null,
+            conversationId: conv._id,
+          };
+        });
+        const filteredUsers = usersList.filter((user) => {
+          return (
+            (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
+          );
+        });
+        setUsers(filteredUsers);
+      } else {
+        setUsers([]);
+      }
+    }
+  }, [searchValue, conversations, userProfile]);
 
   return (
     <div className=" h-full flex flex-col bg-white dark:bg-slate-900 shadow-lg z-10">

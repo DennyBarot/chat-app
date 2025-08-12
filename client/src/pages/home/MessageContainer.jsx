@@ -11,7 +11,7 @@ import SendMessage from "./SendMessage";
 import Message from "./Message";
 import DateSeparator from "./DateSeparator";
 import User from "./User";
-import { getAvatar } from "../../utils/stringUtils";
+import { getAvatar } from "../../utils/avatar";
 import Spinner from "../../components/Spinner";
 import ErrorBoundary from "../../components/ErrorBoundary";
 

@@ -11,7 +11,10 @@ import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
 import ThemeToggle from "../../components/ThemeToggle";
 
-import { getAvatar } from "../../utils/stringUtils";
+// Utility function to generate fallback avatar with initials
+const getAvatar = (avatar, name) =>
+  avatar ||
+  `https://ui-avatars.com/api/?name=${encodeURIComponent(name || "U")}&background=random`;
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);

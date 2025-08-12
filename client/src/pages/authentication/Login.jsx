@@ -99,7 +99,7 @@ const Login = () => {
             </div>
 
             <div className="text-sm text-center text-gray-400">
-               Don&apos;t have an account?
+               Don't have an account?
                <Link to="/signup" className="text-blue-400 hover:underline ml-1">
                   Sign Up
                </Link>
@@ -116,4 +116,3 @@ const Login = () => {
 };
 
 export default Login;
-

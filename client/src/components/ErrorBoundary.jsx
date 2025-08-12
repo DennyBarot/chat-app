@@ -24,7 +24,7 @@ class ErrorBoundary extends React.Component {
       return (
         <div className="flex flex-col items-center justify-center h-full text-red-600 dark:text-red-400 p-4">
           <h2 className="text-xl font-bold mb-2">Something went wrong.</h2>
-          <p className="text-center mb-4">We&apos;re sorry for the inconvenience. Please try again later.</p>
+          <p className="text-center mb-4">We're sorry for the inconvenience. Please try again later.</p>
           {this.props.showDetails && this.state.error && (
             <details className="whitespace-pre-wrap text-sm text-red-500 dark:text-red-300">
               {this.state.error && this.state.error.toString()}

@@ -1,5 +1,4 @@
 import React from "react";
-import PropTypes from 'prop-types';
 
 const DateSeparator = ({ label }) => {
   return (
@@ -9,10 +8,6 @@ const DateSeparator = ({ label }) => {
       </span>
     </div>
   );
-};
-
-DateSeparator.propTypes = {
-  label: PropTypes.string.isRequired,
 };
 
 export default DateSeparator;

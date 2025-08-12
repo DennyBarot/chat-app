@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import PropTypes from "prop-types";
 import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
-import { sendMessageThunk } from "../../store/slice/message/message.thunk";
+import { sendMessageThunk, addMessage } from "../../store/slice/message/message.thunk";
 import { toast } from "react-hot-toast";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
@@ -23,7 +23,16 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     if (!message.trim() || !selectedUser?._id || !userProfile?._id) return;
     if (isSubmitting) return;
 
-    
+    const tempId = Date.now().toString();
+    const optimisticMessage = {
+      _id: tempId,
+      senderId: userProfile._id,
+      receiverId: selectedUser._id,
+      content: message,
+      createdAt: new Date().toISOString(),
+      replyTo: replyMessage?._id,
+      readBy: [userProfile._id],
+    };
 
     // Optimistically add to local state (optional, if your UI supports it)
     // dispatch(addMessage(optimisticMessage));

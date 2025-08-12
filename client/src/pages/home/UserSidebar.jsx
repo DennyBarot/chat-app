@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import PropTypes from "prop-types";
 import { useDispatch, useSelector } from "react-redux";
 import debounce from "lodash.debounce";
-import { useSocket } from "../../context/SocketConfig";
+import { useSocket } from "../../context/SocketContext";
 import { logoutUserThunk } from "../../store/slice/user/user.thunk";
 import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { updateConversation, setSelectedUser } from "../../store/slice/message/message.slice";

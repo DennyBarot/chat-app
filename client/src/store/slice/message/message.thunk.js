@@ -12,7 +12,7 @@ export const sendMessageThunk = createAsyncThunk(
         replyTo,
       });
       // After sending message, refresh conversations
-      dispatch(getConversationsThunk());
+      await dispatch(getConversationsThunk());
       return response.data;
     } catch (error) {
       console.error(error);
@@ -44,7 +44,7 @@ export const getMessageThunk = createAsyncThunk(
       const errMessage = error?.response?.data?.errMessage || error.message || 'Failed to load messages';
       console.error('[getMessageThunk]', error);
       toast.error(errMessage);
-      return rejectWithValue(errMessage);
+      return rejectWithValue([]); // Return empty array to prevent null state
     }
   }
 );
@@ -65,7 +65,7 @@ export const getConversationsThunk = createAsyncThunk(
       const errMessage = error?.response?.data?.errMessage || error.message || 'Failed to load conversations';
       console.error('[getConversationsThunk]', error);
       toast.error(errMessage);
-      return rejectWithValue(errMessage);
+      return rejectWithValue([]); // Return empty array to prevent null state
     }
   }
 );
@@ -82,7 +82,7 @@ export const markMessagesReadThunk = createAsyncThunk(
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
       // Refresh conversations to update unread counts
-      dispatch(getConversationsThunk());
+      await dispatch(getConversationsThunk());
       return response.data;
     } catch (error) {
       const errMessage = error?.response?.data?.errMessage || error.message || 'Failed to mark as read';

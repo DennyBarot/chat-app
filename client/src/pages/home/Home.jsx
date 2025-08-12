@@ -7,7 +7,7 @@ import { initializeSocket, setOnlineUsers } from "../../store/slice/socket/socke
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 // import Spinner from "../../components/Spinner";
-// import ErrorBoundary from "../../components/ErrorBoundary";
+import ErrorBoundary from "../../components/ErrorBoundary";
 
 
 // Custom hook for window size (optional, but cleaner)
@@ -35,8 +35,7 @@ const Home = () => {
     (state) => state.userReducer
   );
   const { socket } = useSelector((state) => state.socketReducer);
-  const [isLoading, setIsLoading] = useState(true);
-  const [socketReady, setSocketReady] = useState(false);
+  
   const { width } = useWindowSize();
   const isMobile = width <= 768;
   const [showMessageContainer, setShowMessageContainer] = useState(false);
@@ -44,10 +43,9 @@ const Home = () => {
   // Initialize socket and load conversations
   useEffect(() => {
     if (!isAuthenticated || !userProfile?._id) return;
-    setIsLoading(true);
     dispatch(initializeSocket(userProfile._id))
-      .then(() => setSocketReady(true))
-      .finally(() => setIsLoading(false));
+      .then(() => {})
+      .finally(() => {});
     dispatch(getConversationsThunk());
   }, [isAuthenticated, userProfile?._id, dispatch]);
 

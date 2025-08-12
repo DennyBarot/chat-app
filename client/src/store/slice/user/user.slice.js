@@ -14,7 +14,7 @@ import {
 const getInitialSelectedUser = () => {
   try {
     return JSON.parse(localStorage.getItem('selectedUser')) || null;
-  } catch (error) {
+  } catch {
     localStorage.removeItem('selectedUser');
     return null;
   }
@@ -81,7 +81,7 @@ export const userSlice = createSlice({
         state.registerStatus = 'pending';
         state.lastRegisterError = null;
       })
-      .addCase(registerUserThunk.fulfilled, (state, action) => {
+      .addCase(registerUserThunk.fulfilled, (state) => {
         state.registerStatus = 'fulfilled';
         // Optionally auto-login here if your backend returns user/token
       })
@@ -134,7 +134,7 @@ export const userSlice = createSlice({
         state.userProfile = action.payload?.responseData || null;
         state.isAuthenticated = true;
       })
-      .addCase(getUserProfileThunk.rejected, (state, action) => {
+      .addCase(getUserProfileThunk.rejected, (state) => {
         state.profileStatus = 'rejected';
         state.isProfileLoading = false;
         state.isAuthenticated = false;

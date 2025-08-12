@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { forgotPasswordUserThunk } from "../../store/slice/user/user.thunk";
-import PropTypes from "prop-types";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -71,10 +70,6 @@ const ForgotPassword = () => {
       </div>
     </div>
   );
-};
-
-ForgotPassword.propTypes = {
-  // Add if you accept props
 };
 
 export default ForgotPassword;

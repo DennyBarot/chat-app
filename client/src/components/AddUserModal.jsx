@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import PropTypes from 'prop-types';
 import { getAllUsersThunk } from "../store/slice/user/user.thunk";
 import { selectAllUsers } from '../store/slice/user/user.slice';
 
@@ -106,6 +107,12 @@ const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
       </div>
     </div>
   );
+};
+
+AddUserModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSelectUser: PropTypes.func.isRequired
 };
 
 export default AddUserModal;

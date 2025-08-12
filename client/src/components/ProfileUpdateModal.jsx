@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import PropTypes from 'prop-types';
 import { updateUserProfileThunk } from '../store/slice/user/user.thunk';
 import { toast } from 'react-hot-toast';
-
 
 const ProfileUpdateModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
@@ -59,7 +59,7 @@ useEffect(() => {
   try {
     await dispatch(updateUserProfileThunk({ fullName, username, avatar }));
     onClose();
-  } catch (error) {
+  } catch {
     toast.error('Failed to update profile');
   }
 };
@@ -189,4 +189,10 @@ useEffect(() => {
   );
 };
 
+ProfileUpdateModal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
 export default ProfileUpdateModal;
+

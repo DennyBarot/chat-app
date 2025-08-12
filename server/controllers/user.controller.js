@@ -12,12 +12,6 @@ export const register = asyncHandler(async (req, res, next) => {
     return next(errorHandler(400, "All fields are required."));
   }
 
-  // Validate gender
-  const validGenders = ["male", "female"];
-  if (!validGenders.includes(gender.toLowerCase())) {
-    return next(errorHandler(400, "Invalid gender provided. Must be 'male' or 'female'."));
-  }
-
   const existingUserByEmail = await User.findOne({ email });
   if (existingUserByEmail) {
     return next(errorHandler(400, "User with this email already exists"));
@@ -175,11 +169,6 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   }
 
   const updatedUser = await User.findByIdAndUpdate(userId, updateData, { new: true });
-
-  console.log('=== UPDATE PROFILE DEBUG ===');
-  console.log('User ID:', userId);
-  console.log('Update Data:', updateData);
-  console.log('Updated User:', updatedUser);
 
   res.status(200).json({
     success: true,

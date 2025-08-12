@@ -10,14 +10,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const senderId = req.user._id;
   let { message, replyTo } = req.body;
 
-  console.log('=== SEND MESSAGE DEBUG ===');
-  console.log('Receiver ID:', receiverId);
-  console.log('Sender ID:', senderId);
-  console.log('Message:', message);
-  console.log('Reply To:', replyTo);
-  console.log('User from auth:', req.user);
-  console.log('Body:', req.body);
-
   if (!senderId || !receiverId || !message) {
     return next(new errorHandler("All fields are required.", 400));
   }

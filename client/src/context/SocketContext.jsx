@@ -58,14 +58,8 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("messageRead", onMessageRead);
     newSocket.on("messagesRead", onMessagesRead);
 
-    // Reconnection logic
+    // Reconnection logic - just handle the reconnect event
     newSocket.io.on("reconnect", handleReconnect);
-      
-      // Re-emit viewConversation on reconnection
-     
-        
-           socket.emit('viewConversation', { conversationId, userId: userProfile._id });
-      
 
     setSocket(newSocket);
 

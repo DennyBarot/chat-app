@@ -4,6 +4,7 @@ import {
   sendMessageThunk,
   getConversationsThunk,
   markMessagesReadThunk,
+
 } from "./message.thunk";
 
 const initialState = {
@@ -114,9 +115,16 @@ export const messageSlice = createSlice({
       }
     }
   },
+  // in message.slice.js reducers:
+updateConversation: (state, { payload }) => {
+  const index = state.conversations.findIndex(c => c._id === payload._id);
+  if (index !== -1) {
+    state.conversations[index] = payload;
+  }
+}
 
 
 });
 
-export const { setNewMessage, messagesRead,updateReactions } = messageSlice.actions;
+export const { setNewMessage, messagesRead,updateReactions,updateConversation } = messageSlice.actions;
 export default messageSlice.reducer;

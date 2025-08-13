@@ -8,7 +8,7 @@ import {
   forgotPasswordUserThunk,
   getAllUsersThunk,
   updateUserProfileThunk,
-} from './user.thunk';
+} from './user.thunk.js';
 
 const getInitialSelectedUser = () => {
   try {

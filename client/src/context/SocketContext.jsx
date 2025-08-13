@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
 
@@ -70,7 +70,7 @@ export const SocketProvider = ({ children }) => {
     setSocket(newSocket);
 
     return () => {
-      isMounted = false;
+      isCleanup = true;
       newSocket.off("messageRead", onMessageRead);
       newSocket.off("messagesRead", onMessagesRead);
       newSocket.io.off("reconnect", handleReconnect);

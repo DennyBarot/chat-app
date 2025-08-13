@@ -192,19 +192,29 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         )}
 
         {/* Reactions */}
-        {[...(messageDetails?.reactions?.entries() || [])].length > 0 && (
-          <div className="flex items-center gap-1 mt-1">
-            {[...(messageDetails?.reactions?.entries() || [])].map(([emoji, userIds]) => (
-              <span
-                key={emoji}
-                className="text-xs bg-slate-100 dark:bg-slate-700 rounded-full px-2 py-1 flex items-center gap-1"
-                title={getReactionUsers(emoji) ? `${emoji} (${getReactionUsers(emoji)})` : emoji}
-              >
-                {emoji} {userIds?.length}
-              </span>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const reactions = messageDetails?.reactions;
+          if (!reactions) return null;
+          
+          // Handle both Map and plain object formats
+          const entries = reactions instanceof Map 
+            ? [...reactions.entries()] 
+            : Object.entries(reactions || {});
+          
+          return entries.length > 0 ? (
+            <div className="flex items-center gap-1 mt-1">
+              {entries.map(([emoji, userIds]) => (
+                <span
+                  key={emoji}
+                  className="text-xs bg-slate-100 dark:bg-slate-700 rounded-full px-2 py-1 flex items-center gap-1"
+                  title={getReactionUsers(emoji) ? `${emoji} (${getReactionUsers(emoji)})` : emoji}
+                >
+                  {emoji} {Array.isArray(userIds) ? userIds.length : 0}
+                </span>
+              ))}
+            </div>
+          ) : null;
+        })()}
       </div>
 
       {/* My avatar (when message is sent by me) */}

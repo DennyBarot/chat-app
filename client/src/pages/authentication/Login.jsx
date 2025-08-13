@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from 'react-redux';
-import { loginUserThunk } from '../../store/slice/user/user.thunk';
+import { loginUserThunk } from '../../store/slice/user/user.thunk.js';
 
 const Login = () => {
    const navigate = useNavigate();

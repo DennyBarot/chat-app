@@ -2,7 +2,7 @@ import "./App.css";
 import React, { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import { useDispatch } from "react-redux";
-import { getUserProfileThunk } from "./store/slice/user/user.thunk";
+import { getUserProfileThunk } from "./store/slice/user/user.thunk.js";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./pages/home/Home.jsx";
 import Login from "./pages/authentication/Login.jsx";

@@ -1,14 +1,14 @@
 import React, { useEffect, useState , useMemo ,useCallback  } from "react";
-import ProfileUpdateModal from "../../components/ProfileUpdateModal";
-import AddUserModal from "../../components/AddUserModal";
-import User from "./User";
+import ProfileUpdateModal from "../../components/ProfileUpdateModal.jsx";
+import AddUserModal from "../../components/AddUserModal.jsx";
+import User from "./User.jsx";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUserThunk } from "../../store/slice/user/user.thunk";
-import { getConversationsThunk } from "../../store/slice/message/message.thunk";
-import { useSocket } from "../../context/SocketContext";
-import { setSelectedUser } from "../../store/slice/user/user.slice";
-import ThemeToggle from "../../components/ThemeToggle";
-import { updateConversationWithNewMessage } from "../../store/slice/message/message.slice";
+import { logoutUserThunk } from "../../store/slice/user/user.thunk.js";
+import { getConversationsThunk } from "../../store/slice/message/message.thunk.js";
+import { useSocket } from "../../context/SocketContext.jsx";
+import { setSelectedUser } from "../../store/slice/user/user.slice.js";
+import ThemeToggle from "../../components/ThemeToggle.jsx";
+import { updateConversationWithNewMessage } from "../../store/slice/message/message.slice.js";
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);

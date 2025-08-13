@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { initializeSocket, setOnlineUsers } from "../../store/slice/socket/socket.slice";
-import { setNewMessage } from "../../store/slice/message/message.slice";
-import { setSelectedUser } from "../../store/slice/user/user.slice";
-import { getMessageThunk, getConversationsThunk } from "../../store/slice/message/message.thunk";
-import UserSidebar from "./UserSidebar";
-import MessageContainer from "./MessageContainer";
+import { initializeSocket, setOnlineUsers } from "../../store/slice/socket/socket.slice.js";
+import { setNewMessage } from "../../store/slice/message/message.slice.js";
+import { setSelectedUser } from "../../store/slice/user/user.slice.js";
+import { getMessageThunk, getConversationsThunk } from "../../store/slice/message/message.thunk.js";
+import UserSidebar from "./UserSidebar.jsx";
+import MessageContainer from "./MessageContainer.jsx";
 
 const Home = () => {
   const dispatch = useDispatch();

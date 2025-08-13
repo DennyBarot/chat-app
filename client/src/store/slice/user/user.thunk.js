@@ -1,7 +1,27 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
-import { toast } from 'react-hot-toast';
+import { toast } from "react-hot-toast";
 import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
+// Centralized error handling with toast and optional logging for development
+const handleApiError = (error) => {
+  const message = error?.response?.data?.errMessage || error.message;
+  toast.error(message);
+  if (process.env.NODE_ENV !== "production") console.error("Axios error:", error);
+  return message;
+};
+
+// Sets the auth token in localStorage if present in the response
+const handleTokenStorage = (response) => {
+  if (response?.data?.responseData?.token) {
+    localStorage.setItem("token", response.data.responseData.token);
+  }
+  return response.data;
+};
+
+// Clears the auth token from localStorage
+const clearToken = () => localStorage.removeItem("token");
+
+// Login
 export const loginUserThunk = createAsyncThunk(
   "user/login",
   async ({ email, password }, { rejectWithValue }) => {
@@ -10,20 +30,66 @@ export const loginUserThunk = createAsyncThunk(
         email,
         password,
       });
-      // Store token in localStorage for persistence
-      if (response.data?.responseData?.token) {
-        localStorage.setItem('token', response.data.responseData.token);
-      }
+      handleTokenStorage(response);
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
 
+// Signup
+export const registerUserThunk = createAsyncThunk(
+  "user/signup",
+  async ({ fullName, username, email, password, gender }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post("/api/v1/user/register", {
+        username,
+        fullName,
+        email,
+        password,
+        gender,
+      });
+      handleTokenStorage(response);
+      toast.success("Account created successfully! Please login with email and password");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Logout
+export const logoutUserThunk = createAsyncThunk(
+  "user/logout",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post("/api/v1/user/logout");
+      clearToken();
+      toast.success("Logout successful!!");
+      return response.data;
+    } catch (error) {
+      clearToken();
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Get user profile
+export const getUserProfileThunk = createAsyncThunk(
+  "user/getProfile",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/api/v1/user/get-profile");
+      return response.data;
+    } catch (error) {
+      clearToken();
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
+
+// Forgot password
 export const forgotPasswordUserThunk = createAsyncThunk(
   "user/forgotPassword",
   async ({ email }, { rejectWithValue }) => {
@@ -34,79 +100,12 @@ export const forgotPasswordUserThunk = createAsyncThunk(
       toast.success("Password reset link sent successfully!!");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
 
-export const registerUserThunk = createAsyncThunk(
-  "user/signup",
-  async ({ fullName, username, email, password, gender }, {  rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.post("/api/v1/user/register", {
-        username,
-        fullName,
-        email,
-        password,
-        gender,
-      });
-      // Store token in localStorage for persistence after signup
-      if (response.data?.responseData?.token) {
-        localStorage.setItem('token', response.data.responseData.token);
-      }
-     
-      // dispatch(setUser(response.data.user)); // Removed because setUser action does not exist in user slice
-      toast.success("Account created successfully! Please login with email and password");
-      return response.data;
-    
-    } catch (error) {
-   
-      console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
-    }
-  }
-);
-
-export const logoutUserThunk = createAsyncThunk(
-  "user/logout",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.post("/api/v1/user/logout");
-      // Clear token from localStorage on logout
-      localStorage.removeItem('token');
-      toast.success("Logout successful!!");
-      return response.data;
-    } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
-    }
-  }
-);
-
-export const getUserProfileThunk = createAsyncThunk(
-  "user/getProfile",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.get("/api/v1/user/get-profile");
-      return response.data;
-    } catch (error) {
-      console.error("Axios error:", error); // Log the full error response
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      // Clear token on error to force login
-      localStorage.removeItem('token');
-      return rejectWithValue(errorOutput);
-    }
-  }
-);
-
+// Get other users (non-self)
 export const getOtherUsersThunk = createAsyncThunk(
   "user/getOtherUsers",
   async (_, { rejectWithValue }) => {
@@ -114,14 +113,12 @@ export const getOtherUsersThunk = createAsyncThunk(
       const response = await axiosInstance.get("/api/v1/user/get-other-users");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error); 
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
 
+// Update profile
 export const updateUserProfileThunk = createAsyncThunk(
   "user/updateProfile",
   async ({ fullName, username, avatar }, { rejectWithValue }) => {
@@ -129,20 +126,17 @@ export const updateUserProfileThunk = createAsyncThunk(
       const response = await axiosInstance.put("/api/v1/user/update-profile", {
         fullName,
         username,
-        avatar, 
+        avatar,
       });
-
       toast.success("Profile updated successfully!");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error);
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      return rejectWithValue(handleApiError(error));
     }
   }
 );
 
+// Get all users (including self)
 export const getAllUsersThunk = createAsyncThunk(
   "user/getAllUsers",
   async (_, { rejectWithValue }) => {
@@ -150,10 +144,7 @@ export const getAllUsersThunk = createAsyncThunk(
       const response = await axiosInstance.get("/api/v1/user/get-all-users");
       return response.data;
     } catch (error) {
-      console.error("Axios error:", error);
-      const errorOutput = error?.response?.data?.errMessage || error.message;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      return rejectWithValue(handleApiError(error));
     }
   }
 );

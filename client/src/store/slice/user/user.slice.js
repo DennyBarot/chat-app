@@ -9,114 +9,135 @@ import {
   getAllUsersThunk,
   updateUserProfileThunk,
 } from './user.thunk';
-//
+
+const getInitialSelectedUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('selectedUser'));
+  } catch (e) {
+    return null;
+  }
+};
+
 const initialState = {
   isAuthenticated: false,
   userProfile: null,
   otherUsers: null,
   allUsers: null,
-  selectedUser: JSON.parse(localStorage.getItem('selectedUser')),
+  selectedUser: getInitialSelectedUser(),
   buttonLoading: false,
   screenLoading: true,
+  // Optional: Add more state as needed, e.g., online status, error, etc.
 };
 
 export const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setSelectedUser: (state, action) => {
-      localStorage.setItem('selectedUser', JSON.stringify(action.payload));
-      state.selectedUser = action.payload;
+    // Persist selected user to local storage (only safe data, not functions)
+    setSelectedUser: (state, { payload }) => {
+      try {
+        localStorage.setItem('selectedUser', JSON.stringify(payload));
+      } catch (e) {
+        console.error('Failed to set selectedUser in localStorage:', e);
+      }
+      state.selectedUser = payload;
     },
     setScreenLoadingFalse: (state) => {
       state.screenLoading = false;
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(loginUserThunk.pending, (state) => {
-      state.buttonLoading = true;
-    });
-    builder.addCase(loginUserThunk.fulfilled, (state, action) => {
-      state.userProfile = action.payload?.responseData?.user;
+    // Helper for async loading states
+    const handleAsyncState = (pending, fulfilled, rejected) => {
+      builder
+        .addCase(pending, (state) => {
+          state.buttonLoading = true;
+        })
+        .addCase(fulfilled, (state, { payload }) => {
+          state.buttonLoading = false;
+        })
+        .addCase(rejected, (state) => {
+          state.buttonLoading = false;
+        });
+    };
+
+    // Login
+    handleAsyncState(loginUserThunk.pending, loginUserThunk.fulfilled, loginUserThunk.rejected);
+    builder.addCase(loginUserThunk.fulfilled, (state, { payload }) => {
+      // Use payload.responseData.user or payload.responseData, not both
+      state.userProfile = payload?.responseData?.user || payload?.responseData;
       state.isAuthenticated = true;
-      state.buttonLoading = false;
-    });
-    builder.addCase(loginUserThunk.rejected, (state) => {
-      state.buttonLoading = false;
     });
 
-    builder.addCase(forgotPasswordUserThunk.pending, (state) => {
-      state.buttonLoading = true;
-      state.success = false;
-    });
-    builder.addCase(forgotPasswordUserThunk.fulfilled, (state) => {
-      state.buttonLoading = false;
-      state.success = true;
-    });
-    builder.addCase(forgotPasswordUserThunk.rejected, (state) => {
-      state.buttonLoading = false;
-      state.success = false;
-    });
+    // Register
+    handleAsyncState(registerUserThunk.pending, registerUserThunk.fulfilled, registerUserThunk.rejected);
 
-    builder.addCase(registerUserThunk.pending, (state) => {
-      state.buttonLoading = true;
-    });
-    builder.addCase(registerUserThunk.fulfilled, (state, action) => {
-      state.buttonLoading = false;
-    });
-    builder.addCase(registerUserThunk.rejected, (state) => {
-      state.buttonLoading = false;
-    });
-
-    builder.addCase(logoutUserThunk.pending, (state) => {
-      state.buttonLoading = true;
-    });
+    // Logout
+    handleAsyncState(logoutUserThunk.pending, logoutUserThunk.fulfilled, logoutUserThunk.rejected);
     builder.addCase(logoutUserThunk.fulfilled, (state) => {
+      state.isAuthenticated = false;
       state.userProfile = null;
       state.selectedUser = null;
       state.otherUsers = null;
       state.allUsers = null;
-      state.isAuthenticated = false;
-      state.buttonLoading = false;
-      localStorage.clear();
-    });
-    builder.addCase(logoutUserThunk.rejected, (state) => {
-      state.buttonLoading = false;
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.error('Failed to clear localStorage:', e);
+      }
     });
 
+    // Forgot Password
+    handleAsyncState(forgotPasswordUserThunk.pending, forgotPasswordUserThunk.fulfilled, forgotPasswordUserThunk.rejected);
+    builder.addCase(forgotPasswordUserThunk.fulfilled, (state, { payload }) => {
+      state.success = true;
+    });
+    builder.addCase(forgotPasswordUserThunk.rejected, (state) => {
+      state.success = false;
+    });
+
+    // Get User Profile
     builder.addCase(getUserProfileThunk.pending, (state) => {
       state.screenLoading = true;
     });
-    builder.addCase(getUserProfileThunk.fulfilled, (state, action) => {
+    builder.addCase(getUserProfileThunk.fulfilled, (state, { payload }) => {
+      state.userProfile = payload?.responseData?.user || payload?.responseData;
       state.isAuthenticated = true;
       state.screenLoading = false;
-      state.userProfile = action.payload?.responseData;
     });
     builder.addCase(getUserProfileThunk.rejected, (state) => {
       state.screenLoading = false;
     });
 
-    builder.addCase(updateUserProfileThunk.fulfilled, (state, action) => {
-      state.userProfile = action.payload?.responseData?.user;
+    // Update Profile
+    builder.addCase(updateUserProfileThunk.fulfilled, (state, { payload }) => {
+      const data = payload?.responseData?.user || payload?.responseData;
+      if (state.userProfile?._id === data?._id) {
+        state.userProfile = data;
+      } else {
+        window.location.reload(); // Optional: Force refresh if profile IDs don't match (edge case)
+      }
     });
 
+    // Get Other Users (non-self)
     builder.addCase(getOtherUsersThunk.pending, (state) => {
       state.screenLoading = true;
     });
-    builder.addCase(getOtherUsersThunk.fulfilled, (state, action) => {
+    builder.addCase(getOtherUsersThunk.fulfilled, (state, { payload }) => {
+      state.otherUsers = payload?.responseData;
       state.screenLoading = false;
-      state.otherUsers = action.payload?.responseData;
     });
     builder.addCase(getOtherUsersThunk.rejected, (state) => {
       state.screenLoading = false;
     });
 
+    // Get All Users (including self)
     builder.addCase(getAllUsersThunk.pending, (state) => {
       state.screenLoading = true;
     });
-    builder.addCase(getAllUsersThunk.fulfilled, (state, action) => {
+    builder.addCase(getAllUsersThunk.fulfilled, (state, { payload }) => {
+      state.allUsers = payload?.responseData;
       state.screenLoading = false;
-      state.allUsers = action.payload?.responseData;
     });
     builder.addCase(getAllUsersThunk.rejected, (state) => {
       state.screenLoading = false;
@@ -124,9 +145,9 @@ export const userSlice = createSlice({
   },
 });
 
-export const { setSelectedUser } = userSlice.actions;
+export const { setSelectedUser, setScreenLoadingFalse } = userSlice.actions;
 
-
+// Memoized selectors
 export const selectAllUsers = createSelector(
   (state) => state.userReducer.allUsers,
   (allUsers) => allUsers || []

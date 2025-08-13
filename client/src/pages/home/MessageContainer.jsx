@@ -10,188 +10,196 @@ import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 
+const getDateLabel = (dateString) => {
+  const date = parseISO(dateString);
+  if (isToday(date)) return "Today";
+  if (isTomorrow(date)) return "Tomorrow";
+  return format(date, "dd MMM yyyy");
+};
+
 const MessageContainer = ({ onBack, isMobile }) => {
-  
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const socket = useSocket();
 
+  // Get messages from Redux
   const messages = useSelector((state) => state.messageReducer.messages);
-  // Filter messages for the selected user if messages is an array of all messages
-  const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
-    ? messages.filter(
-        (msg) =>
-          (msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id)
-      )
-    : messages;
-  const location = useLocation();
-  const messagesEndRef = useRef(null);
 
-  // 1. Add replyMessage state
+  // Filter messages for the current conversation (if needed)
+  const filteredMessages = useMemo(
+    () =>
+      Array.isArray(messages) && selectedUser && selectedUser._id
+        ? messages.filter((msg) => msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id)
+        : messages,
+    [messages, selectedUser]
+  );
+
+  // Prepare reply message state
   const [replyMessage, setReplyMessage] = useState(null);
-
-  // 2. Handler to set reply message
   const handleReply = (message) => setReplyMessage(message);
-  const { conversations } = useSelector((state) => state.messageReducer);
-  
-  // Get conversation ID for the selected user
-  const selectedConversationId = React.useMemo(() => {
+  const handleCancelReply = () => setReplyMessage(null);
+
+  // Get conversations for conversation ID lookup
+  const { conversations } = useSelector((state) => state.messageReducer || { conversations: [] });
+
+  // Find the conversation ID for the selected user
+  const selectedConversationId = useMemo(() => {
     if (!selectedUser || !conversations) return null;
-    
-    const conversation = conversations.find(conv => 
-      conv.participants.some(p => p._id === selectedUser._id)
-    );
+    const conversation = conversations.find((conv) => conv.participants.some((p) => p._id === selectedUser._id));
     return conversation?._id;
   }, [selectedUser, conversations]);
 
-  useEffect(() => {
-    const markAsRead = async () => {
-      if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {
-        const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+  const location = useLocation();
+  const messagesEndRef = useRef(null);
 
-        if (getMessageThunk.fulfilled.match(action) && action.payload) {
-          const messages = Array.isArray(action.payload.responseData) ? action.payload.responseData : action.payload;
-          if (messages && messages.length > 0) {
-            const conversationId = messages[0].conversationId;
-            if (conversationId && socket) {
-              socket.emit('viewConversation', { 
-                conversationId: conversationId, 
-                userId: userProfile?._id 
-              });
-              await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
-              dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-            }
-          }
+  // Mark messages as read and sync "viewed" status on initial load, url change, or user change
+  useEffect(() => {
+    if (!selectedUser?._id || location.pathname === "/login" || location.pathname === "/signup") return;
+
+    const markAsRead = async () => {
+      const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+      if (getMessageThunk.fulfilled.match(action)) {
+        const messages = Array.isArray(action.payload.responseData) ? action.payload.responseData : action.payload;
+        const conversationId = messages[0]?.conversationId;
+        if (conversationId && socket) {
+          socket.emit("viewConversation", { conversationId, userId: userProfile?._id });
+          await dispatch(markMessagesReadThunk({ conversationId }));
+          dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
         }
       }
     };
-
     markAsRead();
   }, [selectedUser, location, dispatch, socket, userProfile?._id]);
 
+  // Handle "messagesRead" custom events from SocketContext
   useEffect(() => {
     const handleMessagesRead = (event) => {
       const { messageIds, readBy, readAt } = event.detail;
       dispatch(messagesRead({ messageIds, readBy, readAt }));
     };
-
-    window.addEventListener('messagesRead', handleMessagesRead);
-
-    return () => {
-      window.removeEventListener('messagesRead', handleMessagesRead);
-    };
+    window.addEventListener("messagesRead", handleMessagesRead);
+    return () => window.removeEventListener("messagesRead", handleMessagesRead);
   }, [dispatch]);
 
-  // Handle visibility change and focus events
+  // Mark messages as read on visibility/focus changes
   useEffect(() => {
     if (!selectedConversationId) return;
-
     const handleVisibilityChange = () => {
       if (!document.hidden && selectedConversationId) {
-        // User returned to the tab, mark messages as read
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-        socket?.emit('viewConversation', { 
-          conversationId: selectedConversationId, 
-          userId: userProfile?._id 
-        });
+        socket?.emit("viewConversation", { conversationId: selectedConversationId, userId: userProfile?._id });
       }
     };
-
     const handleFocus = () => {
       if (selectedConversationId) {
-        // Window gained focus, mark messages as read
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-        socket?.emit('viewConversation', { 
-          conversationId: selectedConversationId, 
-          userId: userProfile?._id 
-        });
+        socket?.emit("viewConversation", { conversationId: selectedConversationId, userId: userProfile?._id });
       }
     };
-
-    // Add event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
     };
-  }, [selectedConversationId, dispatch, socket, userProfile?._id, messages]);
+  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
 
+  // Sync real-time messages for the current conversation
   useEffect(() => {
-    if (!socket || !selectedUser || !selectedUser._id || !selectedConversationId) return;
-
+    if (!socket || !selectedUser?._id || !selectedConversationId) return;
     const handleNewMessage = (newMessage) => {
-      // Only process if the message belongs to the current conversation
       if (newMessage.conversationId === selectedConversationId) {
-        console.log(
-          "MessageContainer.jsx: Received newMessage for current chat, fetching messages and marking as read."
-        );
         dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
     };
-
     socket.on("newMessage", handleNewMessage);
-
     return () => {
       socket.off("newMessage", handleNewMessage);
     };
   }, [socket, selectedUser, dispatch, selectedConversationId]);
+
+  // Scroll to bottom when messages change
   useEffect(() => {
-    console.log("MessageContainer.jsx: messages updated, re-rendering", messages);
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "auto" }); // Instantly scroll to bottom
+      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
     }
-  }, [messages, selectedUser]);
+  }, [filteredMessages, selectedUser]);
 
-  // Helper to get date label for a message date
-  const getDateLabel = (dateString) => {
-    const date = parseISO(dateString);
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    return format(date, "dd MMM yyyy");
-  };
+  // Listen for typing indicators from server
+  const [typingUsers, setTypingUsers] = useState({});
+  useEffect(() => {
+    if (!socket || !userProfile?._id) return;
 
-  // Ensure we have an array to work with
+    const handleUserTyping = ({ conversationId, userId, isTyping }) => {
+      if (isTyping) {
+        setTypingUsers(prev => ({
+          ...prev,
+          [conversationId]: [...(prev[conversationId] || []), userId].filter(
+            (id, index, arr) => arr.indexOf(id) === index
+          )
+        }));
+      } else {
+        setTypingUsers(prev => ({
+          ...prev,
+          [conversationId]: (prev[conversationId] || []).filter(id => id !== userId)
+        }));
+      }
+    };
+
+    socket.on('userTyping', handleUserTyping);
+    return () => {
+      socket.off('userTyping', handleUserTyping);
+    };
+  }, [socket, userProfile?._id]);
+
+  // Prepare the sorted, grouped message list with date separators and last-message logic
   const safeMessages = Array.isArray(filteredMessages) ? filteredMessages : [];
-  
-  // Sort messages by timestamp ascending (oldest first)
   const sortedMessages = [...safeMessages].sort((a, b) => {
     const dateA = new Date(a.createdAt || a.timestamp);
     const dateB = new Date(b.createdAt || b.timestamp);
     return dateA - dateB;
   });
 
-  // Prepare messages with date separators
   const messagesWithSeparators = [];
   let lastDate = null;
 
-  if (sortedMessages && sortedMessages.length > 0) {
-    sortedMessages.forEach((message) => {
-      const messageDate = message.createdAt || message.timestamp;
-      if (messageDate) {
-        const currentDate = messageDate.split("T")[0];
-        if (lastDate !== currentDate) {
-          messagesWithSeparators.push({
-            type: "date-separator",
-            id: `separator-${currentDate}`,
-            label: getDateLabel(messageDate),
-          });
-          lastDate = currentDate;
-        }
+  const lastMessageIdx = sortedMessages.length - 1;
+  sortedMessages.forEach((message, idx) => {
+    const messageDate = message.createdAt || message.timestamp;
+    if (messageDate) {
+      const currentDate = messageDate.split("T")[0];
+      if (lastDate !== currentDate) {
+        messagesWithSeparators.push({
+          type: "date-separator",
+          id: `separator-${currentDate}`,
+          label: getDateLabel(messageDate),
+        });
+        lastDate = currentDate;
       }
-      messagesWithSeparators.push({
-        type: "message",
-        id: message._id,
-        messageDetails: message,
-      });
+    }
+    messagesWithSeparators.push({
+      type: "message",
+      id: message._id,
+      messageDetails: message,
+      isLastMessage: idx === lastMessageIdx,
     });
-  }
+  });
+
+  // Typing indicator display logic
+  const { participants } = conversations.find(conv => conv._id === selectedConversationId) || {};
+  const showTypingIndicator = (
+    !!typingUsers[selectedConversationId]?.length &&
+    !typingUsers[selectedConversationId].includes(userProfile?._id) // Don't show "You are typing"
+  );
+
+  // Map participant IDs to names for the typing indicator
+  // You may want to memoize or optimize this lookup for large conversations
+  const getParticipantName = (userId) =>
+    participants?.find(p => p._id === userId)?.fullName || 'Someone';
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-800 relative">
-
       {isMobile && (
         <button
           onClick={onBack}
@@ -225,6 +233,15 @@ const MessageContainer = ({ onBack, isMobile }) => {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Typing indicator */}
+                {showTypingIndicator && (
+                  <div className="px-4 py-1 text-xs text-slate-500 animate-pulse">
+                    {typingUsers[selectedConversationId]
+                      .map(id => getParticipantName(id))
+                      .join(', ')}{' '}
+                    is typing...
+                  </div>
+                )}
                 {messagesWithSeparators.map((item, index) => {
                   if (item.type === "date-separator") {
                     return <DateSeparator key={item.id} label={item.label} />;
@@ -234,10 +251,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
                       .map((item, idx) => ({ ...item, originalIndex: idx }))
                       .filter(item => item.type === "message")
                       .pop()?.originalIndex;
-                    
                     const isLastMessage = index === lastMessageIndex;
-                    
-                    // 3. Pass onReply to Message
                     return (
                       <Message
                         key={item.id}
@@ -255,7 +269,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
           </div>
 
           {/* Send Message */}
-          {/* 4. Pass replyMessage and onCancelReply to SendMessage */}
           <SendMessage
             replyMessage={replyMessage}
             onCancelReply={() => setReplyMessage(null)}
@@ -267,7 +280,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-                <User userDetails={selectedUser} showUnreadCount={false} />
+            <User userDetails={selectedUser} showUnreadCount={false} />
           </div>
           <h2 className="text-3xl font-bold text-indigo-700">Welcome to CHAT APP</h2>
           <p className="text-xl text-slate-600 text-center max-w-md">Select a conversation from the sidebar or add a new contact to start chatting</p>

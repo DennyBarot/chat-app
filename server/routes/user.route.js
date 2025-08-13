@@ -1,7 +1,5 @@
 import express from 'express';
 import {login, getProfile, register, logout, getOtherUsers, updateProfile, forgotPassword, resetPassword, getAllUsers} from '../controllers/user.controller.js';
-import { asyncHandler } from '../utilities/asyncHandlerUtility.js';
-import { errorHandler } from '../utilities/errorHandlerUtility.js';
 import { isAuthenticated } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();

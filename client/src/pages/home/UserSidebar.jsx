@@ -8,7 +8,7 @@ import { getConversationsThunk } from "../../store/slice/message/message.thunk.j
 import { useSocket } from "../../context/SocketContext.jsx";
 import { setSelectedUser } from "../../store/slice/user/user.slice.js";
 import ThemeToggle from "../../components/ThemeToggle.jsx";
-import { updateConversationThunk } from "../../store/slice/message/message.thunk.js";
+import { updateConversation } from "../../store/slice/message/message.slice.js";
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,7 +78,7 @@ const UserSidebar = ({ onUserSelect }) => {
     if (!socket || !userProfile?._id) return;
 
     const handleNewMessage = (message) => {
-      dispatch(updateConversationThunk({ newMessage: message })); // ensure action exists
+      dispatch(updateConversation(message)); // ensure action exists
     };
 
     const handleSocketReconnect = () => {
@@ -212,6 +212,4 @@ const UserSidebar = ({ onUserSelect }) => {
 };
 
 export default UserSidebar;
-
-
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import User from "./User";
 import Message from "./Message.jsx";
 import DateSeparator from "./DateSeparator.jsx";

@@ -61,14 +61,14 @@ export const getConversationsThunk = createAsyncThunk(
   }
 );
 
-// Mark messages as read and refresh conversations
+// Mark messages as read
 export const markMessagesReadThunk = createAsyncThunk(
   "message/markRead",
   async ({ conversationId }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
-      // Refresh conversation list after marking as read
-      await dispatch(getConversationsThunk());
+      // Removed client-side dispatch of getConversationsThunk to avoid race condition.
+      // Server should send updated unreadCount via socket event or getConversationsThunk will fetch it later.
       return response.data;
     } catch (error) {
       return rejectWithValue(handleApiError(error));
@@ -97,4 +97,3 @@ export const updateConversationThunk = createAsyncThunk(
     }
   }
 );
-

@@ -3,8 +3,6 @@ import {
   getMessageThunk,
   sendMessageThunk,
   getConversationsThunk,
-  markMessagesReadThunk,
-
 } from "./message.thunk";
 
 const initialState = {
@@ -61,7 +59,7 @@ export const messageSlice = createSlice({
             return msg;
           });
           const newUnreadCount = newMessages.filter(
-            (msg) => msg.senderId !== readBy && !msg.readBy.includes(readBy)
+            (msg) => msg.senderId !== readBy && (!msg.readBy || !msg.readBy.includes(readBy))
           ).length;
           state.conversations[conversationIndex] = {
             ...conversation,
@@ -72,7 +70,8 @@ export const messageSlice = createSlice({
         }
       }
     },
-    updateConversation: (state, { payload: newMessage }) => {
+    updateConversation: (state, { payload: newMessage }, getState) => {
+      const { userProfile } = getState().userReducer;
       const conversationId = newMessage.conversationId;
       const conversationIndex = state.conversations.findIndex(c => c._id === conversationId);
 
@@ -84,7 +83,7 @@ export const messageSlice = createSlice({
           conversation.messages.push(newMessage);
         }
         conversation.unreadCount = conversation.messages.filter(
-          (msg) => msg.senderId !== newMessage.senderId && !msg.readBy.includes(newMessage.senderId)
+          (msg) => msg.senderId !== userProfile._id && (!msg.readBy || !msg.readBy.includes(userProfile._id))
         ).length;
       } else {
         getConversationsThunk();

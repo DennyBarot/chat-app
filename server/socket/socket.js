@@ -65,94 +65,38 @@ io.on("connection", (socket) => {
     io.to(conversationId).emit('newMessage', message);
   });
 
-  // Mark a single message as read
-  socket.on('markMessageRead', async ({ messageId, userId, conversationId }) => {
+  socket.on('markConversationAsRead', async ({ conversationId, userId }) => {
     try {
-      const message = await Message.findById(messageId);
-      if (message && !message.readBy.includes(userId)) {
-        message.readBy.push(userId);
-        await message.save();
-        // Notify sender about read receipt
-        const senderSocketId = getSocketId(message.senderId);
-        if (senderSocketId) {
-          io.to(senderSocketId).emit('messageRead', {
-            messageId,
-            readBy: userId,
-            readAt: new Date()
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
-  });
-
-  // Mark all unread messages in a conversation as read
-  socket.on('markConversationRead', async ({ conversationId, userId }) => {
-    try {
-      const messages = await Message.find({
+      // Find all messages in the conversation that the user has not read
+      const messagesToUpdate = await Message.find({
         conversationId,
         readBy: { $ne: userId }
       });
 
-      const updatedMessages = [];
-      for (const message of messages) {
-        message.readBy.push(userId);
-        await message.save();
-        updatedMessages.push(message._id);
-      }
+      if (messagesToUpdate.length === 0) return;
 
-      if (updatedMessages.length) {
-        // Notify all senders in this conversation
-        const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
-        uniqueSenderIds.forEach(senderId => {
-          const senderSocketId = getSocketId(senderId);
-          if (senderSocketId) {
-            io.to(senderSocketId).emit('messagesRead', {
-              messageIds: updatedMessages,
-              readBy: userId,
-              readAt: new Date(),
-              conversationId: conversationId
-            });
-          }
-        });
-      }
+      const messageIdsToUpdate = messagesToUpdate.map(msg => msg._id);
+
+      // Update all found messages in a single operation
+      await Message.updateMany(
+        { _id: { $in: messageIdsToUpdate } },
+        { $addToSet: { readBy: userId } }
+      );
+
+      // Fetch the updated messages to get the latest state
+      const updatedMessages = await Message.find({ _id: { $in: messageIdsToUpdate } });
+
+      // Notify all clients in the conversation that messages have been read
+      io.to(conversationId).emit('messagesRead', {
+        conversationId,
+        userId,
+        messageIds: updatedMessages.map(msg => msg._id),
+        readBy: userId, // for consistency with single message read
+        readAt: new Date()
+      });
+
     } catch (error) {
       console.error('Error marking conversation as read:', error);
-    }
-  });
-
-  // When a user opens a conversation
-  socket.on('viewConversation', async ({ conversationId, userId }) => {
-    try {
-      const messages = await Message.find({
-        conversationId,
-        readBy: { $ne: userId }
-      });
-
-      if (messages.length > 0) {
-        const updatedMessages = [];
-        for (const message of messages) {
-          message.readBy.push(userId);
-          await message.save();
-          updatedMessages.push(message._id);
-        }
-
-        const uniqueSenderIds = [...new Set(messages.map(msg => msg.senderId.toString()))];
-        uniqueSenderIds.forEach(senderId => {
-          const senderSocketId = getSocketId(senderId);
-          if (senderSocketId) {
-            io.to(senderSocketId).emit('messagesRead', {
-              messageIds: updatedMessages,
-              readBy: userId,
-              readAt: new Date(),
-              conversationId: conversationId
-            });
-          }
-        });
-      }
-    } catch (error) {
-      console.error('Error viewing conversation:', error);
     }
   });
 

@@ -53,57 +53,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const location = useLocation();
   const messagesEndRef = useRef(null);
 
-  // Mark messages as read and sync "viewed" status on initial load, url change, or user change
+  // Mark conversation as read when it changes or when the component mounts
   useEffect(() => {
-    if (!selectedUser?._id || location.pathname === "/login" || location.pathname === "/signup") return;
-
-    const markAsRead = async () => {
-      const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-      if (getMessageThunk.fulfilled.match(action)) {
-        const messages = Array.isArray(action.payload.responseData) ? action.payload.responseData : action.payload;
-        const conversationId = messages[0]?.conversationId;
-        if (conversationId && socket) {
-          socket.emit("viewConversation", { conversationId, userId: userProfile?._id });
-          await dispatch(markMessagesReadThunk({ conversationId }));
-          dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-        }
-      }
-    };
-    markAsRead();
-  }, [selectedUser, location, dispatch, socket, userProfile?._id]);
-
-  // Handle "messagesRead" custom events from SocketContext
-  useEffect(() => {
-    const handleMessagesRead = (event) => {
-      const { messageIds, readBy, readAt } = event.detail;
-      dispatch(messagesRead({ messageIds, readBy, readAt }));
-    };
-    window.addEventListener("messagesRead", handleMessagesRead);
-    return () => window.removeEventListener("messagesRead", handleMessagesRead);
-  }, [dispatch]);
-
-  // Mark messages as read on visibility/focus changes
-  useEffect(() => {
-    if (!selectedConversationId) return;
-    const handleVisibilityChange = () => {
-      if (!document.hidden && selectedConversationId) {
-        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-        socket?.emit("viewConversation", { conversationId: selectedConversationId, userId: userProfile?._id });
-      }
-    };
-    const handleFocus = () => {
-      if (selectedConversationId) {
-        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-        socket?.emit("viewConversation", { conversationId: selectedConversationId, userId: userProfile?._id });
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
+    if (selectedConversationId && socket && userProfile?._id) {
+      socket.emit("markConversationAsRead", { conversationId: selectedConversationId, userId: userProfile._id });
+    }
+  }, [selectedConversationId, socket, userProfile?._id]);
 
   // Sync real-time messages for the current conversation
   useEffect(() => {

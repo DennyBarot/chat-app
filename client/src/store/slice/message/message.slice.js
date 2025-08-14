@@ -61,7 +61,7 @@ export const messageSlice = createSlice({
             return msg;
           });
           const newUnreadCount = newMessages.filter(
-            (msg) => !msg.readBy.includes(readBy)
+            (msg) => msg.senderId !== readBy && !msg.readBy.includes(readBy)
           ).length;
           state.conversations[conversationIndex] = {
             ...conversation,
@@ -84,12 +84,9 @@ export const messageSlice = createSlice({
           conversation.messages.push(newMessage);
         }
         conversation.unreadCount = conversation.messages.filter(
-          (msg) => !msg.readBy.includes(newMessage.senderId)
+          (msg) => msg.senderId !== newMessage.senderId && !msg.readBy.includes(newMessage.senderId)
         ).length;
       } else {
-        // If conversation is not found, we should probably fetch it
-        // For now, we will just add it to the list
-        // This part might need adjustment based on how conversations are loaded
         getConversationsThunk();
       }
     },

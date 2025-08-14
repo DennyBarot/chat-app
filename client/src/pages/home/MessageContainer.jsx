@@ -21,7 +21,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const socket = useSocket();
-   const { typingUsers } = useSelector((state) => state.socketReducer);
+  const { typingUsers } = useSelector((state) => state.socketReducer);
+
   // Get messages from Redux
   const messages = useSelector((state) => state.messageReducer.messages);
 
@@ -125,10 +126,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
       messagesEndRef.current.scrollIntoView({ behavior: "auto" });
     }
   }, [filteredMessages, selectedUser]);
-
-  // Listen for typing indicators from server
-  
-
 
   // Prepare the sorted, grouped message list with date separators and last-message logic
   const safeMessages = Array.isArray(filteredMessages) ? filteredMessages : [];
@@ -277,4 +274,3 @@ const MessageContainer = ({ onBack, isMobile }) => {
 };
 
 export default MessageContainer;
-

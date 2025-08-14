@@ -31,7 +31,7 @@ const UserSidebar = ({ onUserSelect }) => {
     return conversation.messages.filter(
       (msg) =>
         msg.senderId !== currentUserId &&
-        (!msg.readBy || !msg.readBy.includes(currentUserId))
+        (!msg.readBy || !msg.readBy.some((u) => u._id === currentUserId))
     ).length;
   }, []);
 /** Build, filter, and sort user list */
@@ -212,4 +212,3 @@ const UserSidebar = ({ onUserSelect }) => {
 };
 
 export default UserSidebar;
-

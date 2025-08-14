@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, memo, useCallback } from "react";
 import { useSelector } from "react-redux";
 import { getRelativeTime, isMessageRead, getReadTime } from "../../utils/timeUtils.js";
 import { axiosInstance } from "../../components/utilities/axiosInstance.js";

@@ -34,18 +34,49 @@ export const messageSlice = createSlice({
     },
     // Mark messages as read by a specific user
     messagesRead: (state, { payload }) => {
-      if (!state.messages || !payload?.messageIds?.length) return;
-      const { messageIds, readBy, readAt } = payload;
-      state.messages = state.messages.map(msg => {
-        if (messageIds.includes(msg._id)) {
-          const newReadBy = msg.readBy ? [...msg.readBy] : [];
-          if (!newReadBy.includes(readBy)) {
-            newReadBy.push(readBy);
+      if (!payload?.messageIds?.length) return;
+      const { messageIds, readBy, readAt, conversationId } = payload;
+
+      // Update messages in the active conversation
+      if (state.messages) {
+        state.messages = state.messages.map(msg => {
+          if (messageIds.includes(msg._id)) {
+            const newReadBy = msg.readBy ? [...msg.readBy] : [];
+            if (!newReadBy.includes(readBy)) {
+              newReadBy.push(readBy);
+            }
+            return { ...msg, readBy: newReadBy, updatedAt: readAt };
           }
-          return { ...msg, readBy: newReadBy, updatedAt: readAt };
+          return msg;
+        });
+      }
+
+      // Update unread count in the conversations list
+      if (state.conversations) {
+        const conversationIndex = state.conversations.findIndex(c => c._id === conversationId);
+        if (conversationIndex !== -1) {
+          const conversation = state.conversations[conversationIndex];
+          const newMessages = conversation.messages.map(msg => {
+            if (messageIds.includes(msg._id)) {
+              const newReadBy = msg.readBy ? [...msg.readBy] : [];
+              if (!newReadBy.includes(readBy)) {
+                newReadBy.push(readBy);
+              }
+              return { ...msg, readBy: newReadBy, updatedAt: readAt };
+            }
+            return msg;
+          });
+          const newUnreadCount = newMessages.filter(
+            (msg) => !msg.readBy.includes(readBy)
+          ).length;
+          state.conversations[conversationIndex] = {
+            ...conversation,
+            messages: newMessages,
+            unreadCount: newUnreadCount,
+            updatedAt: readAt,
+          };
         }
-        return msg;
-      });
+      }
     },
   },
   extraReducers: (builder) => {

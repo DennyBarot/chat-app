@@ -111,7 +111,8 @@ io.on("connection", (socket) => {
             io.to(senderSocketId).emit('messagesRead', {
               messageIds: updatedMessages,
               readBy: userId,
-              readAt: new Date()
+              readAt: new Date(),
+              conversationId: conversationId
             });
           }
         });
@@ -144,7 +145,8 @@ io.on("connection", (socket) => {
             io.to(senderSocketId).emit('messagesRead', {
               messageIds: updatedMessages,
               readBy: userId,
-              readAt: new Date()
+              readAt: new Date(),
+              conversationId: conversationId
             });
           }
         });
@@ -163,4 +165,3 @@ io.on("connection", (socket) => {
 });
 
 export { io, server, app, getSocketId, userSocketMap };
-

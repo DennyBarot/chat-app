@@ -30,7 +30,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
   // Emit typing event when user is typing something (debounced)
   useEffect(() => {
-console.log("Typing event - selectedConversationId:", selectedConversationId);    if (!selectedConversationId || !socket || !message.trim()) {
+    if (!selectedConversationId || !socket || !message.trim()) {
       // Clear typing status
       if (isCurrentlyTyping) {
         socket.emit('typing', { conversationId: selectedConversationId, userId: selectedUser._id, isTyping: false });
@@ -159,4 +159,3 @@ console.log("Typing event - selectedConversationId:", selectedConversationId);  
 };
 
 export default SendMessage;
-

@@ -29,6 +29,18 @@ export const sendMessageThunk = createAsyncThunk(
     }
   }
 );
+// Fetch all conversations for the user
+export const getConversationsThunk = createAsyncThunk(
+  "message/getConversations",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/api/v1/message/get-conversations");
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(handleApiError(error));
+    }
+  }
+);
 
 // Fetch messages for a conversation
 export const getMessageThunk = createAsyncThunk(
@@ -48,18 +60,8 @@ export const getMessageThunk = createAsyncThunk(
   }
 );
 
-// Fetch all conversations for the user
-export const getConversationsThunk = createAsyncThunk(
-  "message/getConversations",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await axiosInstance.get("/api/v1/message/get-conversations");
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(handleApiError(error));
-    }
-  }
-);
+
+
 
 // Mark messages as read
 export const markMessagesReadThunk = createAsyncThunk(

@@ -64,29 +64,14 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
     [messageDetails._id]
   );
 
-  // Utility function to safely get reaction user IDs
-  const getReactionUserIds = useCallback((emoji) => {
-    if (!messageDetails?.reactions) return [];
-    
-    // Handle both Map and plain object formats
-    if (messageDetails.reactions instanceof Map) {
-      return [...(messageDetails.reactions.get(emoji) || [])];
-    } else if (typeof messageDetails.reactions === 'object') {
-      return [...(messageDetails.reactions[emoji] || [])];
-    }
-    
-    return [];
-  }, [messageDetails?.reactions]);
-
   // Get unique user IDs who reacted (for tooltip)
   const getReactionUsers = useCallback((emoji) => {
-    const userIds = getReactionUserIds(emoji);
+    const userIds = [...(messageDetails?.reactions?.get(emoji) || [])];
     if (!userIds.length) return null;
-    
     return userIds
       .map((id) => (id === userProfile?._id ? "You" : selectedUser.fullName))
       .join(", ");
-  }, [getReactionUserIds, selectedUser.fullName, userProfile?._id]);
+  }, [messageDetails?.reactions, selectedUser, userProfile?._id]);
 
   return (
     <div

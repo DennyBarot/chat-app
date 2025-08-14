@@ -49,10 +49,11 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
+    // Custom event emitters for messagesRead/messageRead (if needed elsewhere in the app)
     const onMessagesRead = (data) => {
       dispatch(messagesRead(data));
     }
-    newSocket.on("messagesRead", onMessagesRead);
+    newSocket.on("messageRead", onMessageRead);
    
     
     const handleUserTyping = (data) => {
@@ -85,7 +86,6 @@ export const SocketProvider = ({ children }) => {
     </SocketContext.Provider>
   );
 };
-
 
 
 

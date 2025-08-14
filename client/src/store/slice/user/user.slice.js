@@ -26,7 +26,6 @@ const initialState = {
   selectedUser: getInitialSelectedUser(),
   buttonLoading: false,
   screenLoading: true,
-  success: false,
   // Optional: Add more state as needed, e.g., online status, error, etc.
 };
 
@@ -48,68 +47,54 @@ export const userSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
+    // Helper for async loading states
+    const handleAsyncState = (pending, fulfilled, rejected) => {
+      builder
+        .addCase(pending, (state) => {
+          state.buttonLoading = true;
+        })
+        .addCase(fulfilled, (state, { payload }) => {
+          state.buttonLoading = false;
+        })
+        .addCase(rejected, (state) => {
+          state.buttonLoading = false;
+        });
+    };
+
     // Login
- builder
-      .addCase(loginUserThunk.pending, (state) => {
-        state.buttonLoading = true;
-      })
-      .addCase(loginUserThunk.fulfilled, (state, { payload }) => {
-      
-        state.userProfile = payload?.responseData || payload;
-        state.isAuthenticated = true;
-        state.buttonLoading = false;
-      })
-      .addCase(loginUserThunk.rejected, (state) => {
-        state.buttonLoading = false;
-      });
+    handleAsyncState(loginUserThunk.pending, loginUserThunk.fulfilled, loginUserThunk.rejected);
+    builder.addCase(loginUserThunk.fulfilled, (state, { payload }) => {
+      // Use payload.responseData.user or payload.responseData, not both
+      state.userProfile = payload?.responseData?.user || payload?.responseData;
+      state.isAuthenticated = true;
+    });
 
     // Register
-       builder
-      .addCase(registerUserThunk.pending, (state) => {
-        state.buttonLoading = true;
-      })
-      .addCase(registerUserThunk.fulfilled, (state) => {
-        state.buttonLoading = false;
-      })
-      .addCase(registerUserThunk.rejected, (state) => {
-        state.buttonLoading = false;
-      });
-         // --- Logout ---
-    builder
-      .addCase(logoutUserThunk.pending, (state) => {
-        state.buttonLoading = true;
-      })
-      .addCase(logoutUserThunk.fulfilled, (state) => {
-        state.buttonLoading = false;
-        state.isAuthenticated = false;
-        state.userProfile = null;
-        state.selectedUser = null;
-        state.otherUsers = null;
-        state.allUsers = null;
-        try {
-          localStorage.clear();
-        } catch (e) {
-          console.error('Failed to clear localStorage:', e);
-        }
-      })
-      .addCase(logoutUserThunk.rejected, (state) => {
-        state.buttonLoading = false;
-      });
+    handleAsyncState(registerUserThunk.pending, registerUserThunk.fulfilled, registerUserThunk.rejected);
 
-   // --- Forgot Password ---
-    builder
-      .addCase(forgotPasswordUserThunk.pending, (state) => {
-        state.buttonLoading = true;
-        state.success = false;
-      })
-      .addCase(forgotPasswordUserThunk.fulfilled, (state) => {
-        state.buttonLoading = false;
-        state.success = true;
-      })
-      .addCase(forgotPasswordUserThunk.rejected, (state) => {
-        state.buttonLoading = false;
-        state.success = false;
-      });
+    // Logout
+    handleAsyncState(logoutUserThunk.pending, logoutUserThunk.fulfilled, logoutUserThunk.rejected);
+    builder.addCase(logoutUserThunk.fulfilled, (state) => {
+      state.isAuthenticated = false;
+      state.userProfile = null;
+      state.selectedUser = null;
+      state.otherUsers = null;
+      state.allUsers = null;
+      try {
+        localStorage.clear();
+      } catch (e) {
+        console.error('Failed to clear localStorage:', e);
+      }
+    });
+
+    // Forgot Password
+    handleAsyncState(forgotPasswordUserThunk.pending, forgotPasswordUserThunk.fulfilled, forgotPasswordUserThunk.rejected);
+    builder.addCase(forgotPasswordUserThunk.fulfilled, (state, { payload }) => {
+      state.success = true;
+    });
+    builder.addCase(forgotPasswordUserThunk.rejected, (state) => {
+      state.success = false;
+    });
 
     // Get User Profile
     builder.addCase(getUserProfileThunk.pending, (state) => {

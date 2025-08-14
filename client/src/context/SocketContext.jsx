@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from "
 import { io } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import { setTypingUser } from "../store/slice/socket/socket.slice.js";
-import { messagesRead } from "../store/slice/message/message.slice.js";
+
 const SocketContext = createContext(null);
 
 export const useSocket = () => {
@@ -50,11 +50,12 @@ export const SocketProvider = ({ children }) => {
     });
 
     // Custom event emitters for messagesRead/messageRead (if needed elsewhere in the app)
-    const onMessagesRead = (data) => {
-      dispatch(messagesRead(data));
-    }
+    const onMessageRead = (data) =>
+      window.dispatchEvent(new CustomEvent("messageRead", { detail: data }));
+    const onMessagesRead = (data) =>
+      window.dispatchEvent(new CustomEvent("messagesRead", { detail: data }));
     newSocket.on("messageRead", onMessageRead);
-   
+    newSocket.on("messagesRead", onMessagesRead);
     
     const handleUserTyping = (data) => {
       console.log("Received userTyping event:", data);
@@ -69,7 +70,7 @@ export const SocketProvider = ({ children }) => {
 
     return () => {
       isCleanup = true;
-      
+      newSocket.off("messageRead", onMessageRead);
       newSocket.off("messagesRead", onMessagesRead);
       newSocket.io.off("reconnect", handleReconnect);
       newSocket.off("userTyping", handleUserTyping);
@@ -86,10 +87,6 @@ export const SocketProvider = ({ children }) => {
     </SocketContext.Provider>
   );
 };
-
-
-
-
 
 
 

@@ -54,6 +54,20 @@ io.on("connection", (socket) => {
     io.to(conversationId).emit('newMessage', message);
   });
 
+  socket.on("typing", ({ senderId, receiverId }) => {
+    const receiverSocketId = getSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("typing", { senderId, receiverId });
+    }
+  });
+
+  socket.on("stopTyping", ({ senderId, receiverId }) => {
+    const receiverSocketId = getSocketId(receiverId);
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("stopTyping", { senderId, receiverId });
+    }
+  });
+
   socket.on('markMessageRead', async ({ messageId, userId, conversationId }) => {
     try {
       const message = await Message.findById(messageId);

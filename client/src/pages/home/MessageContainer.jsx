@@ -9,6 +9,7 @@ import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
+import { setTyping } from "../../store/slice/typing/typing.slice";
 
 const MessageContainer = ({ onBack, isMobile }) => {
   
@@ -17,6 +18,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const socket = useSocket();
 
   const messages = useSelector((state) => state.messageReducer.messages);
+  const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
+
   // Filter messages for the selected user if messages is an array of all messages
   const filteredMessages = Array.isArray(messages) && selectedUser && selectedUser._id
     ? messages.filter(
@@ -138,6 +141,32 @@ const MessageContainer = ({ onBack, isMobile }) => {
       socket.off("newMessage", handleNewMessage);
     };
   }, [socket, selectedUser, dispatch, selectedConversationId]);
+
+  // Typing indicator logic
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleTyping = ({ senderId, receiverId }) => {
+      if (receiverId === userProfile._id && senderId === selectedUser._id) {
+        dispatch(setTyping({ userId: senderId, isTyping: true }));
+      }
+    };
+
+    const handleStopTyping = ({ senderId, receiverId }) => {
+      if (receiverId === userProfile._id && senderId === selectedUser._id) {
+        dispatch(setTyping({ userId: senderId, isTyping: false }));
+      }
+    };
+
+    socket.on("typing", handleTyping);
+    socket.on("stopTyping", handleStopTyping);
+
+    return () => {
+      socket.off("typing", handleTyping);
+      socket.off("stopTyping", handleStopTyping);
+    };
+  }, [socket, dispatch, userProfile, selectedUser]);
+
   useEffect(() => {
     console.log("MessageContainer.jsx: messages updated, re-rendering", messages);
     if (messagesEndRef.current) {
@@ -189,6 +218,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
     });
   }
 
+  const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
+
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-800 relative">
 
@@ -209,6 +240,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
           {/* Header */}
           <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm  dark:from-slate-800 dark:to-slate-900 ">
             <User userDetails={selectedUser} showUnreadCount={false} />
+            {isSelectedUserTyping && (
+              <p className="text-sm text-indigo-500 dark:text-indigo-300 animate-pulse">typing...</p>
+            )}
           </div>
 
           {/* Messages */}

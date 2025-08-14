@@ -1,14 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { axiosInstance } from "../../components/utilities/axiosInstance";
+import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
-  const { selectedUser } = useSelector((state) => state.userReducer);
+  const { selectedUser, userProfile } = useSelector((state) => state.userReducer);
+  const socket = useSocket();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef(null);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
@@ -25,6 +29,12 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
     setMessage("");
     setIsSubmitting(false);
     if (replyMessage) onCancelReply(); // Optionally clear reply after sending
+    // After sending message, ensure typing indicator is off
+    if (isTyping) {
+      socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
+      setIsTyping(false);
+      clearTimeout(typingTimeoutRef.current);
+    }
   };
 
   const handleSend = () => {
@@ -32,6 +42,45 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
     setMessage("");
     onCancelReply();
   };
+
+  const handleInputChange = (e) => {
+    setMessage(e.target.value);
+
+    if (!socket || !userProfile || !selectedUser) return;
+
+    // If message is not empty and user is not already marked as typing
+    if (e.target.value.length > 0 && !isTyping) {
+      setIsTyping(true);
+      socket.emit("typing", { senderId: userProfile._id, receiverId: selectedUser._id });
+    }
+
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Set a new timeout to emit stopTyping after a delay
+    typingTimeoutRef.current = setTimeout(() => {
+      setIsTyping(false);
+      socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
+    }, 1000); // 1 second debounce
+
+    // If message becomes empty, immediately send stopTyping
+    if (e.target.value.length === 0 && isTyping) {
+      setIsTyping(false);
+      socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
+      clearTimeout(typingTimeoutRef.current);
+    }
+  };
+
+  useEffect(() => {
+    // Cleanup timeout on component unmount
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 ">
@@ -59,7 +108,7 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
             placeholder="Type your message..."
             className="w-full pl-4 pr-12 py-3 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             value={message}
-            onChange={(e) => setMessage(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -91,4 +140,3 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
 };
 
 export default SendMessage;
-

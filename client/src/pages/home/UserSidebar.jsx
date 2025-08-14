@@ -8,6 +8,7 @@ import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import ThemeToggle from "../../components/ThemeToggle";
+import { setTyping } from "../../store/slice/typing/typing.slice";
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -18,6 +19,7 @@ const UserSidebar = ({ onUserSelect }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
+  const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
   const [users, setUsers] = useState([]);
 
   const socket = useSocket();
@@ -54,7 +56,21 @@ const UserSidebar = ({ onUserSelect }) => {
       dispatch(getConversationsThunk());
     };
 
+    const handleTyping = ({ senderId, receiverId }) => {
+      if (receiverId === userProfile._id) {
+        dispatch(setTyping({ userId: senderId, isTyping: true }));
+      }
+    };
+
+    const handleStopTyping = ({ senderId, receiverId }) => {
+      if (receiverId === userProfile._id) {
+        dispatch(setTyping({ userId: senderId, isTyping: false }));
+      }
+    };
+
     socket.on("newMessage", handleNewMessage);
+    socket.on("typing", handleTyping);
+    socket.on("stopTyping", handleStopTyping);
 
     const handleSocketReconnect = () => {
       dispatch(getConversationsThunk());
@@ -63,6 +79,8 @@ const UserSidebar = ({ onUserSelect }) => {
 
     return () => {
       socket.off("newMessage", handleNewMessage);
+      socket.off("typing", handleTyping);
+      socket.off("stopTyping", handleStopTyping);
       window.removeEventListener("socketReconnect", handleSocketReconnect);
     };
   }, [dispatch, socket, userProfile]);
@@ -197,7 +215,7 @@ const UserSidebar = ({ onUserSelect }) => {
         ) : (
           <div className="space-y-1">
             {users.map((userDetails) => (
-              <User key={userDetails?._id} userDetails={userDetails} />
+              <User key={userDetails?._id} userDetails={userDetails} isTyping={typingUsers[userDetails._id]} />
             ))}
           </div>
         )}

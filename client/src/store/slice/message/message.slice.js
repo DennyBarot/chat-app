@@ -59,13 +59,15 @@ export const messageSlice = createSlice({
             }
             return msg;
           });
-          const newUnreadCount = newMessages.filter(
+           const updatedUnreadCount = payload.unreadCount !== undefined
+            ? payload.unreadCount
+            : newMessages.filter(
             (msg) => msg.senderId !== readBy && (!msg.readBy || !msg.readBy.includes(readBy))
           ).length;
           state.conversations[conversationIndex] = {
             ...conversation,
             messages: newMessages,
-            unreadCount: newUnreadCount,
+            unreadCount: updatedUnreadCount,
             updatedAt: readAt,
           };
         }

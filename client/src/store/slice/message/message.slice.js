@@ -3,6 +3,7 @@ import {
   getMessageThunk,
   sendMessageThunk,
   getConversationsThunk,
+  updateConversationThunk,
 } from "./message.thunk";
 
 const initialState = {
@@ -70,25 +71,6 @@ export const messageSlice = createSlice({
         }
       }
     },
-    updateConversation: (state, { payload: newMessage }, getState) => {
-      const { userProfile } = getState().userReducer;
-      const conversationId = newMessage.conversationId;
-      const conversationIndex = state.conversations.findIndex(c => c._id === conversationId);
-
-      if (conversationIndex !== -1) {
-        const conversation = state.conversations[conversationIndex];
-        conversation.lastMessage = newMessage;
-        conversation.updatedAt = newMessage.createdAt;
-        if (!conversation.messages.find(m => m._id === newMessage._id)) {
-          conversation.messages.push(newMessage);
-        }
-        conversation.unreadCount = conversation.messages.filter(
-          (msg) => msg.senderId !== userProfile._id && (!msg.readBy || !msg.readBy.includes(userProfile._id))
-        ).length;
-      } else {
-        getConversationsThunk();
-      }
-    },
     updateReactions: (state, action) => {
       const { _id, reactions } = action.payload;
       if (state.messages) {
@@ -146,8 +128,25 @@ export const messageSlice = createSlice({
     builder.addCase(getConversationsThunk.fulfilled, (state, { payload }) => {
       state.conversations = payload?.responseData ?? [];
     });
+
+    builder
+      .addCase(updateConversationThunk.fulfilled, (state, { payload }) => {
+        if (!payload) return;
+
+        const { conversationIndex, newMessage, userProfile } = payload;
+        const conversation = state.conversations[conversationIndex];
+
+        conversation.lastMessage = newMessage;
+        conversation.updatedAt = newMessage.createdAt;
+        if (!conversation.messages.find(m => m._id === newMessage._id)) {
+          conversation.messages.push(newMessage);
+        }
+        conversation.unreadCount = conversation.messages.filter(
+          (msg) => msg.senderId !== userProfile._id && (!msg.readBy || !msg.readBy.includes(userProfile._id))
+        ).length;
+      });
   },
 });
 
-export const { setNewMessage, messagesRead, updateReactions, updateConversation } = messageSlice.actions;
+export const { setNewMessage, messagesRead, updateReactions } = messageSlice.actions;
 export default messageSlice.reducer;

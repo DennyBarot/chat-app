@@ -57,9 +57,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
   useEffect(() => {
     if (selectedConversationId && socket && userProfile?._id) {
       socket.emit("markConversationAsRead", { conversationId: selectedConversationId, userId: userProfile._id });
-      dispatch(getConversationsThunk());
     }
-  }, [selectedConversationId, socket, userProfile?._id, dispatch]);
+  }, [selectedConversationId, socket, userProfile?._id]);
 
   // Sync real-time messages for the current conversation
   useEffect(() => {

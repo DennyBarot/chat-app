@@ -59,12 +59,15 @@ export const messageSlice = createSlice({
             }
             return msg;
           });
-          if (payload.unreadCount !== undefined) {
-            state.conversations[conversationIndex].unreadCount = payload.unreadCount;
-          }
+           const updatedUnreadCount = payload.unreadCount !== undefined
+            ? payload.unreadCount
+            : newMessages.filter(
+            (msg) => msg.senderId !== readBy && (!msg.readBy || !msg.readBy.includes(readBy))
+          ).length;
           state.conversations[conversationIndex] = {
             ...conversation,
             messages: newMessages,
+            unreadCount: updatedUnreadCount,
             updatedAt: readAt,
           };
         }
@@ -140,8 +143,9 @@ export const messageSlice = createSlice({
         if (!conversation.messages.find(m => m._id === newMessage._id)) {
           conversation.messages.push(newMessage);
         }
-        // Removed client-side unreadCount calculation.
-        // The unreadCount should be updated by getConversationsThunk or a socket event from the server.
+        conversation.unreadCount = conversation.messages.filter(
+          (msg) => msg.senderId !== userProfile._id && (!msg.readBy || !msg.readBy.includes(userProfile._id))
+        ).length;
       });
   },
 });

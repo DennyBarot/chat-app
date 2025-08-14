@@ -87,12 +87,19 @@ io.on("connection", (socket) => {
       const updatedMessages = await Message.find({ _id: { $in: messageIdsToUpdate } });
 
       // Notify all clients in the conversation that messages have been read
+       // Calculate the new unread count for the user who marked messages as read
+      const newUnreadCount = await Message.countDocuments({
+        conversationId: conversationId,
+        readBy: { $ne: userId },
+        senderId: { $ne: userId } // Only count messages sent by others
+      });
       io.to(conversationId).emit('messagesRead', {
         conversationId,
         userId,
         messageIds: updatedMessages.map(msg => msg._id),
         readBy: userId, // for consistency with single message read
-        readAt: new Date()
+        readAt: new Date(),
+       unreadCount: newUnreadCount // Include the updated unread coun
       });
 
     } catch (error) {

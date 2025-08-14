@@ -12,20 +12,12 @@ export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer || { userProfile: null });
   const [socket, setSocket] = useState(null);
 
-    // Clean trailing slash from backend URL (shorter, no helper)
-  const backendUrl = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '');
-
-
-   const handleReconnect = () => {
-    const event = new Event("socketReconnect");
-    window.dispatchEvent(event);
-   }
-
   useEffect(() => {
     if (!userProfile?._id) return;
-       let isCleanup = false;
+
     const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
-    
+    const backendUrlRaw = import.meta.env.VITE_BACKEND_URL
+    const backendUrl = trimTrailingSlash(backendUrlRaw);
     console.log("SocketContext - backendUrl:", backendUrl);
 
    const newSocket = io(backendUrl, {
@@ -50,37 +42,49 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
-   // Custom event emitters for messagesRead/messageRead (if needed elsewhere in the app)
-    const onMessageRead = (data) =>
-      window.dispatchEvent(new CustomEvent("messageRead", { detail: data }));
-    const onMessagesRead = (data) =>
-      window.dispatchEvent(new CustomEvent("messagesRead", { detail: data }));
-    newSocket.on("messageRead", onMessageRead);
-    newSocket.on("messagesRead", onMessagesRead);
+    newSocket.on("messageRead", (data) => {
+      console.log("Message read event received:", data);
+      const event = new CustomEvent("messageRead", { detail: data });
+      window.dispatchEvent(event);
+    });
 
-    // Reconnection logic
-    newSocket.io.on("reconnect", handleReconnect);
+    newSocket.on("messagesRead", (data) => {
+      console.log("Messages read event received:", data);
+      const event = new CustomEvent("messagesRead", { detail: data });
+      window.dispatchEvent(event);
+    });
+
+    //reconnect event to handle reconnections
+    newSocket.io.on("reconnect", () => {
+      const event = new Event("socketReconnect");
+      window.dispatchEvent(event);
       
       // Re-emit viewConversation on reconnection
-     
+      const userId = newSocket.handshake.query.userId;
+      if (userId) {
+        // Get current conversation from URL or state
+        const pathParts = window.location.pathname.split('/');
+        const conversationId = pathParts[pathParts.length - 1];
         
-           socket.emit('viewConversation', { conversationId, userId: userProfile._id });
-      
+        if (conversationId && conversationId !== 'home') {
+          socket.emit('viewConversation', { 
+            conversationId, 
+            userId 
+          });
+        }
+      }
+    });
 
     setSocket(newSocket);
 
     return () => {
-      isMounted = false;
-      newSocket.off("messageRead", onMessageRead);
-      newSocket.off("messagesRead", onMessagesRead);
-      newSocket.io.off("reconnect", handleReconnect);
       newSocket.disconnect();
       setSocket(null);
     };
-  }, [userProfile?._id]);
-   const contextValue = useMemo(() => socket, [socket]);
+  }, [userProfile]);
+
   return (
-    <SocketContext.Provider value={contextValue}>
+    <SocketContext.Provider value={socket}>
       {children}
     </SocketContext.Provider>
   );

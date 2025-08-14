@@ -1,4 +1,4 @@
-import React, { useEffect, useState , useMemo ,useCallback  } from "react";
+import React, { useEffect, useState } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -8,105 +8,150 @@ import { getConversationsThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import ThemeToggle from "../../components/ThemeToggle";
-import { updateConversationWithNewMessage } from "../../store/slice/message/message.slice";
 
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+  document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
 
+  const [searchValue, setSearchValue] = useState("");
   const dispatch = useDispatch();
-  const { userProfile  } = useSelector((state) => state.userReducer);
+  const { userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
+  const [users, setUsers] = useState([]);
+
   const socket = useSocket();
 
- useEffect(() => {
-    document.body.classList.toggle("modal-open", isModalOpen || isAddUserModalOpen);
-    return () => document.body.classList.remove("modal-open");
-  }, [isModalOpen, isAddUserModalOpen]);
+  const handleLogout = async () => {
+    await dispatch(logoutUserThunk());
+  };
 
-  /** Count unread messages in a conversation */
-  const calculateUnreadCount = useCallback((conversation, currentUserId) => {
-    if (!conversation?.messages?.length) return 0;
+  const handleSelectUser = (user) => {
+    // console.log("UserSidebar: User selected:", user);
+    dispatch(setSelectedUser(user));
+    setIsAddUserModalOpen(false);
+    if (onUserSelect) {
+      onUserSelect(user);
+    }
+  };
+  const calculateUnreadCount = (conversation, currentUserId) => {
+    if (!conversation?.messages || !Array.isArray(conversation.messages)) return 0;
+
     return conversation.messages.filter(
-      (msg) =>
-        msg.senderId !== currentUserId &&
-        (!msg.readBy || !msg.readBy.some((u) => u._id === currentUserId))
+      msg =>
+        msg.senderId !== currentUserId && // Only count messages not sent by current user
+        (!msg.readBy || !msg.readBy.some(u => u._id === currentUserId))
     ).length;
-  }, []);
-/** Build, filter, and sort user list */
-  const users = useMemo(() => {
-    if (!userProfile?._id || !conversations.length) return [];
+  };
 
-    const term = searchValue.trim().toLowerCase();
-
-    return conversations
-      .map((conv) => {
-        const otherUser = conv.participants?.find((p) => p?._id !== userProfile._id);
-        if (!otherUser) return null;
-
-        return {
-          ...otherUser,
-          lastMessage,
-          conversationId: conv._id,
-          updatedAt: conv.updatedAt,
-          unreadCount: calculateUnreadCount(conv, userProfile._id),
-        };
-      })
-
-      .sort(
-        (a, b) =>
-          new Date(b.lastMessage?.createdAt || b.updatedAt || 0) -
-          new Date(a.lastMessage?.createdAt || a.updatedAt || 0)
-      )
-      .filter((user) => {
-        if (!term) return true;
-        return (
-          (user.username?.toLowerCase() || "").includes(term) ||
-          (user.fullName?.toLowerCase() || "").includes(term) ||
-          (user.email?.toLowerCase() || "").includes(term)
-        );
-      });
-  }, [conversations, userProfile?._id, searchValue, calculateUnreadCount]);
-
- useEffect(() => {
-    if (userProfile?._id) dispatch(getConversationsThunk());
-  }, [dispatch, userProfile?._id]);
-
-  /** Real-time socket listeners */
   useEffect(() => {
-    if (!socket || !userProfile?._id) return;
+    if (!socket || !userProfile?._id) {
+      return;
+    }
 
-    const handleNewMessage = (message) => {
-      dispatch(updateConversationWithNewMessage(message)); // ensure action exists
-    };
-
-    const handleSocketReconnect = () => {
+    const handleNewMessage = (data) => {
+      // Refetch conversations to update unread counts
       dispatch(getConversationsThunk());
     };
 
     socket.on("newMessage", handleNewMessage);
+
+    const handleSocketReconnect = () => {
+      dispatch(getConversationsThunk());
+    };
     window.addEventListener("socketReconnect", handleSocketReconnect);
 
     return () => {
       socket.off("newMessage", handleNewMessage);
       window.removeEventListener("socketReconnect", handleSocketReconnect);
     };
-  }, [dispatch, socket, userProfile?._id]);
+  }, [dispatch, socket, userProfile]);
 
-  /** Handlers */
-  const handleLogout = useCallback(() => {
-    dispatch(logoutUserThunk());
-  }, [dispatch]);
+  useEffect(() => {
+    if (!userProfile?._id) {
+      return;
+    }
+    dispatch(getConversationsThunk());
+  }, [dispatch, userProfile]);
 
-  const handleSelectUser = useCallback(
-    (user) => {
-      dispatch(setSelectedUser(user));
-      setIsAddUserModalOpen(false);
-      onUserSelect?.(user);
-    },
-    [dispatch, onUserSelect]
-  );
+  useEffect(() => {
+    if (!userProfile?._id) {
+      setUsers([]);
+      return;
+    }
+    if (conversations.length > 0) {
+      // Map users from conversations
+      let usersList = conversations.map((conv) => {
+        if (!Array.isArray(conv.participants)) {
+          return null;
+        }
+        const otherUser = conv.participants.find(
+          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
+        );
+        if (!otherUser) {
+          return null;
+        }
+        return {
+          ...otherUser,
+          lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
+          conversationId: conv._id,
+          updatedAt: conv.updatedAt,
+          unreadCount: calculateUnreadCount(conv, userProfile._id),
+        };
+      }).filter(Boolean);
+      // Sort users by last message time (most recent first)
+      usersList = usersList.sort((a, b) => {
+        const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
+        const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
+        return new Date(bTime) - new Date(aTime);
+      });
+      setUsers(usersList);
+    } else {
+      setUsers([]);
+    }
+  }, [conversations, userProfile]);
+
+  useEffect(() => {
+    if (!searchValue) {
+      if (conversations.length > 0) {
+        const usersList = conversations.map((conv) => {
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
+            conversationId: conv._id,
+          };
+        });
+      } else {
+        setUsers([]);
+      }
+    } else {
+      if (conversations.length > 0) {
+        const usersList = conversations.map((conv) => {
+          const otherUser = conv.participants.find(
+            (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
+          );
+          return {
+            ...otherUser,
+            lastMessage: conv.messages[0] || null,
+            conversationId: conv._id,
+          };
+        });
+        const filteredUsers = usersList.filter((user) => {
+          return (
+            (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+            (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
+          );
+        });
+        setUsers(filteredUsers);
+      } else {
+        setUsers([]);
+      }
+    }
+  }, [searchValue, conversations, userProfile]);
 
   return (
     <div className=" h-full flex flex-col bg-white dark:bg-slate-900 shadow-lg z-10">

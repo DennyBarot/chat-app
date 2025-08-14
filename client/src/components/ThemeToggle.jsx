@@ -1,40 +1,26 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 
 const ThemeToggle = () => {
-  // Get initial theme, preferring user's saved choice, then system preference, otherwise light
-  const getInitialIsDark = useCallback(() => {
-    const savedTheme = localStorage.getItem("theme");
-    if (savedTheme) return savedTheme === "dark";
-    return window.matchMedia("(prefers-color-scheme: dark)").matches;
-  }, []);
+  const [isDark, setIsDark] = useState(
+    () =>
+      localStorage.getItem("theme") === "dark" ||
+      (localStorage.getItem("theme") == null &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches)
+  );
 
-  const [isDark, setIsDark] = useState(getInitialIsDark);
-
-  // Update class & storage whenever theme changes
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-    localStorage.setItem("theme", isDark ? "dark" : "light");
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
   }, [isDark]);
-
-  // Listen to system theme changes (optional, for rare manual OS theme switches)
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleSystemThemeChange = (e) => {
-      // Only react to system changes if user hasn't set their own theme
-      if (!localStorage.getItem("theme")) {
-        setIsDark(e.matches);
-      }
-    };
-    mediaQuery.addEventListener("change", handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener("change", handleSystemThemeChange);
-  }, []);
-
-  // Toggle handler
-  const toggleTheme = useCallback(() => setIsDark((prev) => !prev), []);
 
   return (
     <button
-      onClick={toggleTheme}
+      onClick={() => setIsDark((prev) => !prev)}
       aria-label="Toggle dark mode"
       title="Toggle dark mode"
       className="ml-3 px-2 py-1 rounded transition-colors bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"

@@ -75,26 +75,3 @@ export const markMessagesReadThunk = createAsyncThunk(
     }
   }
 );
-
-export const updateConversationThunk = createAsyncThunk(
-  'message/updateConversation',
-  async ({ newMessage }, { getState, dispatch }) => {
-    const state = getState();
-    const { userProfile } = state.userReducer;
-
-    const conversationId = newMessage.conversationId;
-    const conversationIndex = state.messageReducer.conversations.findIndex(c => c._id === conversationId);
-
-    if (conversationIndex !== -1) {
-      return {
-        conversationIndex,
-        newMessage,
-        userProfile,
-      };
-    } else {
-      dispatch(getConversationsThunk());
-      return null;
-    }
-  }
-);
-

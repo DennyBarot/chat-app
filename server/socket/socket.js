@@ -17,7 +17,7 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
     credentials: true
   },
-  transports: ['websocket', 'polling']
+  transports: ['websocket']
 });
 
 // Map of userId to socket.id for fast lookups
@@ -163,3 +163,4 @@ io.on("connection", (socket) => {
 });
 
 export { io, server, app, getSocketId, userSocketMap };
+

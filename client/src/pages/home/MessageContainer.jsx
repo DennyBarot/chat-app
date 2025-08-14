@@ -21,7 +21,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const socket = useSocket();
-
+   const { typingUsers } = useSelector((state) => state.socketReducer);
   // Get messages from Redux
   const messages = useSelector((state) => state.messageReducer.messages);
 
@@ -127,31 +127,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [filteredMessages, selectedUser]);
 
   // Listen for typing indicators from server
-  const [typingUsers, setTypingUsers] = useState({});
-  useEffect(() => {
-    if (!socket || !userProfile?._id) return;
+  
 
-    const handleUserTyping = ({ conversationId, userId, isTyping }) => {
-      if (isTyping) {
-        setTypingUsers(prev => ({
-          ...prev,
-          [conversationId]: [...(prev[conversationId] || []), userId].filter(
-            (id, index, arr) => arr.indexOf(id) === index
-          )
-        }));
-      } else {
-        setTypingUsers(prev => ({
-          ...prev,
-          [conversationId]: (prev[conversationId] || []).filter(id => id !== userId)
-        }));
-      }
-    };
-
-    socket.on('userTyping', handleUserTyping);
-    return () => {
-      socket.off('userTyping', handleUserTyping);
-    };
-  }, [socket, userProfile?._id]);
 
   // Prepare the sorted, grouped message list with date separators and last-message logic
   const safeMessages = Array.isArray(filteredMessages) ? filteredMessages : [];
@@ -300,3 +277,4 @@ const MessageContainer = ({ onBack, isMobile }) => {
 };
 
 export default MessageContainer;
+

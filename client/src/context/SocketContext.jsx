@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo } from "react";
 import { io } from "socket.io-client";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setTypingUser } from "../store/slice/socket/socket.slice.js";
 
 const SocketContext = createContext(null);
 
@@ -57,7 +58,11 @@ export const SocketProvider = ({ children }) => {
       window.dispatchEvent(new CustomEvent("messagesRead", { detail: data }));
     newSocket.on("messageRead", onMessageRead);
     newSocket.on("messagesRead", onMessagesRead);
-
+    
+       const handleUserTyping = (data) => {
+      dispatch(setTypingUser(data));
+    };
+    newSocket.on("userTyping", handleUserTyping);
     // Reconnection logic - just handle the reconnect event
     newSocket.io.on("reconnect", handleReconnect);
 
@@ -68,10 +73,11 @@ export const SocketProvider = ({ children }) => {
       newSocket.off("messageRead", onMessageRead);
       newSocket.off("messagesRead", onMessagesRead);
       newSocket.io.off("reconnect", handleReconnect);
+      newSocket.off("userTyping", handleUserTyping);
       newSocket.disconnect();
       setSocket(null);
     };
-  }, [userProfile?._id]);
+  }, [userProfile?._id, dispatch]);
    const contextValue = useMemo(() => socket, [socket]);
   return (
     <SocketContext.Provider value={contextValue}>
@@ -79,4 +85,6 @@ export const SocketProvider = ({ children }) => {
     </SocketContext.Provider>
   );
 };
+
+
 

@@ -154,4 +154,3 @@ export const selectAllUsers = createSelector(
 );
 
 export default userSlice.reducer;
-

@@ -9,20 +9,10 @@ export const store = configureStore({
     messageReducer,
     socketReducer,
   },
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
+  middleware: (getDefaultMiddlware) =>
+    getDefaultMiddlware({
       serializableCheck: {
-        ignoredActions: [
-          'socket/initializeSocket',
-          'socket/disconnectSocket',
-          'socket/setOnlineUsers',
-          'socket/setTypingUser'
-        ],
-        ignoredPaths: [
-          'socketReducer.socket',
-          'socketReducer.onlineUsers',
-          'socketReducer.typingUsers'
-        ],
+        ignoredPaths: ["socketReducer.socket"],
       },
     }),
 });

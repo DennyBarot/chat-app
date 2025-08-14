@@ -12,32 +12,30 @@ export const useSocket = () => {
 export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer || { userProfile: null });
   const [socket, setSocket] = useState(null);
+  const dispatch = useDispatch(); // Fixed: Added missing dispatch initialization
 
-    // Clean trailing slash from backend URL (shorter, no helper)
+  // Clean trailing slash from backend URL (shorter, no helper)
   const backendUrl = import.meta.env.VITE_BACKEND_URL?.replace(/\/$/, '');
 
-
-   const handleReconnect = () => {
+  const handleReconnect = () => {
     const event = new Event("socketReconnect");
     window.dispatchEvent(event);
-   }
+  }
 
   useEffect(() => {
     if (!userProfile?._id) return;
-       let isCleanup = false;
-    const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
+    let isCleanup = false;
     
     console.log("SocketContext - backendUrl:", backendUrl);
 
-   const newSocket = io(backendUrl, {
-  query: {
-    userId: userProfile._id,
-  },
-  transports: ['websocket'], // ✅ prevent polling fallback
-  forceNew: true,
-  // Removed upgrade: false to allow upgrade from polling to websocket
-   path: '/socket.io',  // ✅ prevent upgrade from websocket → polling
-});
+    const newSocket = io(backendUrl, {
+      query: {
+        userId: userProfile._id,
+      },
+      transports: ['websocket'], // ✅ prevent polling fallback
+      forceNew: true,
+      path: '/socket.io',  // ✅ prevent upgrade from websocket → polling
+    });
 
     newSocket.io.on("packet", (packet) => {
       console.log("Socket packet event:", packet);
@@ -51,7 +49,7 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
-   // Custom event emitters for messagesRead/messageRead (if needed elsewhere in the app)
+    // Custom event emitters for messagesRead/messageRead (if needed elsewhere in the app)
     const onMessageRead = (data) =>
       window.dispatchEvent(new CustomEvent("messageRead", { detail: data }));
     const onMessagesRead = (data) =>
@@ -59,10 +57,12 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("messageRead", onMessageRead);
     newSocket.on("messagesRead", onMessagesRead);
     
-       const handleUserTyping = (data) => {
+    const handleUserTyping = (data) => {
+      console.log("Received userTyping event:", data);
       dispatch(setTypingUser(data));
     };
     newSocket.on("userTyping", handleUserTyping);
+    
     // Reconnection logic - just handle the reconnect event
     newSocket.io.on("reconnect", handleReconnect);
 
@@ -77,8 +77,10 @@ export const SocketProvider = ({ children }) => {
       newSocket.disconnect();
       setSocket(null);
     };
-  }, [userProfile?._id, dispatch]);
-   const contextValue = useMemo(() => socket, [socket]);
+  }, [userProfile?._id, dispatch, backendUrl]);
+  
+  const contextValue = useMemo(() => socket, [socket]);
+  
   return (
     <SocketContext.Provider value={contextValue}>
       {children}

@@ -1,6 +1,7 @@
 import React, { memo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice.js";
+import { markMessagesReadThunk } from "../../store/slice/message/message.thunk.js";
 
 const formatTime = (timestamp) => {
   if (!timestamp) return "";
@@ -28,7 +29,10 @@ const User = memo(({ userDetails, showUnreadCount = true }) => {
 
   const handleUserClick = useCallback(() => {
     dispatch(setSelectedUser(userDetails));
-  }, [dispatch, userDetails]);
+    if (conversationId) {
+      dispatch(markMessagesReadThunk({ conversationId }));
+    }
+  }, [dispatch, userDetails, conversationId]);
 
   const itemClass = [
     "flex gap-3 items-center p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-indigo-50 dark:hover:bg-slate-700",

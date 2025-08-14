@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from "react-router-dom";
-import { registerUserThunk } from '../../store/slice/user/user.thunk.js';
+import { registerUserThunk } from '../../store/slice/user/user.thunk';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from "react-hot-toast";
 

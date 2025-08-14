@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, memo, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { getRelativeTime, isMessageRead, getReadTime } from "../../utils/timeUtils.js";
-import { axiosInstance } from "../../components/utilities/axiosInstance.js";
+import { getRelativeTime, isMessageRead, getReadTime } from "../../utils/timeUtils";
+import { axiosInstance } from "../../components/utilities/axiosInstance";
 
 const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const [showMenu, setShowMenu] = useState(false);

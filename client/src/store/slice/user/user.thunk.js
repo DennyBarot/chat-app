@@ -1,6 +1,6 @@
 import { createAsyncThunk } from "@reduxjs/toolkit";
 import { toast } from "react-hot-toast";
-import { axiosInstance } from "../../../components/utilities/axiosInstance.js";
+import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 // Centralized error handling with toast and optional logging for development
 const handleApiError = (error) => {

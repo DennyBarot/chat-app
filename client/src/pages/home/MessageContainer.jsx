@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import User from "./User";
-import Message from "./Message.jsx";
-import DateSeparator from "./DateSeparator.jsx";
+import Message from "./Message";
+import DateSeparator from "./DateSeparator";
 import { useDispatch, useSelector } from "react-redux";
 import { getMessageThunk, markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 import { messagesRead } from "../../store/slice/message/message.slice";
-import { useSocket } from "../../context/SocketContext.jsx";
-import SendMessage from "./SendMessage.jsx";
+import { useSocket } from "../../context/SocketContext";
+import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 

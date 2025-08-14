@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getAllUsersThunk } from "../store/slice/user/user.thunk.js";
-import { selectAllUsers } from '../store/slice/user/user.slice.js';
+import { getAllUsersThunk } from "../store/slice/user/user.thunk";
+import { selectAllUsers } from '../store/slice/user/user.slice';
 
 const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
   const dispatch = useDispatch();

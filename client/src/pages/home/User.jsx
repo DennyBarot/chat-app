@@ -1,7 +1,7 @@
 import React, { memo, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { setSelectedUser } from "../../store/slice/user/user.slice.js";
-import { markMessagesReadThunk } from "../../store/slice/message/message.thunk.js";
+import { setSelectedUser } from "../../store/slice/user/user.slice";
+import { markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 
 const formatTime = (timestamp) => {
   if (!timestamp) return "";

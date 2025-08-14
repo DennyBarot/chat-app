@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { sendMessageThunk } from "../../store/slice/message/message.thunk.js";
+import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { IoIosSend } from "react-icons/io";
-import { useSocket } from "../../context/SocketContext.jsx"; // <-- Add this
+import { useSocket } from "../../context/SocketContext"; // <-- Add this
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();

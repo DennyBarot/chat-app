@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateUserProfileThunk } from '../store/slice/user/user.thunk.js';
+import { updateUserProfileThunk } from '../store/slice/user/user.thunk';
 
 const ProfileUpdateModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();

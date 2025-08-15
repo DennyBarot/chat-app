@@ -46,7 +46,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     );
     return conversation?._id;
   }, [selectedUser, conversations]);
-
+// typing
   useEffect(() => {
     const markAsRead = async () => {
       if (selectedUser && selectedUser._id && location.pathname !== '/login' && location.pathname !== '/signup') {

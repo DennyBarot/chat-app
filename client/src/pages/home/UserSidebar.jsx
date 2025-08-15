@@ -117,60 +117,28 @@ const UserSidebar = ({ onUserSelect }) => {
           unreadCount: calculateUnreadCount(conv, userProfile._id),
         };
       }).filter(Boolean);
-      // Sort users by last message time (most recent first)
-      usersList = usersList.sort((a, b) => {
-        const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
-        const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
-        return new Date(bTime) - new Date(aTime);
-      });
-      console.log('Constructed users list:', usersList);
-      setUsers(usersList);
-    } else {
-      setUsers([]);
-    }
-  }, [conversations, userProfile]);
 
-  useEffect(() => {
-    if (!searchValue) {
-      if (conversations.length > 0) {
-        const usersList = conversations.map((conv) => {
-          const otherUser = conv.participants.find(
-            (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
-          );
-          return {
-            ...otherUser,
-            lastMessage: conv.messages && conv.messages.length > 0 ? conv.messages[0] : null,
-            conversationId: conv._id,
-          };
-        });
-      } else {
-        setUsers([]);
-      }
-    } else {
-      if (conversations.length > 0) {
-        const usersList = conversations.map((conv) => {
-          const otherUser = conv.participants.find(
-            (participant) => participant && participant._id && userProfile?._id && participant._id !== userProfile._id
-          );
-          return {
-            ...otherUser,
-            lastMessage: conv.messages[0] || null,
-            conversationId: conv._id,
-          };
-        });
-        const filteredUsers = usersList.filter((user) => {
+      if (searchValue) {
+        usersList = usersList.filter((user) => {
           return (
             (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
             (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
             (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
           );
         });
-        setUsers(filteredUsers);
-      } else {
-        setUsers([]);
       }
+
+      // Sort users by last message time (most recent first)
+      usersList = usersList.sort((a, b) => {
+        const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
+        const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
+        return new Date(bTime) - new Date(aTime);
+      });
+      setUsers(usersList);
+    } else {
+      setUsers([]);
     }
-  }, [searchValue, conversations, userProfile]);
+  }, [conversations, userProfile, searchValue]);
 
   return (
     <div className=" h-full flex flex-col bg-white dark:bg-slate-900 shadow-lg z-10">

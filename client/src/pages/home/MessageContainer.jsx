@@ -239,7 +239,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
         <>
           {/* Header */}
           <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm  dark:from-slate-800 dark:to-slate-900 ">
-            <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} />
+            <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
           </div>
 
           {/* Messages */}

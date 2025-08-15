@@ -4,19 +4,17 @@ import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const sendMessageThunk = createAsyncThunk(
   "message/send",
-  async ({ recieverId, message, timestamp, replyTo }, { dispatch, rejectWithValue }) => {
+  async ({ receiverId, message, replyTo }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(`/api/v1/message/send/${recieverId}`, {
+      const response = await axiosInstance.post(`/api/v1/message/send/${receiverId}`, {
         message,
-        timestamp,
-        replyTo, // <-- add this
+        replyTo,
       });
-      // After sending message, refresh conversations
       await dispatch(getConversationsThunk());
       return response.data;
     } catch (error) {
       console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
+      const errorOutput = error?.response?.data?.errMessage || "Failed to send message";
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }

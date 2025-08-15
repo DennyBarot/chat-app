@@ -215,7 +215,7 @@ const UserSidebar = ({ onUserSelect }) => {
         ) : (
           <div className="space-y-1">
             {users.map((userDetails) => (
-              <User key={userDetails?._id} userDetails={userDetails} isTyping={typingUsers[userDetails._id]} />
+              <User key={userDetails?._id} userDetails={userDetails} isTyping={typingUsers[userDetails._id]} displayType="sidebar" />
             ))}
           </div>
         )}

@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getMessageThunk, sendMessageThunk, getConversationsThunk, markMessagesReadThunk } from "./message.thunk";
+import { getMessageThunk, sendMessageThunk, getConversationsThunk } from "./message.thunk";
 
 const initialState = {
   buttonLoading: false,

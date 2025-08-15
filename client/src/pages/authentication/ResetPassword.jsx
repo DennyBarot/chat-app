@@ -32,7 +32,7 @@ const ResetPassword = () => {
                 password: newPassword,
             });
             setMessage(response.data.message);
-        } catch (error) {
+        } catch {
             setMessage("Error resetting password. Please try again.");
         }
     }, [newPassword, confirmPassword, emailParam]);

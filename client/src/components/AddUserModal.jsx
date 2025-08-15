@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getAllUsersThunk } from "../store/slice/user/user.thunk";
 import { selectAllUsers } from '../store/slice/user/user.slice';
+import { useDebounce } from "use-debounce";
 
 const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
   const dispatch = useDispatch();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
 
   const allUsers = useSelector(selectAllUsers);
 
@@ -16,20 +17,19 @@ const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
     }
   }, [isOpen, dispatch, allUsers]);
 
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredUsers(allUsers);
+  const filteredUsers = useMemo(() => {
+    if (debouncedSearchTerm.trim() === "") {
+      return allUsers;
     } else {
-      const lowerSearch = searchTerm.toLowerCase();
-      const filtered = allUsers.filter((user) => {
+      const lowerSearch = debouncedSearchTerm.toLowerCase();
+      return allUsers.filter((user) => {
         return (
           (user.username?.toLowerCase() ?? "").includes(lowerSearch) ||
           (user.fullName?.toLowerCase() ?? "").includes(lowerSearch)
         );
       });
-      setFilteredUsers(filtered);
     }
-  }, [searchTerm, allUsers]);
+  }, [debouncedSearchTerm, allUsers]);
 
   if (!isOpen) return null;
 

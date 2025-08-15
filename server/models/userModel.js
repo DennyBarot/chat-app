@@ -34,6 +34,8 @@ const userSchema = new mongoose.Schema({
         enum: ['male', 'female'],
         required: true,
     },
+    resetPasswordToken: String, // Added field
+    resetPasswordExpire: Date,  // Added field
 
 },{timeStamps:true});
 

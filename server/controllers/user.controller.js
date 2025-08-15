@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import User from '../models/userModel.js';
 import { asyncHandler } from '../utilities/asyncHandlerUtility.js';
 import { errorHandler } from '../utilities/errorHandlerUtility.js';
@@ -96,47 +97,71 @@ export const login = asyncHandler(async (req, res, next) => {
     });
 });
 
-export const forgotPassword = asyncHandler(async (req, res) => {
+export const forgotPassword = asyncHandler(async (req, res, next) => {
   const { email } = req.body;
   if (!email) {
     return next(errorHandler(400, "Email is required"));
   }
 
-  const mailData = email;
+  const user = await User.findOne({ email });
+  if (!user) {
+    return next(errorHandler(404, "User with this email does not exist"));
+  }
+
+  // Generate reset token
+  const resetToken = crypto.randomBytes(20).toString('hex');
+  user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000; // Token valid for 15 minutes
+
+  await user.save();
+
   const frontendUrl = process.env.FRONTEND_URL || 'https://chat-app-frontend-ngqc.onrender.com';
+  const resetUrl = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-  console.log("Frontend URL:", frontendUrl);
+  try {
+    await transporter.sendMail({
+      ...mailOptions,
+      to: email,
+      subject: 'Password Reset Request',
+      text: `You are receiving this email because you (or someone else) have requested the reset of a password. Please make a PUT request to: ${resetUrl}
+If you did not request this, please ignore this email and your password will remain unchanged.`,
+      html: `<p>You are receiving this email because you (or someone else) have requested the reset of a password.</p><p>Click <a href='${resetUrl}'>here</a> to reset your password.</p><p>If you did not request this, please ignore this email and your password will remain unchanged.</p>`,
+    });
 
-  const mail = await transporter.sendMail({
-    ...mailOptions,
-    to: mailData,
-    text: `Please use the following link to reset your password: ${frontendUrl}/reset-password`,
-    html: `<p>Click <a style="color: blue" href='${frontendUrl}/reset-password?email=${mailData}'>here</a> to reset your password.</p>`,
-  });
-
-  console.log("Mail sent:", mail);
-
-  res.status(200).json({
-    success: true,
-    message: "Password reset link sent successfully",
-  });
-  console.log(mail)
-
+    res.status(200).json({
+      success: true,
+      message: "Password reset link sent to your email!",
+    });
+  } catch (error) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+    return next(errorHandler(500, "Error sending password reset email"));
+  }
 });
 
 export const resetPassword = asyncHandler(async (req, res, next) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return next(errorHandler(400, "Email and password are required"));
-  }
+  const { token } = req.params; // Get token from URL parameters
+  const { password } = req.body;
 
-  const user = await User.findOne({ email });
+  const resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+
   if (!user) {
-    return next(errorHandler(400, "User not found"));
+    return next(errorHandler(400, "Invalid or expired password reset token"));
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
-  user.password = hashedPassword;
+  if (!password) {
+    return next(errorHandler(400, "New password is required"));
+  }
+
+  user.password = await bcrypt.hash(password, 10);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
   await user.save();
 
   res.status(200).json({
@@ -218,3 +243,5 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
     responseData: allUsers,
   });
 });
+
+

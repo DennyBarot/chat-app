@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { registerUserThunk } from '../../store/slice/user/user.thunk';
 import { useDispatch, useSelector } from 'react-redux';
@@ -25,18 +25,18 @@ const Signup = () => {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     setSignupData(prev => ({
       ...prev,
       [e.target.name]: e.target.value
     }));
-  };
+  }, []);
 
-  const togglePasswordVisibility = () => {
+  const togglePasswordVisibility = useCallback(() => {
     setIsPasswordVisible(prev => !prev);
-  };
+  }, []);
 
-  const handleSignup = async () => {
+  const handleSignup = useCallback(async () => {
     if (!signupData.fullName || !signupData.username || !signupData.email || !signupData.password || !signupData.gender) {
       return toast.error("All fields are required.");
     }
@@ -48,7 +48,7 @@ const Signup = () => {
     } else {
       toast.error(response?.payload || "Signup failed.");
     }
-  };
+  }, [dispatch, signupData, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">

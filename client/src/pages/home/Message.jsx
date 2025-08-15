@@ -1,6 +1,12 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from "react-redux";
 import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
+
+const formatTime = (timestamp) => {
+  if (!timestamp) return "Invalid time";
+  const date = new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -18,23 +24,20 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const createdAt = messageDetails?.createdAt;
   const isSentByMe = userProfile?._id === messageDetails?.senderId;
 
-  // Format time
-  const formatTime = (timestamp) => {
-    if (!timestamp) return "Invalid time";
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const handleMouseEnter = useCallback(() => setShowMenu(true), []);
+  const handleMouseLeave = useCallback(() => setShowMenu(false), []);
+  const handleReply = useCallback(() => onReply(messageDetails), [onReply, messageDetails]);
 
   // Determine if message is read by receiver
-  const messageRead = isMessageRead(messageDetails, userProfile?._id);
-  const readTime = getReadTime(messageDetails, userProfile?._id);
+  const messageRead = useMemo(() => isMessageRead(messageDetails, userProfile?._id), [messageDetails, userProfile]);
+  const readTime = useMemo(() => getReadTime(messageDetails, userProfile?._id), [messageDetails, userProfile]);
 
   return (
     <div
       ref={messageRef}
       className={`flex ${isSentByMe ? 'justify-end' : 'justify-start'} mb-4`}
-      onMouseEnter={() => setShowMenu(true)}
-      onMouseLeave={() => setShowMenu(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       style={{ position: 'relative' }}
     >
       {!isSentByMe && (
@@ -53,7 +56,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         {showMenu && (
           <button
             className="absolute -top-6 right-4 bg-indigo-600 text-white rounded-full p-2 shadow-lg hover:bg-indigo-700 z-20 flex items-center justify-center transition duration-150"
-            onClick={() => onReply(messageDetails)}
+            onClick={handleReply}
             title="Reply to this message"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -112,5 +115,5 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
   );
 };
 
-export default Message;
+export default React.memo(Message);
 

@@ -8,11 +8,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const receiverId = req.params.receiverId;
   const senderId = req.user._id;
   const message = req.body.message;
-  const timestamp = req.body.timestamp;
   const replyTo = req.body.replyTo; // <-- get replyTo
-
-  console.log("sendMessage req.body:", req.body);
-  console.log("sendMessage req.user:", req.user);
 
   if (!senderId || !receiverId || !message) {
       return next(new errorHandler("any field is missing.", 400));
@@ -34,15 +30,12 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       receiverId,
       conversationId: conversation._id,
       content: message, // <-- fix here
-      timestamp,
       replyTo,
       readBy: [senderId],
   });
 
   // Populate replyTo for frontend
   const populatedMessage = await Message.findById(newMessage._id).populate('replyTo');
-
-  const createdAt = newMessage.createdAt;
 
   if (newMessage) {
       conversation.messages.push(newMessage._id);
@@ -59,12 +52,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       io.to(senderSocketId).emit("newMessage", populatedMessage);
   }
 
-  console.log("sendMessage: receiverId:", receiverId);
-  console.log("sendMessage: current userSocketMap keys:", Object.keys(userSocketMap));
-  const socketId = getSocketId(receiverId)
-  console.log("sendMessage: Emitting newMessage to socketId:", socketId);
-  io.to(socketId).emit("newMessage", newMessage);
-
   res.status(200).json({
       success: true,
       responseData: populatedMessage,
@@ -79,50 +66,86 @@ export const getConversations = asyncHandler(async (req, res, next) => {
     if (!userId) {
         return next(new errorHandler("User ID is required", 400));
     }
-    let conversations = await Conversation.find({
-        participants: userId,
-    })
-    .populate({
-        path: "participants",
-        select: "username fullName email avatar",
-    })
-    .populate({
-        path: "messages",
-        options: { sort: { createdAt: -1 } },
-        perDocumentLimit: 1, 
-        populate: { path: 'readBy', select: '_id' },
-    })
-    .sort({ updatedAt: -1 });
 
-    // Manually calculate unread count for each conversation
-    const conversationsWithUnreadCount = await Promise.all(conversations.map(async (conv) => {
-        const unreadCount = await Message.countDocuments({
-            conversationId: conv._id,
-            readBy: { $ne: userId }
-        });
-        return {
-            ...conv.toObject(),
-            unreadCount
-        };
-    }));
+    const conversations = await Conversation.aggregate([
+        { $match: { participants: userId } },
+        { $sort: { updatedAt: -1 } },
+        { $lookup: {
+            from: "users",
+            localField: "participants",
+            foreignField: "_id",
+            as: "participantsData"
+        }},
+        { $addFields: {
+            participants: {
+                $filter: {
+                    input: "$participantsData",
+                    as: "participant",
+                    cond: { $ne: ["$participant._id", userId] }
+                }
+            }
+        }},
+        { $unwind: "$participants" }, // Unwind to get the other participant as a single object
+        { $lookup: {
+            from: "messages",
+            localField: "_id",
+            foreignField: "conversationId",
+            as: "messagesData"
+        }},
+        { $addFields: {
+            lastMessage: {
+                $arrayElemAt: [
+                    { $filter: {
+                        input: "$messagesData",
+                        as: "msg",
+                        cond: { $eq: ["$msg.conversationId", "$_id"] }
+                    }},
+                    { $subtract: [{ $size: "$messagesData" }, 1] }
+                ]
+            },
+            unreadCount: {
+                $size: {
+                    $filter: {
+                        input: "$messagesData",
+                        as: "msg",
+                        cond: { $and: [
+                            { $eq: ["$msg.conversationId", "$_id"] },
+                            { $ne: ["$msg.senderId", userId] },
+                            { $not: { $in: [userId, "$msg.readBy"] } }
+                        ]}
+                    }
+                }
+            }
+        }},
+        { $project: {
+            _id: 1,
+            participants: {
+                _id: "$participants._id",
+                username: "$participants.username",
+                fullName: "$participants.fullName",
+                avatar: "$participants.avatar"
+            },
+            lastMessage: {
+                _id: "$lastMessage._id",
+                senderId: "$lastMessage.senderId",
+                receiverId: "$lastMessage.receiverId",
+                content: "$lastMessage.content",
+                createdAt: "$lastMessage.createdAt",
+                readBy: "$lastMessage.readBy"
+            },
+            unreadCount: 1,
+            updatedAt: 1,
+            createdAt: 1
+        }}
+    ]);
 
     res.status(200).json({
         success: true,
-        responseData: conversationsWithUnreadCount,
+        responseData: conversations,
     });
 });
 
-export const createMessage = async (req, res) => {
-  const { content, senderId, replyTo } = req.body;
-  let quotedContent = '';
-  if (replyTo) {
-    const quotedMsg = await Message.findById(replyTo);
-    if (quotedMsg) quotedContent = quotedMsg.content;
-  }
-  const message = new Message({ content, senderId, replyTo, quotedContent });
-  await message.save();
-  res.status(201).json(message);
-};
+
 
 export const getMessages = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
@@ -165,10 +188,33 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
   const { conversationId } = req.params;
 
   // Find all unread messages in this conversation
-  await Message.updateMany(
+  const updatedMessages = await Message.updateMany(
     { conversationId, readBy: { $ne: userId } },
-    { $addToSet: { readBy: userId } }
+    { $addToSet: { readBy: userId } },
+    { new: true } // Return the updated documents
   );
+
+  // Get the actual messages that were updated to emit their IDs
+  const messagesThatWereRead = await Message.find({ conversationId, readBy: userId });
+  const messageIds = messagesThatWereRead.map(msg => msg._id);
+
+  // Emit messagesRead event to the sender of the messages
+  // This assumes the sender is the other participant in a 1-on-1 chat
+  // For group chats, you might need to iterate through all senders of the unread messages
+  const conversation = await Conversation.findById(conversationId);
+  if (conversation) {
+    const otherParticipantId = conversation.participants.find(p => p.toString() !== userId.toString());
+    if (otherParticipantId) {
+      const senderSocketId = getSocketId(otherParticipantId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit('messagesRead', {
+          messageIds: messageIds,
+          readBy: userId,
+          readAt: new Date()
+        });
+      }
+    }
+  }
 
   res.status(200).json({ success: true });
 });

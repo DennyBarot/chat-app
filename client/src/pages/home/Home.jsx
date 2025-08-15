@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
@@ -22,19 +22,19 @@ const Home = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);
 
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+  const handleResize = useCallback(() => {
+    setIsMobile(window.innerWidth <= 768);
   }, []);
 
   useEffect(() => {
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [handleResize]);
+
+  useEffect(() => {
     if (!isAuthenticated || !userProfile?._id) return;
-    dispatch(initializeSocket(userProfile._id));
     dispatch(getConversationsThunk());
-  }, [isAuthenticated, userProfile?._id]);
+  }, [isAuthenticated, userProfile?._id, dispatch]);
 
   useEffect(() => {
     if (!socket) return;
@@ -44,20 +44,13 @@ const Home = () => {
     const handleNewMessage = (newMessage) => {
       console.log("Home.jsx: Received newMessage socket event:", newMessage);
       dispatch(setNewMessage(newMessage));
-      // Always fetch messages for the selected user for true real-time updates
-      if (selectedUser && selectedUser._id) {
-        console.log("Home.jsx: Dispatching getMessageThunk for selectedUser:", selectedUser._id);
-        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
-      } else {
-        console.log("Home.jsx: No selectedUser or _id, not dispatching getMessageThunk");
-      }
     };
     socket.on("newMessage", handleNewMessage);
     return () => {
       socket.off("newMessage", handleNewMessage);
    
     };
-  }, [socket, selectedUser, dispatch]);
+  }, [socket, dispatch]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -71,7 +64,7 @@ const Home = () => {
       // Prevent dispatch if selectedUser or _id is missing
       console.warn("Home.jsx: getMessageThunk not dispatched, selectedUser or _id missing", selectedUser);
     }
-  }, [selectedUser, dispatch]);
+  }, [selectedUser, dispatch, isAuthenticated]);
 
   useEffect(() => {
     if (isMobile) {
@@ -81,14 +74,9 @@ const Home = () => {
     }
   }, [isMobile, selectedUser]);
 
-  const handleUserSelect = (user) => {
-    // This can be used if you want to handle user select locally
-    // But since selectedUser is from Redux, this might not be necessary
-  };
-
-  const handleBackToSidebar = () => {
+  const handleBackToSidebar = useCallback(() => {
     dispatch(setSelectedUser(null));
-  };
+  }, [dispatch]);
 
   return (
   <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">

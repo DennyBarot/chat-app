@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useDispatch, useSelector } from 'react-redux';
@@ -18,14 +18,14 @@ const Login = () => {
       }
    }, [isAuthenticated, navigate]);
 
-   const handleInputChange = (e) => {
+   const handleInputChange = useCallback((e) => {
       setLoginData((prev) => ({
          ...prev,
          [e.target.name]: e.target.value,
       }));
-   };
+   }, []);
 
-   const handleLogin = async () => {
+   const handleLogin = useCallback(async () => {
       try {
          const response = await dispatch(loginUserThunk(loginData));
          if (response?.payload?.success) {
@@ -37,11 +37,11 @@ const Login = () => {
       } catch (error) {
          toast.error(error?.message || "Login failed");
       }
-   };
+   }, [dispatch, loginData, navigate]);
 
-   const togglePasswordVisibility = () => {
+   const togglePasswordVisibility = useCallback(() => {
       setIsPasswordVisible((prev) => !prev);
-   };
+   }, []);
 
      return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 px-4">

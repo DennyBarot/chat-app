@@ -46,17 +46,7 @@ export const registerUserThunk = createAsyncThunk(
   "user/signup",
   async ({ fullName, username, email, password, gender }, {  rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post("/api/v1/user/register", {
-        username,
-        fullName,
-        email,
-        password,
-        gender,
-      });
-      // Store token in localStorage for persistence after signup
-      if (response.data?.responseData?.token) {
-        localStorage.setItem('token', response.data.responseData.token);
-      }
+      
      
       // dispatch(setUser(response.data.user)); // Removed because setUser action does not exist in user slice
       toast.success("Account created successfully! Please login with email and password");

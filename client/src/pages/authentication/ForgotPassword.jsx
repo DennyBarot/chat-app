@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link ,useNavigate } from "react-router-dom";
 import {toast} from "react-hot-toast";
 import { useDispatch, useSelector} from 'react-redux';
@@ -22,14 +22,14 @@ const ForgotPassword = () => {
       
    });
 
-   const handleInputChange = (e) => {
+   const handleInputChange = useCallback((e) => {
       setEmailData((prev) => ({
          ...prev,
          [e.target.name]: e.target.value,
       }));
-   };
+   }, []);
  
-   const handlePasswordForgot = async () => {  
+   const handlePasswordForgot = useCallback(async () => {  
     try {
     const response = await dispatch(forgotPasswordUserThunk(EmailData));
     console.log("Response from dispatch:", response); 
@@ -38,7 +38,7 @@ const ForgotPassword = () => {
       console.error("Error during password reset:", error); 
       toast.error("Error during password reset");
     }
-     }   
+     }   , [dispatch, EmailData]);
 
    return (
       <div className='flex justify-center place-items-center p-6 h-screen bg-green-200'>

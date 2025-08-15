@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import ProfileUpdateModal from "../../components/ProfileUpdateModal";
 import AddUserModal from "../../components/AddUserModal";
 import User from "./User";
@@ -13,16 +13,22 @@ import { setTyping } from "../../store/slice/typing/typing.slice";
 const UserSidebar = ({ onUserSelect }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
 
   const [searchValue, setSearchValue] = useState("");
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
-  const [users, setUsers] = useState([]);
 
   const socket = useSocket();
+
+  // Effect for managing modal-open class on body
+  useEffect(() => {
+    document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isModalOpen, isAddUserModalOpen]);
 
   const handleLogout = async () => {
     await dispatch(logoutUserThunk());
@@ -92,55 +98,53 @@ const UserSidebar = ({ onUserSelect }) => {
     dispatch(getConversationsThunk());
   }, [dispatch, userProfile]);
 
-  useEffect(() => {
+  const users = useMemo(() => {
     if (!userProfile?._id) {
-      setUsers([]);
-      return;
+      return [];
     }
-    if (conversations.length > 0) {
-      // Map users from conversations
-      let usersList = conversations.map((conv) => {
-        if (!Array.isArray(conv.participants)) {
-          return null;
-        }
-        const otherUser = conv.participants.find(
-          (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
-        );
-        if (!otherUser) {
-          return null;
-        }
-        const sortedMessages = conv.messages && conv.messages.length > 0
-          ? [...conv.messages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-          : [];
-        return {
-          ...otherUser,
-          lastMessage: sortedMessages.length > 0 ? sortedMessages[0] : null,
-          conversationId: conv._id,
-          updatedAt: conv.updatedAt,
-          unreadCount: calculateUnreadCount(conv, userProfile._id),
-        };
-      }).filter(Boolean);
+    if (conversations.length === 0) {
+      return [];
+    }
 
-      if (searchValue) {
-        usersList = usersList.filter((user) => {
-          return (
-            (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-            (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
-            (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
-          );
-        });
+    let usersList = conversations.map((conv) => {
+      if (!Array.isArray(conv.participants)) {
+        return null;
       }
+      const otherUser = conv.participants.find(
+        (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
+      );
+      if (!otherUser) {
+        return null;
+      }
+      const sortedMessages = conv.messages && conv.messages.length > 0
+        ? [...conv.messages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        : [];
+      return {
+        ...otherUser,
+        lastMessage: sortedMessages.length > 0 ? sortedMessages[0] : null,
+        conversationId: conv._id,
+        updatedAt: conv.updatedAt,
+        unreadCount: calculateUnreadCount(conv, userProfile._id),
+      };
+    }).filter(Boolean);
 
-      // Sort users by last message time (most recent first)
-      usersList = usersList.sort((a, b) => {
-        const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
-        const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
-        return new Date(bTime) - new Date(aTime);
+    if (searchValue) {
+      usersList = usersList.filter((user) => {
+        return (
+          (user.username?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+          (user.fullName?.toLowerCase() ?? "").includes(searchValue.toLowerCase()) ||
+          (user.email?.toLowerCase() ?? "").includes(searchValue.toLowerCase())
+        );
       });
-      setUsers(usersList);
-    } else {
-      setUsers([]);
     }
+
+    // Sort users by last message time (most recent first)
+    usersList = usersList.sort((a, b) => {
+      const aTime = a.lastMessage?.createdAt || a.updatedAt || 0;
+      const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
+      return new Date(bTime) - new Date(aTime);
+    });
+    return usersList;
   }, [conversations, userProfile, searchValue]);
 
   return (

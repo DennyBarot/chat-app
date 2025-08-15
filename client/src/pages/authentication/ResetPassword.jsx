@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
@@ -19,7 +19,7 @@ const ResetPassword = () => {
         }
     }, [isAuthenticated, navigate]);
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = useCallback(async (e) => {
         e.preventDefault();
         if (newPassword !== confirmPassword) {
             setMessage("Passwords do not match.");
@@ -27,7 +27,7 @@ const ResetPassword = () => {
         }
 
         try {
-            const response = await axios.post('https://chat-app-frontend-ngqc.onrender.com/api/v1/user/reset-password', {
+            const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/user/reset-password`, {
                 email: emailParam, // Send email from URL parameter
                 password: newPassword,
             });
@@ -35,7 +35,15 @@ const ResetPassword = () => {
         } catch (error) {
             setMessage("Error resetting password. Please try again.");
         }
-    };
+    }, [newPassword, confirmPassword, emailParam]);
+
+    const handleNewPasswordChange = useCallback((e) => {
+        setNewPassword(e.target.value);
+    }, []);
+
+    const handleConfirmPasswordChange = useCallback((e) => {
+        setConfirmPassword(e.target.value);
+    }, []);
 
     return (
         <div>
@@ -46,7 +54,7 @@ const ResetPassword = () => {
                     <input
                         type="password"
                         value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
+                        onChange={handleNewPasswordChange}
                         required
                     />
                 </div>
@@ -55,7 +63,7 @@ const ResetPassword = () => {
                     <input
                         type="password"
                         value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        onChange={handleConfirmPasswordChange}
                         required
                     />
                 </div>

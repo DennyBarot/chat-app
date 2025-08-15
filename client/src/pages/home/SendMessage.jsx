@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { axiosInstance } from "../../components/utilities/axiosInstance";
 import { useSocket } from "../../context/SocketContext";
 
-const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
+const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
   const { selectedUser, userProfile } = useSelector((state) => state.userReducer);
   const socket = useSocket();
@@ -14,36 +14,33 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
 
-  const handleSendMessage = async () => {
+  const handleSendMessage = useCallback(async () => {
     if (!message.trim()) return;
 
     setIsSubmitting(true);
-    const response = await axiosInstance.post(
-      `/api/v1/message/send/${selectedUser?._id}`,
-      {
+    try {
+      await dispatch(sendMessageThunk({
+        receiverId: selectedUser?._id,
         message,
-        timestamp: new Date().toISOString(),
-        replyTo: replyMessage?._id, // <-- Add this line
+        replyTo: replyMessage?._id,
+      }));
+      setMessage("");
+      if (replyMessage) onCancelReply();
+    } catch (error) {
+      console.error("Error sending message:", error);
+      // Optionally show a toast error here
+    } finally {
+      setIsSubmitting(false);
+      // After sending message, ensure typing indicator is off
+      if (isTyping) {
+        socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
+        setIsTyping(false);
+        clearTimeout(typingTimeoutRef.current);
       }
-    );
-    setMessage("");
-    setIsSubmitting(false);
-    if (replyMessage) onCancelReply(); // Optionally clear reply after sending
-    // After sending message, ensure typing indicator is off
-    if (isTyping) {
-      socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
-      setIsTyping(false);
-      clearTimeout(typingTimeoutRef.current);
     }
-  };
+  }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch]);
 
-  const handleSend = () => {
-    onSend(message, replyMessage?._id);
-    setMessage("");
-    onCancelReply();
-  };
-
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     setMessage(e.target.value);
 
     if (!socket || !userProfile || !selectedUser) return;
@@ -71,7 +68,14 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
       socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
       clearTimeout(typingTimeoutRef.current);
     }
-  };
+  }, [socket, userProfile, selectedUser, isTyping]);
+
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }, [handleSendMessage]);
 
   useEffect(() => {
     // Cleanup timeout on component unmount
@@ -109,12 +113,7 @@ const SendMessage = ({ onSend, replyMessage, onCancelReply }) => {
             className="w-full pl-4 pr-12 py-3 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
             value={message}
             onChange={handleInputChange}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             disabled={isSubmitting}
           />
         </div>

@@ -1,39 +1,39 @@
-import React from "react";
+import React, { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { markMessagesReadThunk } from "../../store/slice/message/message.thunk";
+
+const formatTime = (timestamp) => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const now = new Date();
+  
+  
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+  
+ 
+  return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
+};
+
 const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayType = 'sidebar' }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
     const { onlineUsers } = useSelector((state) => state.socketReducer);
 
-  const isUserOnline = onlineUsers?.includes(userDetails?._id);
+  const isUserOnline = useMemo(() => onlineUsers?.includes(userDetails?._id), [onlineUsers, userDetails]);
 
-  const handleUserClick = () => {
+  const handleUserClick = useCallback(() => {
     dispatch(setSelectedUser(userDetails));
      if (userDetails?.conversationId) {
       dispatch(markMessagesReadThunk({ conversationId: userDetails.conversationId }));
     }
-  };
-
-  // Format timestamp for last message
-  const formatTime = (timestamp) => {
-    if (!timestamp) return "";
-    const date = new Date(timestamp);
-    const now = new Date();
-    
-    
-    if (date.toDateString() === now.toDateString()) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    if (date.getFullYear() === now.getFullYear()) {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    }
-    
-   
-    return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
-  };
+  }, [dispatch, userDetails]);
 
   return (
     <div
@@ -88,4 +88,4 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
   );
 };
 
-export default User;
+export default React.memo(User);

@@ -8,7 +8,7 @@ const messageSchema = new Schema(
   senderId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   receiverId: { type: Schema.Types.ObjectId, ref: 'User' }, // optional for one-to-one
   conversationId: { type: Schema.Types.ObjectId, ref: 'Conversation' }, // for group/one-to-one
-  timestamp: { type: Date, default: Date.now },
+  
   replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
   quotedContent: { type: String },
   readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],

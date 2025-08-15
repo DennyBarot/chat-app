@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { updateUserProfileThunk } from '../store/slice/user/user.thunk';
 
@@ -19,7 +19,7 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
     }
   }, [userProfile, isOpen]);
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = useCallback((e) => {
     const file = e.target.files[0];
     if (file) {
       setIsUploading(true);
@@ -30,17 +30,17 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
       };
       reader.readAsDataURL(file);
     }
-  };
+  }, []);
 
-  const handleRemoveAvatar = () => {
+  const handleRemoveAvatar = useCallback(() => {
     setAvatar('');
-  };
+  }, []);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     await dispatch(updateUserProfileThunk({ fullName, username, avatar }));
     onClose();
-  };
+  }, [dispatch, fullName, username, avatar, onClose]);
 
   if (!isOpen) return null;
 

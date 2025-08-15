@@ -239,10 +239,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
         <>
           {/* Header */}
           <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm  dark:from-slate-800 dark:to-slate-900 ">
-            <User userDetails={selectedUser} showUnreadCount={false} />
-            {isSelectedUserTyping && (
-              <p className="text-sm text-indigo-500 dark:text-indigo-300 animate-pulse">typing...</p>
-            )}
+            <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} />
           </div>
 
           {/* Messages */}

@@ -67,9 +67,13 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
           {isTyping ? (
             <p className="text-sm text-indigo-500 animate-pulse">typing...</p>
           ) : displayType === 'sidebar' ? (
-            <p className="text-sm text-slate-600 truncate">
-              {userDetails?.lastMessage?.message ? userDetails.lastMessage.message : `@${userDetails.username}`}
-            </p>
+            userDetails?.lastMessage ? (
+              <p className="text-sm text-slate-600 truncate">
+                {userDetails?.lastMessage?.message}
+              </p>
+            ) : (
+              <p className="text-xs text-slate-500 mr-1">@{userDetails?.username}</p>
+            )
           ) : (
             <p className="text-xs text-slate-500 mr-1">@{userDetails?.username}</p>
           )}

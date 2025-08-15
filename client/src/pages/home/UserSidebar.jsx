@@ -123,6 +123,7 @@ const UserSidebar = ({ onUserSelect }) => {
         const bTime = b.lastMessage?.createdAt || b.updatedAt || 0;
         return new Date(bTime) - new Date(aTime);
       });
+      console.log('Constructed users list:', usersList);
       setUsers(usersList);
     } else {
       setUsers([]);

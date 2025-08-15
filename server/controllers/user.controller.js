@@ -132,10 +132,11 @@ If you did not request this, please ignore this email and your password will rem
       success: true,
       message: "Password reset link sent to your email!",
     });
-  } catch (error) {
+  } catch (err) {
     user.resetPasswordToken = undefined;
     user.resetPasswordExpire = undefined;
     await user.save();
+    console.error(err);
     return next(errorHandler(500, "Error sending password reset email"));
   }
 });
@@ -170,10 +171,10 @@ export const resetPassword = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const getProfile = asyncHandler(async (req, res, next) => {
+export const getProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   if (!userId) {
-    return next(errorHandler(400, "User ID is required"));
+    return res.status(400).json({ message: "User ID is required" });
   }
   const profile = await User.findById(userId);
 
@@ -183,7 +184,7 @@ export const getProfile = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const updateProfile = asyncHandler(async (req, res, next) => {
+export const updateProfile = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { fullName, username, avatar } = req.body;
 
@@ -194,14 +195,14 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   if (avatar) updateData.avatar = avatar;
 
   if (!userId || (!fullName && !username && !avatar)) {
-    return next(errorHandler(400, "User ID is required and at least one field must be provided"));
+    return res.status(400).json({ message: "User ID is required and at least one field must be provided" });
   }
 
 
   if (username) {
     const existingUser = await User.findOne({ username });
     if (existingUser && existingUser._id.toString() !== userId) {
-      return next(errorHandler(400, "Username already exists"));
+      return res.status(400).json({ message: "Username already exists" });
     }
   }
 
@@ -214,7 +215,7 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const logout = asyncHandler(async (req, res, next) => {
+export const logout = asyncHandler(async (req, res) => {
   res.status(200)
     .cookie("token", "", {
       expires: new Date(Date.now()),
@@ -228,7 +229,7 @@ export const logout = asyncHandler(async (req, res, next) => {
     });
 });
 
-export const getOtherUsers = asyncHandler(async (req, res, next) => {
+export const getOtherUsers = asyncHandler(async (req, res) => {
   const otherUsers = await User.find({ _id: { $ne: req.user._id } });
   res.status(200).json({
     success: true,
@@ -236,7 +237,7 @@ export const getOtherUsers = asyncHandler(async (req, res, next) => {
   });
 });
 
-export const getAllUsers = asyncHandler(async (req, res, next) => {
+export const getAllUsers = asyncHandler(async (req, res) => {
   const allUsers = await User.find({});
   res.status(200).json({
     success: true,

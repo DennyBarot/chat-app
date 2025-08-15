@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from "react-redux";
-import PropTypes from 'prop-types';
+
 import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
 
 const formatTime = (timestamp) => {

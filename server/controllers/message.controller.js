@@ -1,17 +1,17 @@
 import Message from "../models/messageModel.js";
 import Conversation from "../models/conversationModel.js";
 import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
-import { errorHandler } from "../utilities/errorHandlerUtility.js";
-import {getSocketId, io, userSocketMap} from '../socket/socket.js';
 
-export const sendMessage = asyncHandler(async (req, res, next) => {
+import {getSocketId, io} from '../socket/socket.js';
+
+export const sendMessage = asyncHandler(async (req, res) => {
   const receiverId = req.params.receiverId;
   const senderId = req.user._id;
   const message = req.body.message;
   const replyTo = req.body.replyTo; // <-- get replyTo
 
   if (!senderId || !receiverId || !message) {
-      return next(new errorHandler("any field is missing.", 400));
+      return res.status(400).json({ message: "any field is missing." });
   }
 
   let conversation = await Conversation.findOne({
@@ -60,11 +60,11 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
 
 
 
-export const getConversations = asyncHandler(async (req, res, next) => {
+export const getConversations = asyncHandler(async (req, res) => {
     const userId = req.user._id;
 
     if (!userId) {
-        return next(new errorHandler("User ID is required", 400));
+        return res.status(400).json({ message: "User ID is required" });
     }
 
     const conversations = await Conversation.aggregate([
@@ -147,12 +147,12 @@ export const getConversations = asyncHandler(async (req, res, next) => {
 
 
 
-export const getMessages = asyncHandler(async (req, res, next) => {
+export const getMessages = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const otherParticipantId = req.params.otherParticipantId;
 
   if (!userId || !otherParticipantId) {
-    return next(new errorHandler("User ID and other participant ID are required", 400));
+    return res.status(400).json({ message: "User ID and other participant ID are required" });
   }
 
   // Find conversation between the two participants
@@ -183,12 +183,12 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   res.json(formatted);
 });
 
-export const markMessagesRead = asyncHandler(async (req, res, next) => {
+export const markMessagesRead = asyncHandler(async (req, res) => {
   const userId = req.user._id;
   const { conversationId } = req.params;
 
   // Find all unread messages in this conversation
-  const updatedMessages = await Message.updateMany(
+  await Message.updateMany(
     { conversationId, readBy: { $ne: userId } },
     { $addToSet: { readBy: userId } },
     { new: true } // Return the updated documents

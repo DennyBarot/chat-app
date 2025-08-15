@@ -16,7 +16,7 @@ const UserSidebar = ({ onUserSelect }) => {
 
   const [searchValue, setSearchValue] = useState("");
   const dispatch = useDispatch();
-  const { userProfile, selectedUser } = useSelector((state) => state.userReducer);
+  const { userProfile } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
 
@@ -57,7 +57,7 @@ const UserSidebar = ({ onUserSelect }) => {
       return;
     }
 
-    const handleNewMessage = (data) => {
+    const handleNewMessage = () => {
       // Refetch conversations to update unread counts
       dispatch(getConversationsThunk());
     };
@@ -186,7 +186,7 @@ const UserSidebar = ({ onUserSelect }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
             </svg>
             <p className="text-center font-medium">No conversations yet</p>
-            <p className="text-sm text-slate-400 text-center mt-1">Click the "Add" button to start a new conversation</p>
+            <p className="text-sm text-slate-400 text-center mt-1">Click the &quot;Add&quot; button to start a new conversation</p>
           </div>
         ) : (
           <div className="space-y-1">

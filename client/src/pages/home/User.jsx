@@ -69,7 +69,7 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
           ) : displayType === 'sidebar' ? (
             userDetails?.lastMessage ? (
               <p className="text-sm text-slate-600 truncate">
-                {userDetails?.lastMessage?.message}
+                {userDetails?.lastMessage?.content}
               </p>
             ) : (
               <p className="text-xs text-slate-500 mr-1">@{userDetails?.username}</p>

@@ -86,13 +86,8 @@ export const messageSlice = createSlice({
     });
 
     // get conversations
-    builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
-      console.log("MessageSlice: Conversations received:", action.payload?.responseData);
-      state.conversations = action.payload?.responseData ?? [];
-    });
-    builder.addCase(getConversationsThunk.rejected, (state, action) => {
-      console.log("MessageSlice: Conversations fetch failed:", action.error);
-      state.conversations = [];
+    builder.addCase(getConversationsThunk.fulfilled, (state, _) => {
+      state.conversations = _.payload?.responseData ?? [];
     });
   },
 });

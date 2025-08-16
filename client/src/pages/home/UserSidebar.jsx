@@ -93,10 +93,8 @@ const UserSidebar = ({ onUserSelect }) => {
 
   useEffect(() => {
     if (!userProfile?._id) {
-      console.log("UserSidebar: No userProfile._id, skipping conversations fetch");
       return;
     }
-    console.log("UserSidebar: Fetching conversations for user:", userProfile._id);
     dispatch(getConversationsThunk());
   }, [dispatch, userProfile]);
 

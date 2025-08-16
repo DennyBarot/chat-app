@@ -67,6 +67,7 @@ export const getConversations = asyncHandler(async (req, res) => {
         return res.status(400).json({ message: "User ID is required" });
     }
 
+    console.log("Fetching conversations for user ID:", userId); // Debugging log
     const conversations = await Conversation.aggregate([
         { $match: { participants: userId } },
         { $sort: { updatedAt: -1 } },

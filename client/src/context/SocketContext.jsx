@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { useDispatch, useSelector } from "react-redux";
-import { setOnlineUsers } from "../store/slice/socket/socket.slice";
+import { useSelector } from "react-redux";
 
 const SocketContext = createContext(null);
 
@@ -15,7 +14,6 @@ export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer || { userProfile: null });
   const [socket, setSocket] = useState(null);
   const socketRef = useRef(null); // Use a ref to hold the socket instance
-  const dispatch = useDispatch();
 
   useEffect(() => {
     if (!userProfile?._id) {
@@ -58,15 +56,11 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on("connect", () => {
-      console.log("✅ Socket connected:", newSocket.id, "UserId:", userProfile?._id);
+      console.log("Socket connected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
     newSocket.on("disconnect", () => {
-      console.log("❌ Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
-    });
-
-    newSocket.on("connect_error", (error) => {
-      console.error("❌ Socket connection error:", error);
+      console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
     newSocket.on("messageRead", (data) => {
@@ -79,11 +73,6 @@ export const SocketProvider = ({ children }) => {
       console.log("Messages read event received:", data);
       const event = new CustomEvent("messagesRead", { detail: data });
       window.dispatchEvent(event);
-    });
-
-    newSocket.on("onlineUsers", (onlineUsers) => {
-      console.log("Online users received:", onlineUsers);
-      dispatch(setOnlineUsers(onlineUsers));
     });
 
     newSocket.io.on("reconnect", () => {
@@ -115,7 +104,7 @@ export const SocketProvider = ({ children }) => {
       socketRef.current = null;
       setSocket(null);
     };
-  }, [userProfile, dispatch]); // Add dispatch to dependency array
+  }, [userProfile]); // Only userProfile in dependency array
 
   return (
     <SocketContext.Provider value={socket}>

@@ -19,11 +19,9 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
 });
 
-const userSocketMap = {};
-
-const getSocketId = (userId) => {
-    return userSocketMap[userId];
-};
+const userSocketMap = {
+    // userId : socketId,
+}
 
 export { io, app, server, getSocketId, userSocketMap };
 
@@ -33,7 +31,8 @@ io.on("connection", (socket) => {
   if (!userId) return;
 
   userSocketMap[userId] = socket.id;
-  io.emit("onlineUsers", Object.keys(userSocketMap));
+
+  io.emit("onlineUsers", Object.keys(userSocketMap))
 
   socket.on("disconnect", () => {
     delete userSocketMap[userId];
@@ -53,4 +52,14 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("stopTyping", { senderId, receiverId });
     }
   });
+
+  // The following events are now handled by API controllers and emit via `io` directly
+  // socket.on('sendMessage', ...)
+  // socket.on('markMessageRead', ...)
+  // socket.on('markConversationRead', ...)
+  // socket.on('viewConversation', ...)
 });
+
+const getSocketId = (userId) => {
+    return userSocketMap[userId];
+}

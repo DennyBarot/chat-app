@@ -38,7 +38,9 @@ const Home = () => {
 
   useEffect(() => {
     if (!socket) return;
-    
+    socket.on("onlineUsers", (onlineUsers) => {
+      dispatch(setOnlineUsers(onlineUsers));
+    });
     const handleNewMessage = (newMessage) => {
       console.log("Home.jsx: Received newMessage socket event:", newMessage);
       dispatch(setNewMessage(newMessage));

@@ -11,7 +11,7 @@ export const sendMessage = asyncHandler(async (req, res) => {
   const replyTo = req.body.replyTo; // <-- get replyTo
 
   if (!senderId || !receiverId || !message) {
-      return res.status(400).json({ message: "Required fields are missing." });
+      return res.status(400).json({ message: "any field is missing." });
   }
 
   let conversation = await Conversation.findOne({

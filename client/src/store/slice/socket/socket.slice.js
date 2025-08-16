@@ -1,11 +1,11 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  onlineUsers: [],
+  onlineUsers: null,
 };
 
-const socketSlice = createSlice({
-  name: 'socket',
+export const socketSlice = createSlice({
+  name: "socket",
   initialState,
   reducers: {
     setOnlineUsers: (state, action) => {

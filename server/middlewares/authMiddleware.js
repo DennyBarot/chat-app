@@ -10,8 +10,7 @@ const token = req.cookies.token || req.headers["authorization"]?.replace("Bearer
 let tokenData;
 try {
     tokenData = jwt.verify(token, process.env.JWT_SECRET);
-} catch (err) {
-    console.error(err);
+} catch (error) {
     return next(new errorHandler(401, "Invalid token"));
 }
     req.user = tokenData;

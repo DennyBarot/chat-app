@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend } from "react-icons/io";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
-
+import { axiosInstance } from "../../components/utilities/axiosInstance";
 import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {

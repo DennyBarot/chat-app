@@ -17,7 +17,7 @@ const Home = () => {
   React.useEffect(() => {
     console.log("Home.jsx: selectedUser changed:", selectedUser);
   }, [selectedUser]);
-  const { socket } = useSelector((state) => state.socketReducer);
+  const { socket, onlineUsers } = useSelector((state) => state.socketReducer);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);

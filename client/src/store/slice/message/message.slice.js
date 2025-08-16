@@ -43,8 +43,8 @@ export const messageSlice = createSlice({
       });
     }
   },
-    extraReducers: (builder) => {
-        builder.addCase(sendMessageThunk.pending, (state, _) => {
+  extraReducers: (builder) => {
+    builder.addCase(sendMessageThunk.pending, (state, action) => {
       state.buttonLoading = true;
       state.sendMessageStatus = 'pending';
     });
@@ -59,13 +59,13 @@ export const messageSlice = createSlice({
       state.buttonLoading = false;
       state.sendMessageStatus = 'fulfilled';
     });
-    builder.addCase(sendMessageThunk.rejected, (state, _) => {
+    builder.addCase(sendMessageThunk.rejected, (state, action) => {
       state.buttonLoading = false;
       state.sendMessageStatus = 'rejected';
     });
 
     // get messages
-    builder.addCase(getMessageThunk.pending, (state, _) => {
+    builder.addCase(getMessageThunk.pending, (state, action) => {
       state.buttonLoading = true;
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
@@ -81,13 +81,13 @@ export const messageSlice = createSlice({
       state.messages = Array.from(uniqueMessagesMap.values());
       state.buttonLoading = false;
     });
-    builder.addCase(getMessageThunk.rejected, (state, _) => {
+    builder.addCase(getMessageThunk.rejected, (state, action) => {
       state.buttonLoading = false;
     });
 
     // get conversations
-    builder.addCase(getConversationsThunk.fulfilled, (state, _) => {
-      state.conversations = _.payload?.responseData ?? [];
+    builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
+      state.conversations = action.payload?.responseData ?? [];
     });
   },
 });

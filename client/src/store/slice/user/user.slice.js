@@ -61,7 +61,7 @@ export const userSlice = createSlice({
     builder.addCase(registerUserThunk.pending, (state) => {
       state.buttonLoading = true;
     });
-    builder.addCase(registerUserThunk.fulfilled, (state, _) => {
+    builder.addCase(registerUserThunk.fulfilled, (state, action) => {
       state.buttonLoading = false;
     });
     builder.addCase(registerUserThunk.rejected, (state) => {

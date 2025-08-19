@@ -6,7 +6,7 @@ import { setOnlineUsers } from "../../store/slice/socket/socket.slice";
 import { setNewMessage } from "../../store/slice/message/message.slice";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getMessageThunk } from "../../store/slice/message/message.thunk";
-import { getConversationsThunk } from "../../store/slice/message/message.thunk";
+import { getConversationsThunk, getOtherUsersThunk } from "../../store/slice/message/message.thunk";
 
 const Home = () => {
   const dispatch = useDispatch();
@@ -34,6 +34,7 @@ const Home = () => {
   useEffect(() => {
     if (!isAuthenticated || !userProfile?._id) return;
     dispatch(getConversationsThunk());
+    dispatch(getOtherUsersThunk());
   }, [isAuthenticated, userProfile?._id, dispatch]);
 
   useEffect(() => {

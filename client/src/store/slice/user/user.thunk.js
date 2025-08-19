@@ -44,17 +44,19 @@ export const forgotPasswordUserThunk = createAsyncThunk(
 
 export const registerUserThunk = createAsyncThunk(
   "user/signup",
-  async ({ fullName, username, email, password, gender }, {  rejectWithValue }) => {
+  async ({ fullName, username, email, password, gender }, { rejectWithValue }) => {
     try {
-      
-     
-      // dispatch(setUser(response.data.user)); // Removed because setUser action does not exist in user slice
+      const response = await axiosInstance.post("/api/v1/user/register", {
+        fullName,
+        username,
+        email,
+        password,
+        gender,
+      });
       toast.success("Account created successfully! Please login with email and password");
       return response.data;
-    
     } catch (error) {
-   
-      console.error("Axios error:", error); 
+      console.error("Axios error:", error);
       const errorOutput = error?.response?.data?.errMessage || error.message;
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);

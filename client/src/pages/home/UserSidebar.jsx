@@ -42,15 +42,6 @@ const UserSidebar = ({ onUserSelect }) => {
       onUserSelect(user);
     }
   };
-  const calculateUnreadCount = (conversation, currentUserId) => {
-    if (!conversation?.messages || !Array.isArray(conversation.messages)) return 0;
-
-    return conversation.messages.filter(
-      msg =>
-        msg.senderId !== currentUserId && // Only count messages not sent by current user
-        (!msg.readBy || !msg.readBy.some(u => u._id === currentUserId))
-    ).length;
-  };
 
   useEffect(() => {
     if (!socket || !userProfile?._id) {
@@ -107,12 +98,10 @@ const UserSidebar = ({ onUserSelect }) => {
     }
 
     let usersList = conversations.map((conv) => {
-      if (!Array.isArray(conv.participants)) {
+      if (!Array.isArray(conv.participants) || conv.participants.length === 0) {
         return null;
       }
-      const otherUser = conv.participants.find(
-        (participant) => participant && participant._id && userProfile && userProfile._id && participant._id !== userProfile._id
-      );
+      const otherUser = conv.participants[0];
       if (!otherUser) {
         return null;
       }
@@ -124,7 +113,7 @@ const UserSidebar = ({ onUserSelect }) => {
         lastMessage: sortedMessages.length > 0 ? sortedMessages[0] : null,
         conversationId: conv._id,
         updatedAt: conv.updatedAt,
-        unreadCount: calculateUnreadCount(conv, userProfile._id),
+        unreadCount: conv.unreadCount,
       };
     }).filter(Boolean);
 

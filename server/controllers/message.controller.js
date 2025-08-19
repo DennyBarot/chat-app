@@ -67,81 +67,48 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         return next(new errorHandler("User ID is required", 400));
     }
 
-    const conversations = await Conversation.aggregate([
-        { $match: { participants: userId } },
-        { $sort: { updatedAt: -1 } },
-        { $lookup: {
-            from: "users",
-            localField: "participants",
-            foreignField: "_id",
-            as: "participantsData"
-        }},
-        { $addFields: {
-            participants: {
-                $filter: {
-                    input: "$participantsData",
-                    as: "participant",
-                    cond: { $ne: ["$participant._id", userId] }
-                }
-            }
-        }},
-        { $unwind: "$participants" }, // Unwind to get the other participant as a single object
-        { $lookup: {
-            from: "messages",
-            localField: "_id",
-            foreignField: "conversationId",
-            as: "messagesData"
-        }},
-        { $addFields: {
-            lastMessage: {
-                $arrayElemAt: [
-                    { $filter: {
-                        input: "$messagesData",
-                        as: "msg",
-                        cond: { $eq: ["$msg.conversationId", "$_id"] }
-                    }},
-                    { $subtract: [{ $size: "$messagesData" }, 1] }
-                ]
-            },
-            unreadCount: {
-                $size: {
-                    $filter: {
-                        input: "$messagesData",
-                        as: "msg",
-                        cond: { $and: [
-                            { $eq: ["$msg.conversationId", "$_id"] },
-                            { $ne: ["$msg.senderId", userId] },
-                            { $not: { $in: [userId, "$msg.readBy"] } }
-                        ]}
-                    }
-                }
-            }
-        }},
-        { $project: {
-            _id: 1,
-            participants: {
-                _id: "$participants._id",
-                username: "$participants.username",
-                fullName: "$participants.fullName",
-                avatar: "$participants.avatar"
-            },
-            lastMessage: {
-                _id: "$lastMessage._id",
-                senderId: "$lastMessage.senderId",
-                receiverId: "$lastMessage.receiverId",
-                content: "$lastMessage.content",
-                createdAt: "$lastMessage.createdAt",
-                readBy: "$lastMessage.readBy"
-            },
-            unreadCount: 1,
-            updatedAt: 1,
-            createdAt: 1
-        }}
-    ]);
+    const conversations = await Conversation.find({ participants: userId })
+        .populate({
+            path: "participants",
+            select: "username fullName avatar",
+        })
+        .populate({
+            path: "messages",
+            options: { sort: { createdAt: -1 }, limit: 1 },
+        })
+        .sort({ updatedAt: -1 });
+
+    const formattedConversations = conversations.map(conv => {
+        const otherParticipants = conv.participants.filter(p => p._id.toString() !== userId.toString());
+        const lastMessage = conv.messages.length > 0 ? conv.messages[0] : null;
+
+        // For unread count, we need to query the database separately.
+        // This is a simplified approach. For a more performant solution,
+        // you might want to use a different strategy.
+        return {
+            _id: conv._id,
+            participants: otherParticipants,
+            lastMessage,
+            updatedAt: conv.updatedAt,
+            createdAt: conv.createdAt,
+        };
+    });
+
+    // This part is tricky without a more complex aggregation.
+    // We will fetch unread counts separately for simplicity.
+    for (let i = 0; i < formattedConversations.length; i++) {
+        const conv = formattedConversations[i];
+        const unreadCount = await Message.countDocuments({
+            conversationId: conv._id,
+            senderId: { $ne: userId },
+            readBy: { $nin: [userId] },
+        });
+        conv.unreadCount = unreadCount;
+    }
 
     res.status(200).json({
         success: true,
-        responseData: conversations,
+        responseData: formattedConversations,
     });
 });
 

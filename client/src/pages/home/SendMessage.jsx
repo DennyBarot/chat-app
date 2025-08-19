@@ -24,12 +24,12 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         message,
         replyTo: replyMessage?._id,
       }));
-      setMessage("");
       if (replyMessage) onCancelReply();
     } catch (error) {
       console.error("Error sending message:", error);
       // Optionally show a toast error here
     } finally {
+      setMessage("");
       setIsSubmitting(false);
       // After sending message, ensure typing indicator is off
       if (isTyping) {

@@ -23,6 +23,10 @@ const userSocketMap = {
     // userId : socketId,
 }
 
+const getSocketId = (userId) => {
+    return userSocketMap[userId];
+}
+
 export { io, app, server, getSocketId, userSocketMap };
 
 io.on("connection", (socket) => {
@@ -59,7 +63,3 @@ io.on("connection", (socket) => {
   // socket.on('markConversationRead', ...)
   // socket.on('viewConversation', ...)
 });
-
-const getSocketId = (userId) => {
-    return userSocketMap[userId];
-}

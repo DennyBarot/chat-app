@@ -22,7 +22,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     setMessage("");
     if (replyMessage) onCancelReply();
     
+    // Only show loading for a very brief moment to indicate action was triggered
     setIsSubmitting(true);
+    
+    // Immediately set submitting to false since message appears via socket
+    setTimeout(() => {
+      setIsSubmitting(false);
+    }, 100); // Very brief loading state
     
     try {
       // Send message in background without blocking UI
@@ -36,8 +42,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       // Optionally show a toast error here
       // In case of error, user can retype the message
     } finally {
-      setIsSubmitting(false);
-      // After sending message, ensure typing indicator is off
+      // Ensure typing indicator is off
       if (isTyping) {
         socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
         setIsTyping(false);

@@ -1,11 +1,12 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getMessageThunk, sendMessageThunk, getConversationsThunk } from "./message.thunk";
+import { getMessageThunk, sendMessageThunk, getConversationsThunk, getOtherUsersThunk } from "./message.thunk";
 
 const initialState = {
   buttonLoading: false,
   screenLoading: false,
   messages: null,
   conversations: [],
+  otherUsers: [],
   sendMessageStatus: 'idle', 
 };
 
@@ -88,6 +89,11 @@ export const messageSlice = createSlice({
     // get conversations
     builder.addCase(getConversationsThunk.fulfilled, (state, action) => {
       state.conversations = action.payload?.responseData ?? [];
+    });
+
+    // get other users
+    builder.addCase(getOtherUsersThunk.fulfilled, (state, action) => {
+      state.otherUsers = action.payload?.responseData ?? [];
     });
   },
 });

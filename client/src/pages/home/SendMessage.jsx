@@ -17,20 +17,25 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const handleSendMessage = useCallback(async () => {
     if (!message.trim()) return;
 
+    // Optimistically clear the input field immediately
+    const messageToSend = message;
+    setMessage("");
+    if (replyMessage) onCancelReply();
+    
     setIsSubmitting(true);
+    
     try {
+      // Send message in background without blocking UI
       await dispatch(sendMessageThunk({
         receiverId: selectedUser?._id,
-        message,
+        message: messageToSend,
         replyTo: replyMessage?._id,
       }));
-      setMessage(""); 
-      if (replyMessage) onCancelReply();
     } catch (error) {
       console.error("Error sending message:", error);
       // Optionally show a toast error here
+      // In case of error, user can retype the message
     } finally {
-     
       setIsSubmitting(false);
       // After sending message, ensure typing indicator is off
       if (isTyping) {

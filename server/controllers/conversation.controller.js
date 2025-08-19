@@ -1,5 +1,5 @@
 import Conversation from '../models/conversationModel.js';
-import asyncHandler from '../utilities/asyncHandlerUtility.js';
+import { asyncHandler } from '../utilities/asyncHandlerUtility.js';
 
 // Create a new conversation
 export const createConversation = asyncHandler(async (req, res) => {

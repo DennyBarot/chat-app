@@ -6,7 +6,7 @@ export const sendMessageThunk = createAsyncThunk(
   "message/send",
   async ({ receiverId, message, timestamp, replyTo }, { dispatch, rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(`/api/v1/message/send/${recieverId}`, {
+      const response = await axiosInstance.post(`/api/v1/message/send/${receiverId}`, {
         message,
         timestamp,
         replyTo, // <-- add this
@@ -64,6 +64,21 @@ export const markMessagesReadThunk = createAsyncThunk(
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
       dispatch(getConversationsThunk());
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      const errorOutput = error?.response?.data?.errMessage;
+      toast.error(errorOutput);
+      return rejectWithValue(errorOutput);
+    }
+  }
+);
+
+export const getOtherUsersThunk = createAsyncThunk(
+  "message/getOtherUsers",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get("/api/v1/user/get-other-users");
       return response.data;
     } catch (error) {
       console.error(error);

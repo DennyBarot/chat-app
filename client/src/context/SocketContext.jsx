@@ -75,6 +75,13 @@ export const SocketProvider = ({ children }) => {
       window.dispatchEvent(event);
     });
 
+    newSocket.on("onlineUsers", (onlineUsers) => {
+      console.log("Online users received:", onlineUsers);
+      // Dispatch the online users to the store via custom event
+      const event = new CustomEvent("onlineUsers", { detail: onlineUsers });
+      window.dispatchEvent(event);
+    });
+
     newSocket.io.on("reconnect", () => {
       const event = new Event("socketReconnect");
       window.dispatchEvent(event);

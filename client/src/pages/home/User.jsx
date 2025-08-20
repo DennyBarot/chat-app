@@ -24,7 +24,7 @@ const formatTime = (timestamp) => {
 const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayType = 'sidebar' }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
-    const { onlineUsers } = useSelector((state) => state.socketReducer);
+    const { onlineUsers } = useSelector((state) => state.socketReducer || { onlineUsers: null });
 
   const isUserOnline = useMemo(() => onlineUsers?.includes(userDetails?._id), [onlineUsers, userDetails]);
 

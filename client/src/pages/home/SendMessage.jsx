@@ -5,7 +5,7 @@ import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { axiosInstance } from "../../components/utilities/axiosInstance";
 import { useSocket } from "../../context/SocketContext";
 
-const SendMessage = ({ replyMessage, onCancelReply }) => {
+const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const dispatch = useDispatch();
   const { selectedUser, userProfile } = useSelector((state) => state.userReducer);
   const socket = useSocket();
@@ -37,6 +37,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         message: messageToSend,
         replyTo: replyMessage?._id,
       }));
+      // Call scrollToBottom after successful dispatch
+      if (scrollToBottom) {
+        scrollToBottom();
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       // Optionally show a toast error here

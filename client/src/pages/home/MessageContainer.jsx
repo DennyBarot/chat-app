@@ -182,6 +182,10 @@ const MessageContainer = ({ onBack, isMobile }) => {
         // When a new message arrives, we should add it to allMessages and scroll to bottom
         setAllMessages(prevMessages => [...prevMessages, newMessage]);
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+        // Manually scroll to bottom
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+        }
       }
     };
 
@@ -217,12 +221,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [socket, dispatch, userProfile, selectedUser]);
 
   // Keep scroll at bottom when new messages arrive (from socket or sending)
+  // This useEffect will now only run when `messagesEndRef` is available,
+  // and we will manually trigger scroll when new messages arrive.
   useEffect(() => {
-    console.log("MessageContainer.jsx: messages updated, re-rendering", allMessages);
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [allMessages]); // Changed from `messages` to `allMessages`
+    // No automatic scroll here. We'll handle it manually.
+  }, []); // Empty dependency array, runs once on mount
 
   const getDateLabel = useCallback((dateString) => {
     const date = parseISO(dateString);
@@ -273,6 +276,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
       .pop()?.originalIndex,
     [messagesWithSeparators]
   );
+
+  const scrollToBottom = useCallback(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, []);
 
   const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
@@ -340,6 +349,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
           <SendMessage
             replyMessage={replyMessage}
             onCancelReply={() => setReplyMessage(null)}
+            scrollToBottom={scrollToBottom}
           />
         </>
       ) : (

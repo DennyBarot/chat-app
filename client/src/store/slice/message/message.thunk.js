@@ -25,43 +25,14 @@ export const sendMessageThunk = createAsyncThunk(
 
 export const getMessageThunk = createAsyncThunk(
   "message/get",
-  async ({ otherParticipantId, limit = 20, before }, { rejectWithValue }) => {
+  async ({ otherParticipantId }, { rejectWithValue }) => {
     if (!otherParticipantId) {
       const errorOutput = "otherParticipantId is required";
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
     try {
-      const params = { limit };
-      if (before) params.before = before;
-      
-      const response = await axiosInstance.get(
-        `/api/v1/message/get-messages/${otherParticipantId}`,
-        { params }
-      );
-      return response.data;
-    } catch (error) {
-      console.error(error);
-      const errorOutput = error?.response?.data?.errMessage;
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
-    }
-  }
-);
-
-export const loadMoreMessagesThunk = createAsyncThunk(
-  "message/loadMore",
-  async ({ otherParticipantId, before, limit = 20 }, { rejectWithValue }) => {
-    if (!otherParticipantId || !before) {
-      const errorOutput = "otherParticipantId and before cursor are required";
-      toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
-    }
-    try {
-      const response = await axiosInstance.get(
-        `/api/v1/message/get-messages/${otherParticipantId}`,
-        { params: { limit, before } }
-      );
+      const response = await axiosInstance.get(`/api/v1/message/get-messages/${otherParticipantId}`);
       return response.data;
     } catch (error) {
       console.error(error);

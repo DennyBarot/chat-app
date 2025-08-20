@@ -117,6 +117,9 @@ export const getConversations = asyncHandler(async (req, res, next) => {
 export const getMessages = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const otherParticipantId = req.params.otherParticipantId;
+  const page = parseInt(req.query.page) || 1; // Default to page 1
+  const limit = parseInt(req.query.limit) || 20; // Default to 20 messages per page
+  const skip = (page - 1) * limit;
 
   if (!userId || !otherParticipantId) {
     return next(new errorHandler("User ID and other participant ID are required", 400));
@@ -129,17 +132,22 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 
   if (!conversation) {
     // No conversation found, return empty array
-    return res.status(200).json([]);
+    return res.status(200).json({ messages: [], totalMessages: 0 });
   }
+
+  const totalMessages = await Message.countDocuments({ conversationId: conversation._id });
 
   const messages = await Message.find({ conversationId: conversation._id })
     .populate({
       path: 'replyTo',
       populate: { path: 'senderId', select: 'fullName username' }
     })
-    .sort({ createdAt: 1 }); // Sort by createdAt ascending (oldest first)
+    .sort({ createdAt: -1 }) // Sort by createdAt descending (newest first) for fetching latest messages
+    .skip(skip)
+    .limit(limit);
 
-  const formatted = messages.map(msg => ({
+  // Reverse the order to display oldest first in the UI
+  const formattedMessages = messages.reverse().map(msg => ({
     ...msg.toObject(),
     quotedMessage: msg.replyTo ? {
       content: msg.replyTo.content || '[No content]',
@@ -147,7 +155,14 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       replyTo: msg.replyTo.replyTo,
     } : null,
   }));
-  res.json(formatted);
+
+  res.json({
+    messages: formattedMessages,
+    totalMessages,
+    currentPage: page,
+    totalPages: Math.ceil(totalMessages / limit),
+    hasMore: totalMessages > (page * limit),
+  });
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {

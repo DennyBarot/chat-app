@@ -70,16 +70,19 @@ export const messageSlice = createSlice({
       state.buttonLoading = true;
     });
     builder.addCase(getMessageThunk.fulfilled, (state, action) => {
-      const messages = Array.isArray(action.payload?.responseData)
-        ? action.payload.responseData
-        : Array.isArray(action.payload)
-        ? action.payload
-        : [];
-      const uniqueMessagesMap = new Map();
-      messages.forEach((msg) => {
-        uniqueMessagesMap.set(msg._id, msg);
-      });
-      state.messages = Array.from(uniqueMessagesMap.values());
+      const { messages: fetchedMessages, hasMore, totalMessages, currentPage } = action.payload;
+
+      if (currentPage === 1) {
+        // Initial fetch or re-fetch, replace messages
+        state.messages = fetchedMessages || [];
+      } else {
+        // Subsequent fetch (pagination), prepend messages
+        const existingMessages = state.messages || [];
+        const uniqueNewMessages = fetchedMessages.filter(
+          (newMessage) => !existingMessages.some((existingMessage) => existingMessage._id === newMessage._id)
+        );
+        state.messages = [...uniqueNewMessages, ...existingMessages];
+      }
       state.buttonLoading = false;
     });
     builder.addCase(getMessageThunk.rejected, (state, action) => {

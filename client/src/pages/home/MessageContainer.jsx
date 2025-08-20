@@ -19,20 +19,26 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const messages = useSelector((state) => state.messageReducer.messages);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
 
+  const [replyMessage, setReplyMessage] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [allMessages, setAllMessages] = useState([]); // To store all messages
+
+  const scrollRef = useRef(null); // Ref for the scrollable div
+  const messagesEndRef = useRef(null);
+
   const filteredMessages = useMemo(() => {
-    if (Array.isArray(messages) && selectedUser?._id) {
-      return messages.filter(
+    if (Array.isArray(allMessages) && selectedUser?._id) {
+      return allMessages.filter(
         (msg) =>
           msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id
       );
     }
-    return messages;
-  }, [messages, selectedUser]);
+    return allMessages;
+  }, [allMessages, selectedUser]);
 
   const location = useLocation();
-  const messagesEndRef = useRef(null);
-
-  const [replyMessage, setReplyMessage] = useState(null);
 
   const handleReply = useCallback((message) => setReplyMessage(message), []);
   const { conversations } = useSelector((state) => state.messageReducer);
@@ -45,13 +51,26 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return conversation?._id;
   }, [selectedUser, conversations]);
 
+  // Effect to fetch initial messages or when selectedUser changes
   useEffect(() => {
-    const markAsReadAndFetch = async () => {
-      if (selectedUser?._id && location.pathname !== '/login' && location.pathname !== '/signup') {
-        const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id }));
+    const fetchMessages = async () => {
+      if (!selectedUser?._id || location.pathname === '/login' || location.pathname === '/signup') {
+        setAllMessages([]); // Clear messages if no user selected or on auth pages
+        setCurrentPage(1);
+        setHasMoreMessages(true);
+        return;
+      }
+
+      setIsLoadingMessages(true);
+      try {
+        const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }));
 
         if (getMessageThunk.fulfilled.match(action) && action.payload) {
-          const fetchedMessages = Array.isArray(action.payload.responseData) ? action.payload.responseData : action.payload;
+          const { messages: fetchedMessages, hasMore, totalMessages } = action.payload;
+          setAllMessages(fetchedMessages || []);
+          setHasMoreMessages(hasMore);
+          setCurrentPage(1); // Reset to first page
+
           if (fetchedMessages?.length > 0) {
             const conversationId = fetchedMessages[0].conversationId;
             if (conversationId && socket) {
@@ -60,15 +79,53 @@ const MessageContainer = ({ onBack, isMobile }) => {
                 userId: userProfile?._id
               });
               await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
-              // No need to dispatch getMessageThunk again here, markMessagesReadThunk should update state
             }
           }
+        }
+      } catch (error) {
+        console.error("Failed to fetch messages:", error);
+        setAllMessages([]);
+        setHasMoreMessages(false);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    fetchMessages();
+  }, [selectedUser, location, dispatch, socket, userProfile?._id]);
+
+  // Effect for infinite scrolling
+  useEffect(() => {
+    const currentScrollRef = scrollRef.current;
+    if (!currentScrollRef) return;
+
+    const handleScroll = async () => {
+      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages) {
+        setIsLoadingMessages(true);
+        const nextPage = currentPage + 1;
+        try {
+          const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: nextPage, limit: 20 }));
+
+          if (getMessageThunk.fulfilled.match(action) && action.payload) {
+            const { messages: newFetchedMessages, hasMore } = action.payload;
+            setAllMessages(prevMessages => [...newFetchedMessages, ...prevMessages]); // Prepend new messages
+            setHasMoreMessages(hasMore);
+            setCurrentPage(nextPage);
+          }
+        } catch (error) {
+          console.error("Failed to fetch more messages:", error);
+        } finally {
+          setIsLoadingMessages(false);
         }
       }
     };
 
-    markAsReadAndFetch();
-  }, [selectedUser, location, dispatch, socket, userProfile?._id]);
+    currentScrollRef.addEventListener('scroll', handleScroll);
+
+    return () => {
+      currentScrollRef.removeEventListener('scroll', handleScroll);
+    };
+  }, [currentPage, hasMoreMessages, isLoadingMessages, selectedUser, dispatch]);
 
   useEffect(() => {
     const handleMessagesRead = (event) => {
@@ -122,6 +179,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
           "MessageContainer.jsx: Received newMessage for current chat, adding to state and marking as read."
         );
         dispatch(setNewMessage(newMessage)); // Directly add new message to state
+        // When a new message arrives, we should add it to allMessages and scroll to bottom
+        setAllMessages(prevMessages => [...prevMessages, newMessage]);
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
     };
@@ -157,12 +216,13 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
   }, [socket, dispatch, userProfile, selectedUser]);
 
+  // Keep scroll at bottom when new messages arrive (from socket or sending)
   useEffect(() => {
-    console.log("MessageContainer.jsx: messages updated, re-rendering", messages);
+    console.log("MessageContainer.jsx: messages updated, re-rendering", allMessages);
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "auto" });
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, selectedUser]);
+  }, [allMessages]); // Changed from `messages` to `allMessages`
 
   const getDateLabel = useCallback((dateString) => {
     const date = parseISO(dateString);
@@ -235,8 +295,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
           <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm dark:from-slate-800 dark:to-slate-900">
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
           </div>
-          <div className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
-            {messages?.length === 0 ? (
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
+            {isLoadingMessages && currentPage === 1 ? (
+              <div className="flex justify-center items-center h-full">
+                <span className="loading loading-spinner loading-lg text-indigo-500"></span>
+              </div>
+            ) : messages?.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-500">
                 <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -248,6 +312,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
               </div>
             ) : (
               <div className="space-y-4">
+                {isLoadingMessages && currentPage > 1 && (
+                  <div className="flex justify-center py-2">
+                    <span className="loading loading-spinner loading-md text-indigo-500"></span>
+                  </div>
+                )}
                 {messagesWithSeparators.map((item, index) => {
                   if (item.type === "date-separator") {
                     return <DateSeparator key={item.id} label={item.label} />;

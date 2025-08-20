@@ -25,14 +25,14 @@ export const sendMessageThunk = createAsyncThunk(
 
 export const getMessageThunk = createAsyncThunk(
   "message/get",
-  async ({ otherParticipantId }, { rejectWithValue }) => {
+  async ({ otherParticipantId, page = 1, limit = 20 }, { rejectWithValue }) => {
     if (!otherParticipantId) {
       const errorOutput = "otherParticipantId is required";
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
     try {
-      const response = await axiosInstance.get(`/api/v1/message/get-messages/${otherParticipantId}`);
+      const response = await axiosInstance.get(`/api/v1/message/get-messages/${otherParticipantId}?page=${page}&limit=${limit}`);
       return response.data;
     } catch (error) {
       console.error(error);

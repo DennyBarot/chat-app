@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from "react";
 import User from "./User";
 import Message from "./Message";
 import DateSeparator from "./DateSeparator";
@@ -27,6 +27,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   const scrollRef = useRef(null); // Ref for the scrollable div
   const messagesEndRef = useRef(null);
+  const prevScrollHeightRef = useRef(0);
 
   const filteredMessages = useMemo(() => {
     if (Array.isArray(allMessages) && selectedUser?._id) {
@@ -103,6 +104,10 @@ const MessageContainer = ({ onBack, isMobile }) => {
       if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages) {
         setIsLoadingMessages(true);
         const nextPage = currentPage + 1;
+
+        // Store current scroll height before fetching new messages
+        prevScrollHeightRef.current = currentScrollRef.scrollHeight;
+
         try {
           const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: nextPage, limit: 20 }));
 
@@ -126,6 +131,18 @@ const MessageContainer = ({ onBack, isMobile }) => {
       currentScrollRef.removeEventListener('scroll', handleScroll);
     };
   }, [currentPage, hasMoreMessages, isLoadingMessages, selectedUser, dispatch]);
+
+  // useLayoutEffect to adjust scroll position after new messages are prepended
+  useLayoutEffect(() => {
+    const currentScrollRef = scrollRef.current;
+    // Only adjust scroll if we just loaded more messages (currentPage > 1)
+    // and not during the initial load (isLoadingMessages is false after fetch)
+    if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
+      const newScrollHeight = currentScrollRef.scrollHeight;
+      const scrollDifference = newScrollHeight - prevScrollHeightRef.current;
+      currentScrollRef.scrollTop += scrollDifference;
+    }
+  }, [allMessages, isLoadingMessages]); // Trigger when allMessages updates after loading more
 
   useEffect(() => {
     const handleMessagesRead = (event) => {

@@ -117,6 +117,7 @@ export const getConversations = asyncHandler(async (req, res, next) => {
 export const getMessages = asyncHandler(async (req, res, next) => {
   const userId = req.user._id;
   const otherParticipantId = req.params.otherParticipantId;
+  const { limit = 20, before, after } = req.query;
 
   if (!userId || !otherParticipantId) {
     return next(new errorHandler("User ID and other participant ID are required", 400));
@@ -128,18 +129,38 @@ export const getMessages = asyncHandler(async (req, res, next) => {
   });
 
   if (!conversation) {
-    // No conversation found, return empty array
-    return res.status(200).json([]);
+    return res.status(200).json({
+      messages: [],
+      hasMore: false,
+      cursor: null
+    });
   }
 
-  const messages = await Message.find({ conversationId: conversation._id })
+  // Build query for pagination
+  let query = { conversationId: conversation._id };
+  
+  // Handle cursor-based pagination
+  if (before) {
+    query.createdAt = { $lt: new Date(before) };
+  } else if (after) {
+    query.createdAt = { $gt: new Date(after) };
+  }
+
+  const messages = await Message.find(query)
     .populate({
       path: 'replyTo',
       populate: { path: 'senderId', select: 'fullName username' }
     })
-    .sort({ createdAt: 1 }); // Sort by createdAt ascending (oldest first)
+    .sort({ createdAt: -1 }) // Newest first for pagination
+    .limit(parseInt(limit) + 1); // Get one extra to check if there's more
 
-  const formatted = messages.map(msg => ({
+  const hasMore = messages.length > parseInt(limit);
+  const messagesToSend = hasMore ? messages.slice(0, -1) : messages;
+  
+  // Reverse to show oldest first in frontend
+  const reversedMessages = messagesToSend.reverse();
+
+  const formatted = reversedMessages.map(msg => ({
     ...msg.toObject(),
     quotedMessage: msg.replyTo ? {
       content: msg.replyTo.content || '[No content]',
@@ -147,7 +168,12 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       replyTo: msg.replyTo.replyTo,
     } : null,
   }));
-  res.json(formatted);
+
+  res.json({
+    messages: formatted,
+    hasMore,
+    cursor: formatted.length > 0 ? formatted[0].createdAt : null
+  });
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {

@@ -16,11 +16,8 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
     (state) => state.userReducer || { userProfile: null, selectedUser: null }
   );
 
-  useEffect(() => {
-    if (messageRef.current) {
-      messageRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, []);
+  // Remove the automatic scrollIntoView to prevent unwanted animations
+  // The scroll positioning is handled by the parent MessageContainer
 
   const createdAt = messageDetails?.createdAt;
   const isSentByMe = userProfile?._id === messageDetails?.senderId;

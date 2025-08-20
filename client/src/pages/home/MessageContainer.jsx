@@ -147,16 +147,18 @@ const MessageContainer = ({ onBack, isMobile }) => {
     }
   }, [allMessages, isLoadingMessages]); // Trigger when allMessages updates after loading more
 
-  // Effect to handle initial scroll to bottom
+  // Effect to handle initial scroll to bottom - FIXED
   useEffect(() => {
     if (selectedUser?._id && allMessages.length > 0 && isInitialLoadRef.current) {
-      // Delay scroll slightly to ensure DOM is fully rendered
-      setTimeout(() => {
-        scrollToBottom("auto");
+      // Use requestAnimationFrame to ensure DOM is fully rendered
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
         isInitialLoadRef.current = false;
-      }, 0);
+      });
     }
-  }, [selectedUser, allMessages]); // Dependencies: selectedUser and allMessages
+  }, [selectedUser, allMessages]);
 
   useEffect(() => {
     const handleMessagesRead = (event) => {
@@ -335,7 +337,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
           <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm dark:from-slate-800 dark:to-slate-900">
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
           </div>
-          <div ref={scrollRef} key={selectedUser?._id} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
             {isLoadingMessages && currentPage === 1 ? (
               <div className="flex justify-center items-center h-full">
                 <span className="loading loading-spinner loading-lg text-indigo-500"></span>

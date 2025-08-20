@@ -84,11 +84,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
               await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
             }
           }
-          // Scroll to bottom instantly after initial load, only if it's the very first load
-          if (isInitialLoadRef.current) {
-            scrollToBottom("auto");
-            isInitialLoadRef.current = false;
-          }
+          // Initial scroll will be handled by a separate useEffect
         }
       } catch (error) {
         console.error("Failed to fetch messages:", error);
@@ -150,6 +146,14 @@ const MessageContainer = ({ onBack, isMobile }) => {
       currentScrollRef.scrollTop += scrollDifference;
     }
   }, [allMessages, isLoadingMessages]); // Trigger when allMessages updates after loading more
+
+  // Effect to handle initial scroll to bottom
+  useEffect(() => {
+    if (selectedUser?._id && allMessages.length > 0 && isInitialLoadRef.current) {
+      scrollToBottom("auto");
+      isInitialLoadRef.current = false;
+    }
+  }, [selectedUser, allMessages]); // Dependencies: selectedUser and allMessages
 
   useEffect(() => {
     const handleMessagesRead = (event) => {

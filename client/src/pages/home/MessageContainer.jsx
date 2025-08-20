@@ -340,7 +340,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
               <div className="space-y-4">
                 {isLoadingMessages && currentPage > 1 && (
                   <div className="flex justify-center py-4 bg-slate-100 dark:bg-slate-700 rounded-lg my-2">
-                    <span className="loading loading-spinner loading-lg text-indigo-500"></span>
+                    <div className="custom-spinner"></div>
                   </div>
                 )}
                 {messagesWithSeparators.map((item, index) => {

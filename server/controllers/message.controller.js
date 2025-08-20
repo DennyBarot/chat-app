@@ -169,11 +169,16 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     } : null,
   }));
 
-  res.json({
-    messages: formatted,
-    hasMore,
-    cursor: formatted.length > 0 ? formatted[0].createdAt : null
-  });
+  // For backward compatibility, return array when no pagination params
+  if (!req.query.limit && !req.query.before && !req.query.after) {
+    res.json(formatted);
+  } else {
+    res.json({
+      messages: formatted,
+      hasMore,
+      cursor: formatted.length > 0 ? formatted[0].createdAt : null
+    });
+  }
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {

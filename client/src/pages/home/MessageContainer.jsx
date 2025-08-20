@@ -28,6 +28,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const scrollRef = useRef(null); // Ref for the scrollable div
   const messagesEndRef = useRef(null);
   const prevScrollHeightRef = useRef(0);
+  const isInitialLoadRef = useRef(true);
 
   const filteredMessages = useMemo(() => {
     if (Array.isArray(allMessages) && selectedUser?._id) {
@@ -54,6 +55,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   // Effect to fetch initial messages or when selectedUser changes
   useEffect(() => {
+    isInitialLoadRef.current = true; // Reset for new conversation
     const fetchMessages = async () => {
       if (!selectedUser?._id || location.pathname === '/login' || location.pathname === '/signup') {
         setAllMessages([]); // Clear messages if no user selected or on auth pages
@@ -82,8 +84,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
               await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
             }
           }
-          // Scroll to bottom instantly after initial load
-          scrollToBottom("auto");
+          // Scroll to bottom instantly after initial load, only if it's the very first load
+          if (isInitialLoadRef.current) {
+            scrollToBottom("auto");
+            isInitialLoadRef.current = false;
+          }
         }
       } catch (error) {
         console.error("Failed to fetch messages:", error);

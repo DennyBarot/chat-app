@@ -82,6 +82,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
               await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
             }
           }
+          // Scroll to bottom instantly after initial load
+          scrollToBottom("auto");
         }
       } catch (error) {
         console.error("Failed to fetch messages:", error);
@@ -294,9 +296,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
     [messagesWithSeparators]
   );
 
-  const scrollToBottom = useCallback(() => {
+  const scrollToBottom = useCallback((behavior = "smooth") => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current.scrollIntoView({ behavior: behavior });
     }
   }, []);
 
@@ -339,7 +341,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
             ) : (
               <div className="space-y-4">
                 {isLoadingMessages && currentPage > 1 && (
-                  <div className="flex justify-center py-4 bg-slate-100 dark:bg-slate-700 rounded-lg my-2">
+                  <div className="flex justify-center bg-slate-100 dark:bg-slate-700 rounded-lg">
                     <div className="custom-spinner"></div>
                   </div>
                 )}

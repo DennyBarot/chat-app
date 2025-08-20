@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
-import { setOnlineUsers } from "../../store/slice/socket/socket.slice";
 import { setNewMessage } from "../../store/slice/message/message.slice";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getMessageThunk } from "../../store/slice/message/message.thunk";
@@ -17,7 +16,7 @@ const Home = () => {
   React.useEffect(() => {
     console.log("Home.jsx: selectedUser changed:", selectedUser);
   }, [selectedUser]);
-  const { socket, onlineUsers } = useSelector((state) => state.socketReducer);
+  const { socket } = useSelector((state) => state.socketReducer);
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);
@@ -39,9 +38,6 @@ const Home = () => {
 
   useEffect(() => {
     if (!socket) return;
-    socket.on("onlineUsers", (onlineUsers) => {
-      dispatch(setOnlineUsers(onlineUsers));
-    });
     const handleNewMessage = (newMessage) => {
       console.log("Home.jsx: Received newMessage socket event:", newMessage);
       dispatch(setNewMessage(newMessage));

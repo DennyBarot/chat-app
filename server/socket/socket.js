@@ -32,11 +32,11 @@ export { io, app, server, getSocketId, userSocketMap };
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
 
-  if (!userId) return;
+  if (userId != "undefined") {
+    userSocketMap[userId] = socket.id;
+  }
 
-  userSocketMap[userId] = socket.id;
-
-  io.emit("onlineUsers", Object.keys(userSocketMap))
+  io.emit("onlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", () => {
     delete userSocketMap[userId];

@@ -67,48 +67,84 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         return next(new errorHandler("User ID is required", 400));
     }
 
-    const conversations = await Conversation.find({ participants: userId })
-        .populate({
-            path: "participants",
-            select: "username fullName avatar",
-        })
-        .populate({
-            path: "messages",
-            options: { sort: { createdAt: -1 }, limit: 1 },
-        })
-        .sort({ updatedAt: -1 });
-
-    const formattedConversations = conversations.map(conv => {
-        const otherParticipants = conv.participants.filter(p => p._id.toString() !== userId.toString());
-        const lastMessage = conv.messages.length > 0 ? conv.messages[0] : null;
-
-        // For unread count, we need to query the database separately.
-        // This is a simplified approach. For a more performant solution,
-        // you might want to use a different strategy.
-        return {
-            _id: conv._id,
-            participants: otherParticipants,
-            lastMessage,
-            updatedAt: conv.updatedAt,
-            createdAt: conv.createdAt,
-        };
-    });
-
-    // This part is tricky without a more complex aggregation.
-    // We will fetch unread counts separately for simplicity.
-    for (let i = 0; i < formattedConversations.length; i++) {
-        const conv = formattedConversations[i];
-        const unreadCount = await Message.countDocuments({
-            conversationId: conv._id,
-            senderId: { $ne: userId },
-            readBy: { $nin: [userId] },
-        });
-        conv.unreadCount = unreadCount;
-    }
+    const conversations = await Conversation.aggregate([
+        {
+            $match: {
+                participants: userId,
+            },
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "participants",
+                foreignField: "_id",
+                as: "participantDetails",
+            },
+        },
+        {
+            $lookup: {
+                from: "messages",
+                localField: "_id",
+                foreignField: "conversationId",
+                as: "messages",
+            },
+        },
+        {
+            $addFields: {
+                otherParticipants: {
+                    $filter: {
+                        input: "$participantDetails",
+                        as: "participant",
+                        cond: { $ne: ["$participant._id", userId] },
+                    },
+                },
+                lastMessage: {
+                    $arrayElemAt: [
+                        {
+                            $sortArray: {
+                                input: "$messages",
+                                sortBy: { createdAt: -1 },
+                            },
+                        },
+                        0,
+                    ],
+                },
+                unreadCount: {
+                    $size: {
+                        $filter: {
+                            input: "$messages",
+                            as: "message",
+                            cond: {
+                                $and: [
+                                    { $ne: ["$message.senderId", userId] },
+                                    { $not: { $in: [userId, "$message.readBy"] } },
+                                ],
+                            },
+                        },
+                    },
+                },
+            },
+        },
+        {
+            $project: {
+                _id: 1,
+                participants: "$otherParticipants",
+                lastMessage: 1,
+                unreadCount: 1,
+                updatedAt: 1,
+                createdAt: 1,
+            },
+        },
+        {
+            $sort: {
+                "lastMessage.createdAt": -1,
+            },
+        },
+    ]);
 
     res.status(200).json({
         success: true,
-        responseData: formattedConversations,
+        responseData: conversations,
     });
 });
 

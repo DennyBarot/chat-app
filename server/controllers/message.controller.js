@@ -137,7 +137,9 @@ export const getMessages = asyncHandler(async (req, res, next) => {
       path: 'replyTo',
       populate: { path: 'senderId', select: 'fullName username' }
     })
-    .sort({ createdAt: 1 }); // Sort by createdAt ascending (oldest first)
+    .sort({ createdAt: -1 }) // Get latest messages first
+    .limit(20) // Limit to recent 20 messages
+    .sort({ createdAt: 1 }); // Sort ascending for display
 
   const formatted = messages.map(msg => ({
     ...msg.toObject(),

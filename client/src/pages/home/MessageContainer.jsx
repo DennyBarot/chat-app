@@ -23,6 +23,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isInitialScrolling, setIsInitialScrolling] = useState(true);
   const [allMessages, setAllMessages] = useState([]); // To store all messages
 
   const scrollRef = useRef(null); // Ref for the scrollable div
@@ -65,6 +66,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
       }
 
       setIsLoadingMessages(true);
+      setIsInitialScrolling(true);
       try {
         const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }));
 
@@ -104,7 +106,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     if (!currentScrollRef) return;
 
     const handleScroll = async () => {
-      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages) {
+      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isInitialScrolling) {
         setIsLoadingMessages(true);
         const nextPage = currentPage + 1;
 
@@ -133,7 +135,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return () => {
       currentScrollRef.removeEventListener('scroll', handleScroll);
     };
-  }, [currentPage, hasMoreMessages, isLoadingMessages, selectedUser, dispatch]);
+  }, [currentPage, hasMoreMessages, isLoadingMessages, selectedUser, dispatch, isInitialScrolling]);
 
   // useLayoutEffect to adjust scroll position after new messages are prepended
   useLayoutEffect(() => {
@@ -156,6 +158,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
         isInitialLoadRef.current = false;
+        setIsInitialScrolling(false);
       }, 100);
     }
   }, [selectedUser, allMessages]);

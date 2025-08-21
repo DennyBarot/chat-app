@@ -169,13 +169,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
     const handleMessagesRead = (data) => {
       const { messageIds, readBy, readAt } = data;
       dispatch(messagesRead({ messageIds, readBy, readAt }));
-      setAllMessages(prevMessages =>
-        prevMessages.map(msg =>
-          messageIds.includes(msg._id)
-            ? { ...msg, readBy: [...(msg.readBy || []), readBy], readAt }
-            : msg
-        )
-      );
     };
 
     socket.on('messagesRead', handleMessagesRead);

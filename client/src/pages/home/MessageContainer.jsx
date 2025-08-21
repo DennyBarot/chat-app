@@ -164,17 +164,19 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [selectedUser, allMessages]);
 
   useEffect(() => {
-    const handleMessagesRead = (event) => {
-      const { messageIds, readBy, readAt } = event.detail;
+    if (!socket) return;
+
+    const handleMessagesRead = (data) => {
+      const { messageIds, readBy, readAt } = data;
       dispatch(messagesRead({ messageIds, readBy, readAt }));
     };
 
-    window.addEventListener('messagesRead', handleMessagesRead);
+    socket.on('messagesRead', handleMessagesRead);
 
     return () => {
-      window.removeEventListener('messagesRead', handleMessagesRead);
+      socket.off('messagesRead', handleMessagesRead);
     };
-  }, [dispatch]);
+  }, [socket, dispatch]);
 
   useEffect(() => {
     if (!selectedConversationId) return;

@@ -16,7 +16,7 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Online status indicator styles */
+/* Online status indicator styles
 .avatar {
   position: relative;
 }
@@ -32,4 +32,4 @@
   border: 2px solid white;
   border-radius: 50%;
   z-index: 10;
-}
+} */

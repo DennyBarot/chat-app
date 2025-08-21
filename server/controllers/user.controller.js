@@ -189,11 +189,11 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 
 
   const updateData = {};
-  if (fullName) updateData.fullName = fullName;
-  if (username) updateData.username = username;
-  if (avatar) updateData.avatar = avatar;
+  if (fullName !== undefined) updateData.fullName = fullName;
+  if (username !== undefined) updateData.username = username;
+  if (avatar !== undefined) updateData.avatar = avatar;
 
-  if (!userId || (!fullName && !username && !avatar)) {
+  if (!userId || Object.keys(updateData).length === 0) {
     return next(errorHandler(400, "User ID is required and at least one field must be provided"));
   }
 
@@ -210,7 +210,9 @@ export const updateProfile = asyncHandler(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    responseData: updatedUser,
+    responseData: {
+      user: updatedUser,
+    },
   });
 });
 

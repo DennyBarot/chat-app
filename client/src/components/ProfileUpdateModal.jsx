@@ -4,7 +4,7 @@ import { updateUserProfileThunk } from '../store/slice/user/user.thunk';
 
 const ProfileUpdateModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
-  const { userProfile } = useSelector((state) => state.userReducer);
+  const { userProfile, buttonLoading } = useSelector((state) => state.userReducer);
 
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
@@ -156,9 +156,17 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
             </button>
             <button
               type="submit"
-              className="px-5 py-2.5 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm hover:shadow transition-all duration-200"
+              disabled={buttonLoading || isUploading}
+              className="px-5 py-2.5 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Save Changes
+              {buttonLoading ? (
+                <div className="flex items-center">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Saving...
+                </div>
+              ) : (
+                'Save Changes'
+              )}
             </button>
           </div>
         </form>

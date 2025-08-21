@@ -164,6 +164,28 @@ const MessageContainer = ({ onBack, isMobile }) => {
   }, [selectedUser, allMessages]);
 
   useEffect(() => {
+    if (!socket) return;
+
+    const handleMessagesRead = (data) => {
+      const { messageIds, readBy, readAt } = data;
+      dispatch(messagesRead({ messageIds, readBy, readAt }));
+      setAllMessages(prevMessages =>
+        prevMessages.map(msg =>
+          messageIds.includes(msg._id)
+            ? { ...msg, readBy: [...(msg.readBy || []), readBy], readAt }
+            : msg
+        )
+      );
+    };
+
+    socket.on('messagesRead', handleMessagesRead);
+
+    return () => {
+      socket.off('messagesRead', handleMessagesRead);
+    };
+  }, [socket, dispatch]);
+
+  useEffect(() => {
     if (!selectedConversationId) return;
 
     const handleVisibilityChange = () => {
@@ -193,25 +215,27 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
   }, [selectedConversationId, dispatch, socket, userProfile?._id]);
 
-  // Listen for new messages in Redux store and add them to allMessages
   useEffect(() => {
-    if (!messages || !Array.isArray(messages) || !selectedConversationId) return;
-    
-    // Find new messages that belong to the current conversation
-    const newMessages = messages.filter(msg => 
-      msg.conversationId === selectedConversationId && 
-      !allMessages.some(existingMsg => existingMsg._id === msg._id)
-    );
-    
-    if (newMessages.length > 0) {
-      setAllMessages(prev => [...prev, ...newMessages]);
-      
-      // Mark new messages as read
-      if (newMessages.some(msg => msg.senderId !== userProfile?._id)) {
+    if (!socket || !selectedUser?._id || !selectedConversationId) return;
+
+    const handleNewMessage = (newMessage) => {
+      if (newMessage.conversationId === selectedConversationId) {
+        console.log(
+          "MessageContainer.jsx: Received newMessage for current chat, adding to state and marking as read."
+        );
+        dispatch(setNewMessage(newMessage)); // Directly add new message to state
+        // When a new message arrives, we should add it to allMessages and scroll to bottom
+        setAllMessages(prevMessages => [...prevMessages, newMessage]);
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
-    }
-  }, [messages, selectedConversationId, allMessages, userProfile?._id, dispatch]);
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket, selectedUser, dispatch, selectedConversationId]);
 
   useEffect(() => {
     if (!socket) return;

@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState, useRef } from "r
 import { io } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import { setOnlineUsers } from "../store/slice/socket/socket.slice";
-import { setNewMessage, messagesRead } from "../store/slice/message/message.slice";
 
 const SocketContext = createContext(null);
 
@@ -68,27 +67,30 @@ export const SocketProvider = ({ children }) => {
 
     newSocket.on("newMessage", (message) => {
       console.log("New message received via socket:", message);
-      // Directly dispatch to Redux store instead of using CustomEvents
-      dispatch(setNewMessage(message));
+      const event = new CustomEvent("newMessage", { detail: message });
+      window.dispatchEvent(event);
     });
 
     newSocket.on("messageRead", (data) => {
       console.log("Message read event received:", data);
-      dispatch(messagesRead({ 
-        messageIds: data.messageIds, 
-        readBy: data.readBy, 
-        readAt: data.readAt 
-      }));
+      const event = new CustomEvent("messageRead", { detail: data });
+      window.dispatchEvent(event);
     });
    
     newSocket.on("messagesRead", (data) => {
       console.log("Messages read event received:", data);
-      dispatch(messagesRead({ 
-        messageIds: data.messageIds, 
-        readBy: data.readBy, 
-        readAt: data.readAt 
-      }));
+      const event = new CustomEvent("messagesRead", { detail: data });
+      window.dispatchEvent(event);
     });
+    // Add this inside the socket.on handlers
+newSocket.on("messagesRead", (data) => {
+  console.log("Messages read event received:", data);
+  dispatch(messagesRead({ 
+    messageIds: data.messageIds, 
+    readBy: data.readBy, 
+    readAt: data.readAt 
+  }));
+});
 
 
     newSocket.on("onlineUsers", (onlineUsers) => {

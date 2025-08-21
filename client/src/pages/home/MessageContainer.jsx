@@ -147,19 +147,18 @@ const MessageContainer = ({ onBack, isMobile }) => {
       const scrollDifference = newScrollHeight - prevScrollHeightRef.current;
       currentScrollRef.scrollTop += scrollDifference;
     }
-  }, [allMessages, isLoadingMessages]); // Trigger when allMessages updates after loading more
+  }, [allMessages, isLoadingMessages, currentPage]); // Trigger when allMessages updates after loading more
 
-  // Effect to handle initial scroll to bottom - FIXED
-  useEffect(() => {
-    if (selectedUser?._id && allMessages.length > 0) {
-      // Use setTimeout to ensure DOM is fully rendered and messages are displayed
-      setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-        isInitialLoadRef.current = false;
-        setIsInitialScrolling(false);
-      }, 100);
+  // useLayoutEffect to handle initial scroll to bottom
+  useLayoutEffect(() => {
+    // On initial load for a selected user with messages, scroll to the bottom.
+    if (isInitialLoadRef.current && selectedUser?._id && allMessages.length > 0) {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+      // Mark the initial load and scroll as complete.
+      isInitialLoadRef.current = false;
+      setIsInitialScrolling(false);
     }
   }, [selectedUser, allMessages]);
 

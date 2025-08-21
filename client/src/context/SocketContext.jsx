@@ -76,12 +76,22 @@ export const SocketProvider = ({ children }) => {
       const event = new CustomEvent("messageRead", { detail: data });
       window.dispatchEvent(event);
     });
-
+   
     newSocket.on("messagesRead", (data) => {
       console.log("Messages read event received:", data);
       const event = new CustomEvent("messagesRead", { detail: data });
       window.dispatchEvent(event);
     });
+    // Add this inside the socket.on handlers
+newSocket.on("messagesRead", (data) => {
+  console.log("Messages read event received:", data);
+  dispatch(messagesRead({ 
+    messageIds: data.messageIds, 
+    readBy: data.readBy, 
+    readAt: data.readAt 
+  }));
+});
+
 
     newSocket.on("onlineUsers", (onlineUsers) => {
       console.log("Online users received:", onlineUsers);

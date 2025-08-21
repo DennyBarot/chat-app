@@ -258,6 +258,14 @@ const MessageContainer = ({ onBack, isMobile }) => {
   useEffect(() => {
     // No automatic scroll here. We'll handle it manually.
   }, []); // Empty dependency array, runs once on mount
+   
+  // Add this useEffect to mark messages as read when conversation is opened
+useEffect(() => {
+  if (selectedConversationId && messages?.length > 0) {
+    dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+  }
+}, [selectedConversationId, messages, dispatch]);
+
 
   const getDateLabel = useCallback((dateString) => {
     const date = parseISO(dateString);

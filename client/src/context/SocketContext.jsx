@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setOnlineUsers } from "../store/slice/socket/socket.slice";
 
 const SocketContext = createContext(null);
 
@@ -14,6 +15,7 @@ export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer || { userProfile: null });
   const [socket, setSocket] = useState(null);
   const socketRef = useRef(null); // Use a ref to hold the socket instance
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (!userProfile?._id) {
@@ -83,9 +85,7 @@ export const SocketProvider = ({ children }) => {
 
     newSocket.on("onlineUsers", (onlineUsers) => {
       console.log("Online users received:", onlineUsers);
-      // Dispatch the online users to the store via custom event
-      const event = new CustomEvent("onlineUsers", { detail: onlineUsers });
-      window.dispatchEvent(event);
+      dispatch(setOnlineUsers(onlineUsers));
     });
 
     newSocket.io.on("reconnect", () => {
@@ -117,7 +117,7 @@ export const SocketProvider = ({ children }) => {
       socketRef.current = null;
       setSocket(null);
     };
-  }, [userProfile]); // Only userProfile in dependency array
+  }, [userProfile, dispatch]); // Only userProfile in dependency array
 
   return (
     <SocketContext.Provider value={socket}>

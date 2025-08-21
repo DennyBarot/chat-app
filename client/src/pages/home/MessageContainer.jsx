@@ -23,6 +23,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialScrolling, setIsInitialScrolling] = useState(true);
   const [allMessages, setAllMessages] = useState([]); // To store all messages
 
@@ -106,8 +107,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
     if (!currentScrollRef) return;
 
     const handleScroll = async () => {
-      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isInitialScrolling) {
-        setIsLoadingMessages(true);
+      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore && !isInitialScrolling) {
+        setIsLoadingMore(true);
         const nextPage = currentPage + 1;
 
         // Store current scroll height before fetching new messages
@@ -125,7 +126,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
         } catch (error) {
           console.error("Failed to fetch more messages:", error);
         } finally {
-          setIsLoadingMessages(false);
+          setIsLoadingMore(false);
         }
       }
     };
@@ -135,7 +136,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return () => {
       currentScrollRef.removeEventListener('scroll', handleScroll);
     };
-  }, [currentPage, hasMoreMessages, isLoadingMessages, selectedUser, dispatch, isInitialScrolling]);
+  }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser, dispatch, isInitialScrolling]);
 
   // useLayoutEffect to adjust scroll position after new messages are prepended
   useLayoutEffect(() => {
@@ -357,7 +358,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                {isLoadingMessages && currentPage > 1 && (
+                {isLoadingMore && (
                   <div className="flex justify-center bg-slate-100 dark:bg-slate-700 rounded-lg">
                     <div className="custom-spinner"></div>
                   </div>

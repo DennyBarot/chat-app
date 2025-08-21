@@ -194,22 +194,20 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
   const messagesThatWereRead = await Message.find({ conversationId, readBy: userId });
   const messageIds = messagesThatWereRead.map(msg => msg._id);
 
-  // Emit messagesRead event to the sender of the messages
-  // This assumes the sender is the other participant in a 1-on-1 chat
-  // For group chats, you might need to iterate through all senders of the unread messages
+  // Emit messagesRead event to all participants in the conversation
   const conversation = await Conversation.findById(conversationId);
   if (conversation) {
-    const otherParticipantId = conversation.participants.find(p => p.toString() !== userId.toString());
-    if (otherParticipantId) {
-      const senderSocketId = getSocketId(otherParticipantId);
-      if (senderSocketId) {
-        io.to(senderSocketId).emit('messagesRead', {
+    conversation.participants.forEach(participantId => {
+      const participantSocketId = getSocketId(participantId.toString());
+      if (participantSocketId) {
+        io.to(participantSocketId).emit('messagesRead', {
+          conversationId: conversationId,
           messageIds: messageIds,
           readBy: userId,
           readAt: new Date()
         });
       }
-    }
+    });
   }
 
   res.status(200).json({ success: true });

@@ -167,15 +167,17 @@ const MessageContainer = ({ onBack, isMobile }) => {
     if (!socket) return;
 
     const handleMessagesRead = (data) => {
-      const { messageIds, readBy, readAt } = data;
-      dispatch(messagesRead({ messageIds, readBy, readAt }));
-      setAllMessages(prevMessages =>
-        prevMessages.map(msg =>
-          messageIds.includes(msg._id)
-            ? { ...msg, readBy: [...(msg.readBy || []), readBy], readAt }
-            : msg
-        )
-      );
+      const { conversationId, messageIds, readBy, readAt } = data;
+      if (conversationId === selectedConversationId) {
+        dispatch(messagesRead({ conversationId, messageIds, readBy, readAt }));
+        setAllMessages(prevMessages =>
+          prevMessages.map(msg =>
+            messageIds.includes(msg._id)
+              ? { ...msg, readBy: [...(msg.readBy || []), readBy], readAt }
+              : msg
+          )
+        );
+      }
     };
 
     socket.on('messagesRead', handleMessagesRead);
@@ -183,7 +185,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return () => {
       socket.off('messagesRead', handleMessagesRead);
     };
-  }, [socket, dispatch]);
+  }, [socket, dispatch, selectedConversationId]);
 
   useEffect(() => {
     if (!selectedConversationId) return;

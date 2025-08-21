@@ -150,13 +150,13 @@ const MessageContainer = ({ onBack, isMobile }) => {
     }
   }, [allMessages, isLoadingMessages, currentPage]); // Trigger when allMessages updates after loading more
 
-  // useLayoutEffect to handle initial scroll to bottom
-  useLayoutEffect(() => {
+  // useEffect to handle initial scroll to bottom
+  useEffect(() => {
     // On initial load for a selected user with messages, scroll to the bottom.
     if (isInitialLoadRef.current && selectedUser?._id && allMessages.length > 0) {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-      }
+      // Use scrollIntoView on the messagesEndRef for more reliable scrolling
+      messagesEndRef.current?.scrollIntoView();
+      
       // Mark the initial load and scroll as complete.
       isInitialLoadRef.current = false;
       setIsInitialScrolling(false);

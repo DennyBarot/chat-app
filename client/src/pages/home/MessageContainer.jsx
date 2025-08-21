@@ -149,14 +149,14 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   // Effect to handle initial scroll to bottom - FIXED
   useEffect(() => {
-    if (selectedUser?._id && allMessages.length > 0 && isInitialLoadRef.current) {
-      // Use requestAnimationFrame to ensure DOM is fully rendered
-      requestAnimationFrame(() => {
+    if (selectedUser?._id && allMessages.length > 0) {
+      // Use setTimeout to ensure DOM is fully rendered and messages are displayed
+      setTimeout(() => {
         if (scrollRef.current) {
           scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
         isInitialLoadRef.current = false;
-      });
+      }, 100);
     }
   }, [selectedUser, allMessages]);
 

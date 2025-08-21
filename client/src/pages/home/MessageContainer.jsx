@@ -25,7 +25,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isInitialScrolling, setIsInitialScrolling] = useState(true);
-  const [allMessages, setAllMessages] = useState([]); // To store all messages
 
   const scrollRef = useRef(null); // Ref for the scrollable div
   const messagesEndRef = useRef(null);
@@ -33,14 +32,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const isInitialLoadRef = useRef(true);
 
   const filteredMessages = useMemo(() => {
-    if (Array.isArray(allMessages) && selectedUser?._id) {
-      return allMessages.filter(
-        (msg) =>
-          msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id
-      );
-    }
-    return allMessages;
-  }, [allMessages, selectedUser]);
+    if (!Array.isArray(messages) || !selectedUser?._id) return messages;
+    
+    return messages.filter(msg => 
+      msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id
+    );
+  }, [messages, selectedUser?._id]);
 
   const location = useLocation();
 
@@ -73,7 +70,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
         if (getMessageThunk.fulfilled.match(action) && action.payload) {
           const { messages: fetchedMessages, hasMore, totalMessages } = action.payload;
-          setAllMessages(fetchedMessages || []);
           setHasMoreMessages(hasMore);
           setCurrentPage(1); // Reset to first page
 
@@ -119,7 +115,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
           if (getMessageThunk.fulfilled.match(action) && action.payload) {
             const { messages: newFetchedMessages, hasMore } = action.payload;
-            setAllMessages(prevMessages => [...newFetchedMessages, ...prevMessages]); // Prepend new messages
             setHasMoreMessages(hasMore);
             setCurrentPage(nextPage);
           }
@@ -138,43 +133,41 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
   }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser, dispatch, isInitialScrolling]);
 
-  // useLayoutEffect to adjust scroll position after new messages are prepended
+  // Simplified scroll management
   useLayoutEffect(() => {
     const currentScrollRef = scrollRef.current;
-    // Only adjust scroll if we just loaded more messages (currentPage > 1)
-    // and not during the initial load (isLoadingMessages is false after fetch)
-    if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
+    if (!currentScrollRef) return;
+
+    // Handle scroll position for pagination (loading more messages)
+    if (!isLoadingMessages && currentPage > 1) {
       const newScrollHeight = currentScrollRef.scrollHeight;
       const scrollDifference = newScrollHeight - prevScrollHeightRef.current;
       currentScrollRef.scrollTop += scrollDifference;
     }
-  }, [allMessages, isLoadingMessages, currentPage]); // Trigger when allMessages updates after loading more
-
-  // useEffect to handle initial scroll to bottom
-  useEffect(() => {
-    // On initial load for a selected user with messages, scroll to the bottom.
-    if (isInitialLoadRef.current && selectedUser?._id && allMessages.length > 0) {
-      // Use scrollIntoView on the messagesEndRef for more reliable scrolling
-      messagesEndRef.current?.scrollIntoView();
-      
-      // Mark the initial load and scroll as complete.
+    
+    // Handle initial scroll to bottom
+    if (isInitialLoadRef.current && selectedUser?._id && messages?.length > 0) {
+      currentScrollRef.scrollTop = currentScrollRef.scrollHeight;
       isInitialLoadRef.current = false;
       setIsInitialScrolling(false);
     }
-  }, [selectedUser, allMessages]);
+  }, [messages, isLoadingMessages, currentPage, selectedUser]);
 
-  useEffect(() => {
-    const handleMessagesRead = (event) => {
-      const { messageIds, readBy, readAt } = event.detail;
-      dispatch(messagesRead({ messageIds, readBy, readAt }));
-    };
+  // Auto-scroll to bottom when new messages arrive
+  useLayoutEffect(() => {
+    const currentScrollRef = scrollRef.current;
+    if (!currentScrollRef || isInitialLoadRef.current) return;
 
-    window.addEventListener('messagesRead', handleMessagesRead);
+    // Only auto-scroll if user is near the bottom (within 100px)
+    const isNearBottom = 
+      currentScrollRef.scrollHeight - currentScrollRef.scrollTop - currentScrollRef.clientHeight < 100;
+    
+    if (isNearBottom) {
+      currentScrollRef.scrollTop = currentScrollRef.scrollHeight;
+    }
+  }, [messages]); // Trigger when messages change
 
-    return () => {
-      window.removeEventListener('messagesRead', handleMessagesRead);
-    };
-  }, [dispatch]);
+  // messagesRead events are now handled directly via Redux dispatch in SocketContext
 
   useEffect(() => {
     if (!selectedConversationId) return;
@@ -206,27 +199,19 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
   }, [selectedConversationId, dispatch, socket, userProfile?._id]);
 
+  // Handle marking messages as read when new messages arrive via socket
   useEffect(() => {
-    if (!socket || !selectedUser?._id || !selectedConversationId) return;
-
-    const handleNewMessage = (newMessage) => {
-      if (newMessage.conversationId === selectedConversationId) {
-        console.log(
-          "MessageContainer.jsx: Received newMessage for current chat, adding to state and marking as read."
-        );
-        dispatch(setNewMessage(newMessage)); // Directly add new message to state
-        // When a new message arrives, we should add it to allMessages and scroll to bottom
-        setAllMessages(prevMessages => [...prevMessages, newMessage]);
+    if (messages && messages.length > 0 && selectedConversationId) {
+      // Get the latest message
+      const latestMessage = messages[messages.length - 1];
+      
+      // If the latest message is from the other user and not read by current user
+      if (latestMessage.senderId !== userProfile?._id && 
+          (!latestMessage.readBy || !latestMessage.readBy.includes(userProfile?._id))) {
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
-    };
-
-    socket.on("newMessage", handleNewMessage);
-
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-    };
-  }, [socket, selectedUser, dispatch, selectedConversationId]);
+    }
+  }, [messages, selectedConversationId, userProfile?._id, dispatch]);
 
   useEffect(() => {
     if (!socket) return;
@@ -275,37 +260,36 @@ useEffect(() => {
   }, []);
 
   const messagesWithSeparators = useMemo(() => {
-    const safeMessages = Array.isArray(filteredMessages) ? filteredMessages : [];
-    const sortedMessages = [...safeMessages].sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.timestamp);
-      const dateB = new Date(b.createdAt || b.timestamp);
-      return dateA - dateB;
+    if (!Array.isArray(filteredMessages) || filteredMessages.length === 0) return [];
+    
+    // Sort messages by date (oldest first)
+    const sortedMessages = [...filteredMessages].sort((a, b) => {
+      return new Date(a.createdAt || a.timestamp) - new Date(b.createdAt || b.timestamp);
     });
 
     const result = [];
     let lastDate = null;
 
-    if (sortedMessages.length > 0) {
-      sortedMessages.forEach((message) => {
-        const messageDate = message.createdAt || message.timestamp;
-        if (messageDate) {
-          const currentDate = messageDate.split("T")[0];
-          if (lastDate !== currentDate) {
-            result.push({
-              type: "date-separator",
-              id: `separator-${currentDate}`,
-              label: getDateLabel(messageDate),
-            });
-            lastDate = currentDate;
-          }
+    sortedMessages.forEach((message) => {
+      const messageDate = message.createdAt || message.timestamp;
+      if (messageDate) {
+        const currentDate = messageDate.split("T")[0];
+        if (lastDate !== currentDate) {
+          result.push({
+            type: "date-separator",
+            id: `separator-${currentDate}`,
+            label: getDateLabel(messageDate),
+          });
+          lastDate = currentDate;
         }
-        result.push({
-          type: "message",
-          id: message._id,
-          messageDetails: message,
-        });
+      }
+      result.push({
+        type: "message",
+        id: message._id,
+        messageDetails: message,
       });
-    }
+    });
+    
     return result;
   }, [filteredMessages, getDateLabel]);
 
@@ -317,7 +301,7 @@ useEffect(() => {
     [messagesWithSeparators]
   );
 
-  const lastMessage = useMemo(() => allMessages[allMessages.length - 1], [allMessages]);
+  const lastMessage = useMemo(() => messages[messages.length - 1], [messages]);
 
   useLayoutEffect(() => {
     // This effect is for auto-scrolling to the bottom when a new message is added.

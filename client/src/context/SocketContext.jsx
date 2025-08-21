@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from "r
 import { io } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import { setOnlineUsers } from "../store/slice/socket/socket.slice";
+import { setNewMessage, messagesRead } from "../store/slice/message/message.slice";
 
 const SocketContext = createContext(null);
 
@@ -14,7 +15,7 @@ const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
 export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer || { userProfile: null });
   const [socket, setSocket] = useState(null);
-  const socketRef = useRef(null); // Use a ref to hold the socket instance
+  const socketRef = useRef(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -30,7 +31,6 @@ export const SocketProvider = ({ children }) => {
 
     // Only create a new socket if one doesn't exist or userProfile changes
     if (socketRef.current && socketRef.current.connected && socketRef.current.io.opts.query.userId === userProfile._id) {
-      // Socket already exists and is connected for the current user, do nothing
       return;
     }
 
@@ -42,75 +42,53 @@ export const SocketProvider = ({ children }) => {
 
     const backendUrlRaw = import.meta.env.VITE_BACKEND_URL;
     const backendUrl = trimTrailingSlash(backendUrlRaw);
-    console.log("SocketContext - backendUrl:", backendUrl);
+    console.log("SocketContext - Connecting to backend:", backendUrl);
 
     const newSocket = io(backendUrl, {
       query: {
         userId: userProfile._id,
       },
-      transports: ['websocket'],
-      forceNew: true, // Ensure a new connection when userProfile changes
+      transports: ['websocket', 'polling'], // Allow fallback to polling
+      forceNew: true,
       path: '/socket.io',
     });
 
-    newSocket.io.on("packet", (packet) => {
-      console.log("Socket packet event:", packet);
-    });
-
     newSocket.on("connect", () => {
-      console.log("Socket connected:", newSocket.id, "UserId:", userProfile?._id);
+      console.log("✅ Socket connected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
-    newSocket.on("disconnect", () => {
-      console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
+    newSocket.on("disconnect", (reason) => {
+      console.log("❌ Socket disconnected:", reason, "UserId:", userProfile?._id);
     });
 
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
+
+    // Direct Redux dispatch for socket events
     newSocket.on("newMessage", (message) => {
-      console.log("New message received via socket:", message);
-      const event = new CustomEvent("newMessage", { detail: message });
-      window.dispatchEvent(event);
+      console.log("📨 New message received via socket:", message);
+      dispatch(setNewMessage(message));
     });
 
-    newSocket.on("messageRead", (data) => {
-      console.log("Message read event received:", data);
-      const event = new CustomEvent("messageRead", { detail: data });
-      window.dispatchEvent(event);
-    });
-   
     newSocket.on("messagesRead", (data) => {
-      console.log("Messages read event received:", data);
-      const event = new CustomEvent("messagesRead", { detail: data });
-      window.dispatchEvent(event);
+      console.log("👀 Messages read event received:", data);
+      dispatch(messagesRead(data));
     });
-    // Add this inside the socket.on handlers
-newSocket.on("messagesRead", (data) => {
-  console.log("Messages read event received:", data);
-  dispatch(messagesRead({ 
-    messageIds: data.messageIds, 
-    readBy: data.readBy, 
-    readAt: data.readAt 
-  }));
-});
-
 
     newSocket.on("onlineUsers", (onlineUsers) => {
-      console.log("Online users received:", onlineUsers);
+      console.log("👥 Online users received:", onlineUsers);
       dispatch(setOnlineUsers(onlineUsers));
     });
 
     newSocket.io.on("reconnect", () => {
-      const event = new Event("socketReconnect");
-      window.dispatchEvent(event);
-
-      // Re-emit viewConversation on reconnection
-      // Use newSocket.handshake.query.userId as it's the current socket's query
+      console.log("🔄 Socket reconnected");
+      // Re-emit viewConversation on reconnection if needed
       const userId = newSocket.handshake.query.userId;
       if (userId) {
         const pathParts = window.location.pathname.split('/');
         const conversationId = pathParts[pathParts.length - 1];
-
         if (conversationId && conversationId !== 'home') {
-          // Use newSocket here, not the state 'socket' which might be null or outdated
           newSocket.emit('viewConversation', {
             conversationId,
             userId
@@ -120,14 +98,16 @@ newSocket.on("messagesRead", (data) => {
     });
 
     setSocket(newSocket);
-    socketRef.current = newSocket; // Store in ref
+    socketRef.current = newSocket;
 
     return () => {
-      newSocket.disconnect();
-      socketRef.current = null;
-      setSocket(null);
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+        setSocket(null);
+      }
     };
-  }, [userProfile, dispatch]); // Only userProfile in dependency array
+  }, [userProfile, dispatch]);
 
   return (
     <SocketContext.Provider value={socket}>

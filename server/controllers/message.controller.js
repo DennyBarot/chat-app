@@ -203,6 +203,11 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
     if (otherParticipantId) {
       const senderSocketId = getSocketId(otherParticipantId);
       if (senderSocketId) {
+        console.log("Server: Emitting 'messagesRead' event to socket ID:", senderSocketId, "with data:", {
+          messageIds: messageIds,
+          readBy: userId,
+          readAt: new Date()
+        });
         io.to(senderSocketId).emit('messagesRead', {
           messageIds: messageIds,
           readBy: userId,

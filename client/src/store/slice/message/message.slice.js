@@ -30,6 +30,7 @@ export const messageSlice = createSlice({
     },
     messagesRead: (state, action) => {
       const { messageIds, readBy, readAt } = action.payload;
+      console.log("Redux: 'messagesRead' reducer triggered with payload:", action.payload);
       if (!state.messages || !messageIds) return;
 
       state.messages = state.messages.map(msg => {

@@ -29,10 +29,9 @@ export const messageSlice = createSlice({
       }
     },
     messagesRead: (state, action) => {
-      const { conversationId, messageIds, readBy, readAt } = action.payload;
+      const { messageIds, readBy, readAt } = action.payload;
       if (!state.messages || !messageIds) return;
 
-      // First, update the messages within the `messages` array
       state.messages = state.messages.map(msg => {
         if (messageIds.includes(msg._id)) {
           const newReadBy = msg.readBy ? [...msg.readBy] : [];
@@ -43,20 +42,6 @@ export const messageSlice = createSlice({
         }
         return msg;
       });
-
-      // Also update the `lastMessage` in the corresponding conversation
-      const conversation = state.conversations.find(c => c._id === conversationId);
-      if (conversation && conversation.lastMessage && messageIds.includes(conversation.lastMessage._id)) {
-        const newReadBy = conversation.lastMessage.readBy ? [...conversation.lastMessage.readBy] : [];
-        if (!newReadBy.includes(readBy)) {
-          newReadBy.push(readBy);
-        }
-        conversation.lastMessage = {
-          ...conversation.lastMessage,
-          readBy: newReadBy,
-          updatedAt: readAt
-        };
-      }
     }
   },
   extraReducers: (builder) => {

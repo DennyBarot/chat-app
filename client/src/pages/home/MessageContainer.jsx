@@ -217,10 +217,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
         // When a new message arrives, we should add it to allMessages and scroll to bottom
         setAllMessages(prevMessages => [...prevMessages, newMessage]);
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-        // Manually scroll to bottom
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
       }
     };
 
@@ -312,11 +308,16 @@ const MessageContainer = ({ onBack, isMobile }) => {
     [messagesWithSeparators]
   );
 
-  const scrollToBottom = useCallback((behavior = "smooth") => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: behavior });
+  const lastMessage = useMemo(() => allMessages[allMessages.length - 1], [allMessages]);
+
+  useLayoutEffect(() => {
+    // This effect is for auto-scrolling to the bottom when a new message is added.
+    // It triggers when `lastMessage` changes.
+    // We do not want this to run on the initial load, as that is handled by another effect.
+    if (!isInitialLoadRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, []);
+  }, [lastMessage]);
 
   const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
@@ -384,7 +385,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
           <SendMessage
             replyMessage={replyMessage}
             onCancelReply={() => setReplyMessage(null)}
-            scrollToBottom={scrollToBottom}
           />
         </>
       ) : (

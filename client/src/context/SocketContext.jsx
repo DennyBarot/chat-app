@@ -63,6 +63,12 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket disconnected:", newSocket.id, "UserId:", userProfile?._id);
     });
 
+    newSocket.on("newMessage", (message) => {
+      console.log("New message received via socket:", message);
+      const event = new CustomEvent("newMessage", { detail: message });
+      window.dispatchEvent(event);
+    });
+
     newSocket.on("messageRead", (data) => {
       console.log("Message read event received:", data);
       const event = new CustomEvent("messageRead", { detail: data });

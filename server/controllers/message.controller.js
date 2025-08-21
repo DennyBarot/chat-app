@@ -34,8 +34,13 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
       readBy: [senderId],
   });
 
-  // Populate replyTo for frontend
-  const populatedMessage = await Message.findById(newMessage._id).populate('replyTo');
+  // Populate replyTo with sender details for frontend
+  const populatedMessage = await Message.findById(newMessage._id)
+    .populate('replyTo')
+    .populate({
+      path: 'replyTo',
+      populate: { path: 'senderId', select: 'fullName username' }
+    });
 
   if (newMessage) {
       conversation.messages.push(newMessage._id);
@@ -44,12 +49,21 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
   const receiverSocketId = getSocketId(receiverId);
   const senderSocketId = getSocketId(senderId);
 
-  
+  // Format message for socket emission with complete quote data
+  const formattedMessage = {
+    ...populatedMessage.toObject(),
+    quotedMessage: populatedMessage.replyTo ? {
+      content: populatedMessage.replyTo.content || '[No content]',
+      senderName: (populatedMessage.replyTo.senderId?.fullName || populatedMessage.replyTo.senderId?.username || 'Unknown'),
+      replyTo: populatedMessage.replyTo.replyTo,
+    } : null,
+  };
+
   if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", populatedMessage);
+      io.to(receiverSocketId).emit("newMessage", formattedMessage);
   }
   if (senderSocketId && senderSocketId !== receiverSocketId) {
-      io.to(senderSocketId).emit("newMessage", populatedMessage);
+      io.to(senderSocketId).emit("newMessage", formattedMessage);
   }
 
   res.status(200).json({

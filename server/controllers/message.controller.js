@@ -172,3 +172,90 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         responseData: formattedConversations,
     });
 });
+
+export const getMessages = asyncHandler(async (req, res, next) => {
+  const userId = req.user._id;
+  const otherParticipantId = req.params.otherParticipantId;
+  const page = parseInt(req.query.page) || 1; // Default to page 1
+  const limit = parseInt(req.query.limit) || 20; // Default to 20 messages per page
+  const skip = (page - 1) * limit;
+
+  if (!userId || !otherParticipantId) {
+    return next(new errorHandler("User ID and other participant ID are required", 400));
+  }
+
+  // Find conversation between the two participants
+  const conversation = await Conversation.findOne({
+    participants: { $all: [userId, otherParticipantId] },
+  });
+
+  if (!conversation) {
+    // No conversation found, return empty array
+    return res.status(200).json({ messages: [], totalMessages: 0 });
+  }
+
+  const totalMessages = await Message.countDocuments({ conversationId: conversation._id });
+
+  const messages = await Message.find({ conversationId: conversation._id })
+    .populate({
+      path: 'replyTo',
+      populate: { path: 'senderId', select: 'fullName username' }
+    })
+    .sort({ createdAt: 1 }) // Sort by createdAt ascending (oldest first)
+    .skip(skip)
+    .limit(limit);
+
+  // No need to reverse if sorted ascending
+  const formattedMessages = messages.map(msg => ({
+    ...msg.toObject(),
+    quotedMessage: msg.replyTo ? {
+      content: msg.replyTo.content || '[No content]',
+      senderName: (msg.replyTo.senderId?.fullName || msg.replyTo.senderId?.username || 'Unknown'),
+      replyTo: msg.replyTo.replyTo,
+    } : null,
+  }));
+
+  res.json({
+    messages: formattedMessages,
+    totalMessages,
+    currentPage: page,
+    totalPages: Math.ceil(totalMessages / limit),
+    hasMore: totalMessages > (page * limit),
+  });
+});
+
+export const markMessagesRead = asyncHandler(async (req, res, next) => {
+  const userId = req.user._id;
+  const { conversationId } = req.params;
+
+  // Find all unread messages in this conversation
+  const updatedMessages = await Message.updateMany(
+    { conversationId, readBy: { $ne: userId } },
+    { $addToSet: { readBy: userId } },
+    { new: true } // Return the updated documents
+  );
+
+  // Get the actual messages that were updated to emit their IDs
+  const messagesThatWereRead = await Message.find({ conversationId, readBy: userId });
+  const messageIds = messagesThatWereRead.map(msg => msg._id);
+
+  // Emit messagesRead event to the sender of the messages
+  // This assumes the sender is the other participant in a 1-on-1 chat
+  // For group chats, you might need to iterate through all senders of the unread messages
+  const conversation = await Conversation.findById(conversationId);
+  if (conversation) {
+    const otherParticipantId = conversation.participants.find(p => p.toString() !== userId.toString());
+    if (otherParticipantId) {
+      const senderSocketId = getSocketId(otherParticipantId);
+      if (senderSocketId) {
+        io.to(senderSocketId).emit('messagesRead', {
+          messageIds: messageIds,
+          readBy: userId,
+          readAt: new Date()
+        });
+      }
+    }
+  }
+
+  res.status(200).json({ success: true });
+});

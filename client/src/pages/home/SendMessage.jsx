@@ -38,9 +38,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         replyTo: replyMessage?._id,
       }));
       // Call scrollToBottom after successful dispatch
-      if (scrollToBottom) {
-        scrollToBottom();
-      }
+    
     } catch (error) {
       console.error("Error sending message:", error);
       // Optionally show a toast error here

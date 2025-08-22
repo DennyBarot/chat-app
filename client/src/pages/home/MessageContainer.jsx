@@ -15,38 +15,29 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const { socket } = useSocket();
+  const location = useLocation();
 
+  // --- STATE MANAGEMENT ---
+  // 1. Read messages directly from the Redux store (Single Source of Truth)
   const messages = useSelector((state) => state.messageReducer.messages);
+  const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
 
+  // Local component state
   const [replyMessage, setReplyMessage] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [isInitialScrolling, setIsInitialScrolling] = useState(true);
-  const [allMessages, setAllMessages] = useState([]); // To store all messages
+  const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
 
-  const scrollRef = useRef(null); // Ref for the scrollable div
+  // Refs for managing scroll behavior
+  const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
   const prevScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
 
-  const filteredMessages = useMemo(() => {
-    if (Array.isArray(allMessages) && selectedUser?._id) {
-      return allMessages.filter(
-        (msg) =>
-          msg.senderId === selectedUser._id || msg.receiverId === selectedUser._id
-      );
-    }
-    return allMessages;
-  }, [allMessages, selectedUser]);
-
-  const location = useLocation();
-
-  const handleReply = useCallback((message) => setReplyMessage(message), []);
-  const { conversations } = useSelector((state) => state.messageReducer);
-
+  // --- MEMOIZED VALUES ---
   const selectedConversationId = useMemo(() => {
     if (!selectedUser || !conversations) return null;
     const conversation = conversations.find(conv =>
@@ -55,72 +46,92 @@ const MessageContainer = ({ onBack, isMobile }) => {
     return conversation?._id;
   }, [selectedUser, conversations]);
 
-  // Effect to fetch initial messages or when selectedUser changes
+  // Use the Redux 'messages' state for all derivations
+  const lastMessage = useMemo(() => (messages ? messages[messages.length - 1] : null), [messages]);
+
+  const getDateLabel = useCallback((dateString) => {
+    const date = parseISO(dateString);
+    if (isToday(date)) return "Today";
+    if (isTomorrow(date)) return "Tomorrow";
+    return format(date, "dd MMM yyyy");
+  }, []);
+
+  const messagesWithSeparators = useMemo(() => {
+    const safeMessages = Array.isArray(messages) ? messages : [];
+    const sortedMessages = [...safeMessages].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const result = [];
+    let lastDate = null;
+
+    sortedMessages.forEach((message) => {
+      const messageDate = message.createdAt;
+      if (messageDate) {
+        const currentDate = messageDate.split("T")[0];
+        if (lastDate !== currentDate) {
+          result.push({ type: "date-separator", id: `separator-${currentDate}`, label: getDateLabel(messageDate) });
+          lastDate = currentDate;
+        }
+      }
+      result.push({ type: "message", id: message._id, messageDetails: message });
+    });
+    return result;
+  }, [messages, getDateLabel]);
+
+  const lastMessageIndex = useMemo(() =>
+    messagesWithSeparators.map((item, idx) => ({ ...item, originalIndex: idx })).filter(item => item.type === "message").pop()?.originalIndex,
+    [messagesWithSeparators]
+  );
+
+  const handleReply = useCallback((message) => setReplyMessage(message), []);
+
+  // --- DATA FETCHING & SOCKET EFFECTS ---
+
+  // Effect to fetch initial messages
   useEffect(() => {
-    isInitialLoadRef.current = true; // Reset for new conversation
+    isInitialLoadRef.current = true;
     const fetchMessages = async () => {
-      if (!selectedUser?._id || location.pathname === '/login' || location.pathname === '/signup') {
-        setAllMessages([]); // Clear messages if no user selected or on auth pages
-        setCurrentPage(1);
-        setHasMoreMessages(true);
+      if (!selectedUser?._id) {
+        // No user selected, do nothing with messages. Redux state will be empty.
         return;
       }
-
       setIsLoadingMessages(true);
-      setIsInitialScrolling(true);
       try {
         const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }));
-
         if (getMessageThunk.fulfilled.match(action) && action.payload) {
-          const { messages: fetchedMessages, hasMore, totalMessages } = action.payload;
-          setAllMessages(fetchedMessages || []);
+          const { messages: fetchedMessages, hasMore } = action.payload;
           setHasMoreMessages(hasMore);
-          setCurrentPage(1); // Reset to first page
+          setCurrentPage(1);
 
           if (fetchedMessages?.length > 0) {
             const conversationId = fetchedMessages[0].conversationId;
             if (conversationId && socket) {
-              socket.emit('viewConversation', {
-                conversationId: conversationId,
-                userId: userProfile?._id
-              });
-              await dispatch(markMessagesReadThunk({ conversationId: conversationId }));
+              socket.emit('viewConversation', { conversationId, userId: userProfile?._id });
+              await dispatch(markMessagesReadThunk({ conversationId }));
             }
           }
-          // Initial scroll will be handled by a separate useEffect
         }
       } catch (error) {
         console.error("Failed to fetch messages:", error);
-        setAllMessages([]);
-        setHasMoreMessages(false);
       } finally {
         setIsLoadingMessages(false);
       }
     };
-
     fetchMessages();
-  }, [selectedUser, location, dispatch, socket, userProfile?._id]);
+  }, [selectedUser?._id, dispatch, socket, userProfile?._id]);
 
-  // Effect for infinite scrolling
+  // Effect for infinite scroll (loading older messages)
   useEffect(() => {
     const currentScrollRef = scrollRef.current;
     if (!currentScrollRef) return;
 
     const handleScroll = async () => {
-      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore && !isInitialScrolling) {
+      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore) {
         setIsLoadingMore(true);
         const nextPage = currentPage + 1;
-
-        // Store current scroll height before fetching new messages
         prevScrollHeightRef.current = currentScrollRef.scrollHeight;
-
         try {
           const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: nextPage, limit: 20 }));
-
           if (getMessageThunk.fulfilled.match(action) && action.payload) {
-            const { messages: newFetchedMessages, hasMore } = action.payload;
-            setAllMessages(prevMessages => [...newFetchedMessages, ...prevMessages]); // Prepend new messages
-            setHasMoreMessages(hasMore);
+            setHasMoreMessages(action.payload.hasMore);
             setCurrentPage(nextPage);
           }
         } catch (error) {
@@ -132,213 +143,95 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
 
     currentScrollRef.addEventListener('scroll', handleScroll);
+    return () => currentScrollRef.removeEventListener('scroll', handleScroll);
+  }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser?._id, dispatch]);
+
+  // Socket event listeners
+  useEffect(() => {
+    if (!socket || !selectedConversationId) return;
+
+    const handleNewMessage = (newMessage) => {
+      if (newMessage.conversationId === selectedConversationId) {
+        dispatch(setNewMessage(newMessage)); // Update Redux store
+        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+      }
+    };
+
+    const handleTyping = ({ senderId }) => {
+      if (senderId === selectedUser?._id) dispatch(setTyping({ userId: senderId, isTyping: true }));
+    };
+
+    const handleStopTyping = ({ senderId }) => {
+      if (senderId === selectedUser?._id) dispatch(setTyping({ userId: senderId, isTyping: false }));
+    };
+
+    socket.on("newMessage", handleNewMessage);
+    socket.on("typing", handleTyping);
+    socket.on("stopTyping", handleStopTyping);
 
     return () => {
-      currentScrollRef.removeEventListener('scroll', handleScroll);
+      socket.off("newMessage", handleNewMessage);
+      socket.off("typing", handleTyping);
+      socket.off("stopTyping", handleStopTyping);
     };
-  }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser, dispatch, isInitialScrolling]);
+  }, [socket, selectedUser?._id, selectedConversationId, dispatch]);
 
-  // useLayoutEffect to adjust scroll position after new messages are prepended
+  // --- SCROLL MANAGEMENT EFFECTS ---
+
+  // Adjust scroll position after prepending older messages
   useLayoutEffect(() => {
     const currentScrollRef = scrollRef.current;
-    // Only adjust scroll if we just loaded more messages (currentPage > 1)
-    // and not during the initial load (isLoadingMessages is false after fetch)
     if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
       const newScrollHeight = currentScrollRef.scrollHeight;
       const scrollDifference = newScrollHeight - prevScrollHeightRef.current;
       currentScrollRef.scrollTop += scrollDifference;
     }
-  }, [allMessages, isLoadingMessages, currentPage]); // Trigger when allMessages updates after loading more
+  }, [messages, isLoadingMessages, currentPage]);
 
-  // useEffect to handle initial scroll to bottom
-  useEffect(() => {
-    // On initial load for a selected user with messages, scroll to the bottom.
-    if (isInitialLoadRef.current && selectedUser?._id && allMessages.length > 0) {
-      // Use scrollIntoView on the messagesEndRef for more reliable scrolling
-      messagesEndRef.current?.scrollIntoView();
-      
-      // Mark the initial load and scroll as complete.
-      isInitialLoadRef.current = false;
-      setIsInitialScrolling(false);
-    }
-  }, [selectedUser, allMessages]);
-
-  useEffect(() => {
-    const handleMessagesRead = (event) => {
-      const { messageIds, readBy, readAt } = event.detail;
-      dispatch(messagesRead({ messageIds, readBy, readAt }));
-    };
-
-    window.addEventListener('messagesRead', handleMessagesRead);
-
-    return () => {
-      window.removeEventListener('messagesRead', handleMessagesRead);
-    };
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (!selectedConversationId) return;
-
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-        socket?.emit('viewConversation', {
-          conversationId: selectedConversationId,
-          userId: userProfile?._id
-        });
-      }
-    };
-
-    const handleFocus = () => {
-      dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-      socket?.emit('viewConversation', {
-        conversationId: selectedConversationId,
-        userId: userProfile?._id
-      });
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [selectedConversationId, dispatch, socket, userProfile?._id]);
-
-  useEffect(() => {
-    if (!socket || !selectedUser?._id || !selectedConversationId) return;
-
-    const handleNewMessage = (newMessage) => {
-      if (newMessage.conversationId === selectedConversationId) {
-        console.log(
-          "MessageContainer.jsx: Received newMessage for current chat, adding to state and marking as read."
-        );
-        dispatch(setNewMessage(newMessage)); // Directly add new message to state
-        // When a new message arrives, we should add it to allMessages and scroll to bottom
-        setAllMessages(prevMessages => [...prevMessages, newMessage]);
-        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-      }
-    };
-
-    socket.on("newMessage", handleNewMessage);
-
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-    };
-  }, [socket, selectedUser, dispatch, selectedConversationId]);
-
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleTyping = ({ senderId, receiverId }) => {
-      if (receiverId === userProfile?._id && senderId === selectedUser?._id) {
-        dispatch(setTyping({ userId: senderId, isTyping: true }));
-      }
-    };
-
-    const handleStopTyping = ({ senderId, receiverId }) => {
-      if (receiverId === userProfile?._id && senderId === selectedUser?._id) {
-        dispatch(setTyping({ userId: senderId, isTyping: false }));
-      }
-    };
-
-    socket.on("typing", handleTyping);
-    socket.on("stopTyping", handleStopTyping);
-
-    return () => {
-      socket.off("typing", handleTyping);
-      socket.off("stopTyping", handleStopTyping);
-    };
-  }, [socket, dispatch, userProfile, selectedUser]);
-
-  // Keep scroll at bottom when new messages arrive (from socket or sending)
-  // This useEffect will now only run when `messagesEndRef` is available,
-  // and we will manually trigger scroll when new messages arrive.
-  useEffect(() => {
-    // No automatic scroll here. We'll handle it manually.
-  }, []); // Empty dependency array, runs once on mount
-   
-  // Add this useEffect to mark messages as read when conversation is opened
-useEffect(() => {
-  if (selectedConversationId && messages?.length > 0) {
-    dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-  }
-}, [selectedConversationId, messages, dispatch]);
-
-
-  const getDateLabel = useCallback((dateString) => {
-    const date = parseISO(dateString);
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    return format(date, "dd MMM yyyy");
-  }, []);
-
-  const messagesWithSeparators = useMemo(() => {
-    const safeMessages = Array.isArray(filteredMessages) ? filteredMessages : [];
-    const sortedMessages = [...safeMessages].sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.timestamp);
-      const dateB = new Date(b.createdAt || b.timestamp);
-      return dateA - dateB;
-    });
-
-    const result = [];
-    let lastDate = null;
-
-    if (sortedMessages.length > 0) {
-      sortedMessages.forEach((message) => {
-        const messageDate = message.createdAt || message.timestamp;
-        if (messageDate) {
-          const currentDate = messageDate.split("T")[0];
-          if (lastDate !== currentDate) {
-            result.push({
-              type: "date-separator",
-              id: `separator-${currentDate}`,
-              label: getDateLabel(messageDate),
-            });
-            lastDate = currentDate;
-          }
-        }
-        result.push({
-          type: "message",
-          id: message._id,
-          messageDetails: message,
-        });
-      });
-    }
-    return result;
-  }, [filteredMessages, getDateLabel]);
-
-  const lastMessageIndex = useMemo(() => 
-    messagesWithSeparators
-      .map((item, idx) => ({ ...item, originalIndex: idx }))
-      .filter(item => item.type === "message")
-      .pop()?.originalIndex,
-    [messagesWithSeparators]
-  );
-
-  const lastMessage = useMemo(() => allMessages[allMessages.length - 1], [allMessages]);
-
+  // Handle initial scroll to bottom on first load
   useLayoutEffect(() => {
-    // This effect is for auto-scrolling to the bottom when a new message is added.
-    // It triggers when `lastMessage` changes.
-    // We do not want this to run on the initial load, as that is handled by another effect.
-    if (!isInitialLoadRef.current) {
+    if (isInitialLoadRef.current && messages && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView();
+      isInitialLoadRef.current = false;
+    }
+  }, [messages]);
+
+  // 2. The single, conditional auto-scrolling effect
+  useLayoutEffect(() => {
+    if (isInitialLoadRef.current) return;
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const isScrolledToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200;
+    if (isScrolledToBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setShowNewMessageIndicator(false);
+    } else {
+      setShowNewMessageIndicator(true);
     }
   }, [lastMessage]);
 
+  // Hide indicator if user scrolls down manually
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const handleManualScroll = () => {
+      if (scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200) {
+        setShowNewMessageIndicator(false);
+      }
+    };
+    scrollContainer.addEventListener('scroll', handleManualScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleManualScroll);
+  }, []);
+
+  // --- RENDER ---
   const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-800 relative">
       {isMobile && (
-        <button
-          onClick={onBack}
-          aria-label="Back"
-          title="Back"
-          className="absolute top-2 left-2 z-20 p-1 rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700 transition-colors flex items-center justify-center"
-        >
+        <button onClick={onBack} aria-label="Back" title="Back" className="absolute top-2 left-2 z-20 p-1 rounded-full bg-indigo-600 text-white shadow-md hover:bg-indigo-700">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
@@ -346,74 +239,47 @@ useEffect(() => {
       )}
       {selectedUser ? (
         <>
-          <div className="p-4 border-b border-slate-200 bg-purple- shadow-sm dark:from-slate-800 dark:to-slate-900">
+          <div className="p-4 border-b border-slate-200 shadow-sm dark:from-slate-800 dark:to-slate-900">
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
           </div>
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900">
+          {/* 3. Add 'relative' class for positioning the indicator button */}
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 relative">
             {isLoadingMessages && currentPage === 1 ? (
               <div className="flex justify-center items-center h-full">
                 <span className="loading loading-spinner loading-lg text-indigo-500"></span>
               </div>
             ) : messages?.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-500">
-                <div className="w-20 h-20 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-medium text-slate-700">No messages yet</h3>
-                <p className="text-slate-500 mt-2 text-center">Send a message to start the conversation with {selectedUser.fullName}</p>
+                <p>Send a message to start the conversation with {selectedUser.fullName}</p>
               </div>
             ) : (
               <div className="space-y-4">
-                {isLoadingMore && (
-                  <div className="flex justify-center bg-slate-100 dark:bg-slate-700 rounded-lg">
-                    <div className="custom-spinner"></div>
-                  </div>
-                )}
+                {isLoadingMore && <div className="flex justify-center"><div className="custom-spinner"></div></div>}
                 {messagesWithSeparators.map((item, index) => {
-                  if (item.type === "date-separator") {
-                    return <DateSeparator key={item.id} label={item.label} />;
-                  } else if (item.type === "message") {
-                    const isLastMessage = index === lastMessageIndex;
-                    return (
-                      <Message
-                        key={item.id}
-                        messageDetails={item.messageDetails}
-                        onReply={handleReply}
-                        isLastMessage={isLastMessage}
-                      />
-                    );
-                  }
-                  return null;
+                  if (item.type === "date-separator") return <DateSeparator key={item.id} label={item.label} />;
+                  return <Message key={item.id} messageDetails={item.messageDetails} onReply={handleReply} isLastMessage={index === lastMessageIndex} />;
                 })}
                 <div ref={messagesEndRef} />
               </div>
             )}
+            
+            {showNewMessageIndicator && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                <button onClick={() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); setShowNewMessageIndicator(false); }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all flex items-center gap-2 animate-bounce">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  New Message
+                </button>
+              </div>
+            )}
           </div>
-          <SendMessage
-            replyMessage={replyMessage}
-            onCancelReply={() => setReplyMessage(null)}
-          />
+          <SendMessage replyMessage={replyMessage} onCancelReply={() => setReplyMessage(null)} />
         </>
       ) : (
-        <div className="h-full flex items-center justify-center flex-col gap-5 bg-gradient-to-br from-indigo-50 to-white p-8">
-          <div className="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center mb-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </div>
-          <h2 className="text-3xl font-bold text-indigo-700">Welcome to CHAT APP</h2>
-          <p className="text-xl text-slate-600 text-center max-w-md">Select a conversation from the sidebar or add a new contact to start chatting</p>
-          <button
-            onClick={() => document.querySelector('[title="Add new conversation"]').click()}
-            className="mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
-            </svg>
-            Add New Contact
-          </button>
+        <div className="h-full flex items-center justify-center">
+          <p>Select a user to start chatting.</p>
         </div>
       )}
     </div>

@@ -14,7 +14,7 @@ import { setTyping } from "../../store/slice/typing/typing.slice";
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
-  const socket = useSocket();
+  const { socket } = useSocket();
 
   const messages = useSelector((state) => state.messageReducer.messages);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);

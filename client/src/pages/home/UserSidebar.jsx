@@ -20,7 +20,7 @@ const UserSidebar = ({ onUserSelect }) => {
   const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
 
-  const socket = useSocket();
+  const { socket } = useSocket();
 
   // Effect for managing modal-open class on body
   useEffect(() => {

@@ -231,18 +231,42 @@ export const logout = asyncHandler(async (req, res, next) => {
 });
 
 export const getOtherUsers = asyncHandler(async (req, res, next) => {
-  const otherUsers = await User.find({ _id: { $ne: req.user._id } });
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10; // Default limit to 10 users per page
+  const skip = (page - 1) * limit;
+
+  const otherUsers = await User.find({ _id: { $ne: req.user._id } })
+    .skip(skip)
+    .limit(limit);
+
+  const totalUsers = await User.countDocuments({ _id: { $ne: req.user._id } });
+
   res.status(200).json({
     success: true,
     responseData: otherUsers,
+    currentPage: page,
+    totalPages: Math.ceil(totalUsers / limit),
+    totalUsers: totalUsers,
   });
 });
 
 export const getAllUsers = asyncHandler(async (req, res, next) => {
-  const allUsers = await User.find({});
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10; // Default limit to 10 users per page
+  const skip = (page - 1) * limit;
+
+  const allUsers = await User.find({})
+    .skip(skip)
+    .limit(limit);
+
+  const totalUsers = await User.countDocuments({});
+
   res.status(200).json({
     success: true,
     responseData: allUsers,
+    currentPage: page,
+    totalPages: Math.ceil(totalUsers / limit),
+    totalUsers: totalUsers,
   });
 });
 

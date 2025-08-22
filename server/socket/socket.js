@@ -57,25 +57,9 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Handle viewConversation event for read receipts
-  socket.on('viewConversation', ({ conversationId, userId }) => {
-    console.log(`User ${userId} viewed conversation ${conversationId}`);
-    // This can be used to track active conversations or implement typing indicators
-  });
-
-  // Handle message events (these are primarily handled by API controllers)
-  socket.on('sendMessage', (data) => {
-    console.log('Message sent via socket:', data);
-    // This would typically be handled by the message controller API
-  });
-
-  socket.on('markMessageRead', (data) => {
-    console.log('Message marked as read:', data);
-    // This would typically be handled by the message controller API
-  });
-
-  socket.on('markConversationRead', (data) => {
-    console.log('Conversation marked as read:', data);
-    // This would typically be handled by the message controller API
-  });
+  // The following events are now handled by API controllers and emit via `io` directly
+  // socket.on('sendMessage', ...)
+  // socket.on('markMessageRead', ...)
+  // socket.on('markConversationRead', ...)
+  // socket.on('viewConversation', ...)
 });

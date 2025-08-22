@@ -13,7 +13,7 @@ const AddUserModal = ({ isOpen, onClose, onSelectUser }) => {
 
   useEffect(() => {
     if (isOpen && (!allUsers || allUsers.length === 0)) {
-      dispatch(getAllUsersThunk());
+      dispatch(getAllUsersThunk({ page: 1, limit: 100 })); // Fetch first 100 users, adjust limit as needed
     }
   }, [isOpen, dispatch, allUsers]);
 

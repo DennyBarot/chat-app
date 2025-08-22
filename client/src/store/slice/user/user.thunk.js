@@ -137,10 +137,10 @@ export const updateUserProfileThunk = createAsyncThunk(
 
 export const getAllUsersThunk = createAsyncThunk(
   "user/getAllUsers",
-  async (_, { rejectWithValue }) => {
+  async ({ page = 1, limit = 10 } = {}, { rejectWithValue }) => { // Add page and limit parameters
     try {
-      const response = await axiosInstance.get("/api/v1/user/get-all-users");
-      return response.data;
+      const response = await axiosInstance.get(`/api/v1/user/get-all-users?page=${page}&limit=${limit}`);
+      return response.data; // This will contain { responseData: users, currentPage, totalPages, totalUsers }
     } catch (error) {
       console.error("Axios error:", error);
       const errorOutput = error?.response?.data?.errMessage || error.message;

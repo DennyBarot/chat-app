@@ -105,12 +105,9 @@ const UserSidebar = ({ onUserSelect }) => {
       if (!otherUser) {
         return null;
       }
-      const sortedMessages = conv.messages && conv.messages.length > 0
-        ? [...conv.messages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-        : [];
       return {
         ...otherUser,
-        lastMessage: sortedMessages.length > 0 ? sortedMessages[0] : null,
+        lastMessage: conv.lastMessage, // Use the lastMessage directly from the server
         conversationId: conv._id,
         updatedAt: conv.updatedAt,
         unreadCount: conv.unreadCount,

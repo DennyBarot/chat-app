@@ -201,12 +201,12 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   // Handle marking messages as read when new messages arrive via socket
   useEffect(() => {
-    if (Array.isArray(messages) && messages.length > 0 && selectedConversationId) {
+    if (messages && messages.length > 0 && selectedConversationId) {
       // Get the latest message
       const latestMessage = messages[messages.length - 1];
       
       // If the latest message is from the other user and not read by current user
-      if (latestMessage && latestMessage.senderId !== userProfile?._id && 
+      if (latestMessage.senderId !== userProfile?._id && 
           (!latestMessage.readBy || !latestMessage.readBy.includes(userProfile?._id))) {
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
@@ -301,15 +301,13 @@ useEffect(() => {
     [messagesWithSeparators]
   );
 
-  const lastMessage = useMemo(() => {
-    return Array.isArray(messages) && messages.length > 0 ? messages[messages.length - 1] : null;
-  }, [messages]);
+  const lastMessage = useMemo(() => messages[messages.length - 1], [messages]);
 
   useLayoutEffect(() => {
     // This effect is for auto-scrolling to the bottom when a new message is added.
     // It triggers when `lastMessage` changes.
     // We do not want this to run on the initial load, as that is handled by another effect.
-    if (!isInitialLoadRef.current && lastMessage) {
+    if (!isInitialLoadRef.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, [lastMessage]);

@@ -1,10 +1,83 @@
 import Message from "../models/messageModel.js";
 import Conversation from "../models/conversationModel.js";
-import User from "../models/userModel.js"; // Import User model
+import User from "../models/userModel.js";
 import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
 import { errorHandler } from "../utilities/errorHandlerUtility.js";
 import mongoose from 'mongoose';
 import { getSocketId, io } from '../socket/socket.js';
+
+// --- The Single, Reliable Helper Function ---
+// This function will now be used by both sendMessage and markMessagesRead.
+const getUpdatedConversationForUser = async (conversationId, userId) => {
+    const userObjectId = new mongoose.Types.ObjectId(userId.toString());
+
+    const pipeline = [
+        { $match: { _id: new mongoose.Types.ObjectId(conversationId.toString()) } },
+        {
+            $lookup: {
+                from: "messages",
+                let: { conversationId: "$_id" },
+                pipeline: [
+                    { $match: { $expr: { $eq: ["$conversationId", "$$conversationId"] } } },
+                    { $sort: { createdAt: -1 } },
+                    { $limit: 1 }
+                ],
+                as: "lastMessage"
+            }
+        },
+        {
+            $lookup: {
+                from: "messages",
+                let: { conversationId: "$_id" },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ["$conversationId", "$$conversationId"] },
+                                    { $not: { $in: [userObjectId, { $ifNull: ["$readBy", []] }] } }
+                                ]
+                            }
+                        }
+                    },
+                    { $count: "count" }
+                ],
+                as: "unreadMessages"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "participants",
+                foreignField: "_id",
+                as: "participantsInfo"
+            }
+        },
+        {
+            $project: {
+                _id: 1, updatedAt: 1, createdAt: 1,
+                lastMessage: { $arrayElemAt: ["$lastMessage", 0] },
+                unreadCount: { $ifNull: [{ $arrayElemAt: ["$unreadMessages.count", 0] }, 0] },
+                participants: {
+                    $filter: {
+                        input: "$participantsInfo",
+                        as: "participant",
+                        cond: { $ne: ["$$participant._id", userObjectId] }
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                "participants.password": 0, "participants.email": 0, "participants.gender": 0,
+                "participants.createdAt": 0, "participants.updatedAt": 0,
+            }
+        }
+    ];
+
+    const result = await Conversation.aggregate(pipeline);
+    return result.length > 0 ? result[0] : null;
+};
 
 export const sendMessage = asyncHandler(async (req, res, next) => {
     const receiverId = req.params.receiverId;
@@ -26,75 +99,40 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     }
 
     const newMessage = await Message.create({
-        senderId,
-        receiverId,
-        conversationId: conversation._id,
-        content: message,
-        replyTo,
-        readBy: [senderId], // The sender has implicitly read the message
+        senderId, receiverId, conversationId: conversation._id,
+        content: message, replyTo, readBy: [senderId],
     });
 
-    // Populate the new message to get all necessary details for the events
-    const populatedMessage = await Message.findById(newMessage._id)
-        .populate({
-            path: 'replyTo',
-            populate: { path: 'senderId', select: 'fullName username' }
-        })
-        .lean(); // Use .lean() for a plain JS object, which is faster
-
-    if (!populatedMessage) {
-        return next(new errorHandler("Failed to create and populate message.", 500));
-    }
-    
-    // Update the conversation's last message and timestamp
     conversation.messages.push(newMessage._id);
     conversation.updatedAt = new Date();
     await conversation.save();
 
+    const populatedMessage = await Message.findById(newMessage._id)
+        .populate({
+            path: 'replyTo',
+            populate: { path: 'senderId', select: 'fullName username' }
+        }).lean();
+
+    if (!populatedMessage) {
+        return next(new errorHandler("Failed to create message.", 500));
+    }
 
     // --- INSTANT REAL-TIME EVENTS ---
-
-    // 1. Emit the new message to the chat windows of both users
     const receiverSocketId = getSocketId(receiverId);
-    if (receiverSocketId) {
-        io.to(receiverSocketId).emit("newMessage", populatedMessage);
-    }
+    if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", populatedMessage);
+    
     const senderSocketId = getSocketId(senderId);
-    if (senderSocketId) {
-        io.to(senderSocketId).emit("newMessage", populatedMessage);
+    if (senderSocketId) io.to(senderSocketId).emit("newMessage", populatedMessage);
+
+    // Use the reliable helper function to get the updated state for both users
+    const receiverUpdate = await getUpdatedConversationForUser(conversation._id, receiverId);
+    if (receiverSocketId && receiverUpdate) {
+        io.to(receiverSocketId).emit("conversationUpdated", receiverUpdate);
     }
 
-    // 2. Manually construct and emit the updated conversation for the sidebars
-    const participants = await User.find({
-        _id: { $in: conversation.participants }
-    }).select("username fullName avatar").lean();
-
-    // For the receiver
-    if (receiverSocketId) {
-        const unreadCountForReceiver = await Message.countDocuments({
-            conversationId: conversation._id,
-            readBy: { $nin: [receiverId] }
-        });
-        const receiverPayload = {
-            _id: conversation._id,
-            participants: participants.filter(p => p._id.toString() !== receiverId.toString()),
-            lastMessage: populatedMessage,
-            unreadCount: unreadCountForReceiver,
-            updatedAt: conversation.updatedAt,
-        };
-        io.to(receiverSocketId).emit("conversationUpdated", receiverPayload);
-    }
-
-    // For the sender
-    if (senderSocketId) {
-        const senderPayload = {
-            _id: conversation._id,
-            participants: participants.filter(p => p._id.toString() !== senderId.toString()),
-            lastMessage: populatedMessage,
-            unreadCount: 0, // Sender's unread count is always 0 for their own message
-            updatedAt: conversation.updatedAt,
-        };
-        io.to(senderSocketId).emit("conversationUpdated", senderPayload);
+    const senderUpdate = await getUpdatedConversationForUser(conversation._id, senderId);
+    if (senderSocketId && senderUpdate) {
+        io.to(senderSocketId).emit("conversationUpdated", senderUpdate);
     }
     
     res.status(201).json({
@@ -102,10 +140,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         responseData: populatedMessage,
     });
 });
-
-
-// --- NO CHANGES NEEDED FOR THE REST OF THE FILE ---
-// The aggregation pipeline is still the most efficient way for the initial load.
 
 export const getConversations = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
@@ -192,18 +226,19 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {
-    // This function remains the same and should work correctly.
     const userId = req.user._id;
     const { conversationId } = req.params;
     const updateResult = await Message.updateMany(
         { conversationId, readBy: { $ne: userId } },
         { $addToSet: { readBy: userId } }
     );
+
     if (updateResult.modifiedCount > 0) {
         const conversation = await Conversation.findById(conversationId);
         if (conversation) {
+            // Use the reliable helper function to get the updated state
+            const updatedConversationForReader = await getUpdatedConversationForUser(conversationId, userId);
             const currentUserSocketId = getSocketId(userId.toString());
-            const updatedConversationForReader = await getUpdatedConversation(conversationId, userId);
             if (currentUserSocketId && updatedConversationForReader) {
                  io.to(currentUserSocketId).emit('conversationUpdated', updatedConversationForReader);
             }

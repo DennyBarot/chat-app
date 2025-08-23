@@ -9,59 +9,60 @@ import { useSocket } from "../../context/SocketContext";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import ThemeToggle from "../../components/ThemeToggle";
 import { setTyping } from "../../store/slice/typing/typing.slice";
-// --- Import the new action ---
 import { updateSingleConversation } from "../../store/slice/message/message.slice";
+import { setOnlineUsers } from "../../store/slice/socket/socket.slice";
 
 const UserSidebar = ({ onUserSelect }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  
-  const dispatch = useDispatch();
+
+const dispatch = useDispatch();
   const { userProfile } = useSelector((state) => state.userReducer);
   const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
-  const { socket } = useSocket();
+
+  const socket = useSocket(); // Get the clean socket instance directly
 
   useEffect(() => {
     document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
     return () => document.body.classList.remove('modal-open');
   }, [isModalOpen, isAddUserModalOpen]);
 
-  // --- UPDATED SOCKET EFFECT ---
+    // This effect now handles all socket events for the sidebar
   useEffect(() => {
-    if (!socket || !userProfile?._id) return;
+    // The socket can be null initially, so we check for it.
+    if (!socket) return;
 
-    // Listener for the new, efficient conversation update
     const handleConversationUpdate = (updatedConversation) => {
       dispatch(updateSingleConversation(updatedConversation));
     };
-
-    const handleTyping = ({ senderId }) => {
-      dispatch(setTyping({ userId: senderId, isTyping: true }));
-    };
-
-    const handleStopTyping = ({ senderId }) => {
-      dispatch(setTyping({ userId: senderId, isTyping: false }));
-    };
+    const handleOnlineUsers = (users) => dispatch(setOnlineUsers(users));
+    const handleTyping = ({ senderId }) => dispatch(setTyping({ userId: senderId, isTyping: true }));
+    const handleStopTyping = ({ senderId }) => dispatch(setTyping({ userId: senderId, isTyping: false }));
 
     socket.on("conversationUpdated", handleConversationUpdate);
+    socket.on("onlineUsers", handleOnlineUsers);
     socket.on("typing", handleTyping);
     socket.on("stopTyping", handleStopTyping);
 
+    // Cleanup function to remove listeners when component unmounts
     return () => {
       socket.off("conversationUpdated", handleConversationUpdate);
+      socket.off("onlineUsers", handleOnlineUsers);
       socket.off("typing", handleTyping);
       socket.off("stopTyping", handleStopTyping);
     };
-  }, [dispatch, socket, userProfile]);
+  }, [socket, dispatch]); 
 
-  // Initial fetch of conversations when the component mounts
+  // --- UPDATED SOCKET EFFECT ---
+  // Initial fetch of conversations when the component mounts and the user is logged in.
   useEffect(() => {
     if (userProfile?._id) {
       dispatch(getConversationsThunk());
     }
-  }, [dispatch, userProfile]);
+  }, [dispatch, userProfile?._id]);
+
 
   const users = useMemo(() => {
     if (!conversations || conversations.length === 0) return [];
@@ -123,8 +124,8 @@ const UserSidebar = ({ onUserSelect }) => {
         ) : (
           <div className="space-y-1">
             {users.map((userDetails) => (
-              <User 
-                key={userDetails?._id} 
+             <User 
+                key={userDetails?.conversationId || userDetails?._id} 
                 userDetails={userDetails} 
                 isTyping={typingUsers[userDetails._id]} 
                 displayType="sidebar" 

@@ -14,14 +14,21 @@ import { setTyping } from "../../store/slice/typing/typing.slice";
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
-  const { socket } = useSocket();
-  const location = useLocation();
-
-  // --- STATE MANAGEMENT ---
-  // 1. Read messages directly from the Redux store (Single Source of Truth)
   const messages = useSelector((state) => state.messageReducer.messages);
-  const conversations = useSelector((state) => state.messageReducer.conversations);
+    const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
+   // 1. Get the clean socket connection from the context.
+   const { socket } = useSocket();
+     // Derive the current conversation ID from the Redux state.
+  // Derive the current conversation ID from the Redux state.
+  const selectedConversationId = useMemo(() => {
+    if (!selectedUser || !conversations) return null;
+    const conversation = conversations.find(conv => 
+      conv.participants.some(p => p._id === selectedUser._id)
+    );
+    return conversation?._id;
+  }, [selectedUser, conversations]);
+  
 
   // Local component state
   const [replyMessage, setReplyMessage] = useState(null);
@@ -36,18 +43,138 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const messagesEndRef = useRef(null);
   const prevScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
+ 
+    // 2. This effect is the single source of truth for all real-time events related to the open chat.
+  useEffect(() => {
+    // The socket can be null initially, and we only listen if a conversation is open.
+    if (!socket || !selectedConversationId) return;
 
-  // --- MEMOIZED VALUES ---
-  const selectedConversationId = useMemo(() => {
-    if (!selectedUser || !conversations) return null;
-    const conversation = conversations.find(conv =>
-      conv.participants.some(p => p._id === selectedUser._id)
-    );
-    return conversation?._id;
-  }, [selectedUser, conversations]);
+    const handleNewMessage = (newMessage) => {
+      if (newMessage.conversationId === selectedConversationId) {
+        dispatch(setNewMessage(newMessage));
+        // Since the user is actively watching, we immediately mark the message as read.
+        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
+      }
+    };
+
+    const handleMessagesRead = (data) => {
+      // This handles the "read receipt" update when the other user reads your messages.
+      dispatch(messagesRead(data));
+    };
+
+    // Set up the listeners.
+    socket.on("newMessage", handleNewMessage);
+    socket.on("messagesRead", handleMessagesRead);
+
+    // Cleanup function to remove listeners.
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+      socket.off("messagesRead", handleMessagesRead);
+    };
+  }, [socket, selectedConversationId, dispatch]);
+
+ // Effect to fetch initial messages when a user is selected.
+  useEffect(() => {
+    isInitialLoadRef.current = true;
+    if (selectedUser?._id) {
+      setIsLoadingMessages(true);
+      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }))
+        .unwrap()
+        .then((payload) => {
+          setHasMoreMessages(payload.hasMore);
+          setCurrentPage(1);
+        })
+        .catch(console.error)
+        .finally(() => setIsLoadingMessages(false));
+    }
+  }, [selectedUser?._id, dispatch]);
+
+  // Effect for infinite scroll (loading older messages)
+  useEffect(() => {
+    const currentScrollRef = scrollRef.current;
+    if (!currentScrollRef) return;
+
+    const handleScroll = async () => {
+      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore) {
+        setIsLoadingMore(true);
+        const nextPage = currentPage + 1;
+        prevScrollHeightRef.current = currentScrollRef.scrollHeight;
+        try {
+          const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: nextPage, limit: 20 }));
+          if (getMessageThunk.fulfilled.match(action) && action.payload) {
+            setHasMoreMessages(action.payload.hasMore);
+            setCurrentPage(nextPage);
+          }
+        } catch (error) {
+          console.error("Failed to fetch more messages:", error);
+        } finally {
+          setIsLoadingMore(false);
+        }
+      }
+    };
+
+    currentScrollRef.addEventListener('scroll', handleScroll);
+    return () => {
+      if (currentScrollRef) {
+        currentScrollRef.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser?._id, dispatch]);
+
+  // Adjust scroll position after prepending older messages
+  useLayoutEffect(() => {
+    const currentScrollRef = scrollRef.current;
+    if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
+      const newScrollHeight = currentScrollRef.scrollHeight;
+      const scrollDifference = newScrollHeight - prevScrollHeightRef.current;
+      currentScrollRef.scrollTop += scrollDifference;
+    }
+  }, [messages, isLoadingMessages, currentPage]);
+
+  // Handle initial scroll to bottom on first load
+  useLayoutEffect(() => {
+    if (isInitialLoadRef.current && messages && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView();
+      isInitialLoadRef.current = false;
+    }
+  }, [messages]);
 
   // Use the Redux 'messages' state for all derivations
   const lastMessage = useMemo(() => (messages ? messages[messages.length - 1] : null), [messages]);
+  
+   // Conditional auto-scrolling effect
+  useLayoutEffect(() => {
+    if (isInitialLoadRef.current) return;
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const isScrolledToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200;
+    if (isScrolledToBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setShowNewMessageIndicator(false);
+    } else {
+      setShowNewMessageIndicator(true);
+    }
+  }, [lastMessage]);
+
+   // Hide indicator if user scrolls down manually
+  useEffect(() => {
+    const scrollContainer = scrollRef.current;
+    if (!scrollContainer) return;
+
+    const handleManualScroll = () => {
+      if (scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200) {
+        setShowNewMessageIndicator(false);
+      }
+    };
+    scrollContainer.addEventListener('scroll', handleManualScroll);
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener('scroll', handleManualScroll);
+      }
+    };
+  }, []);
+
 
   const getDateLabel = useCallback((dateString) => {
     const date = parseISO(dateString);
@@ -82,151 +209,10 @@ const MessageContainer = ({ onBack, isMobile }) => {
   );
 
   const handleReply = useCallback((message) => setReplyMessage(message), []);
+   const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
-  // --- DATA FETCHING & SOCKET EFFECTS ---
 
-  // Effect to fetch initial messages
-  useEffect(() => {
-    isInitialLoadRef.current = true;
-    const fetchMessages = async () => {
-      if (!selectedUser?._id) {
-        // No user selected, do nothing with messages. Redux state will be empty.
-        return;
-      }
-      setIsLoadingMessages(true);
-      try {
-        const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }));
-        if (getMessageThunk.fulfilled.match(action) && action.payload) {
-          const { messages: fetchedMessages, hasMore } = action.payload;
-          setHasMoreMessages(hasMore);
-          setCurrentPage(1);
 
-          if (fetchedMessages?.length > 0) {
-            const conversationId = fetchedMessages[0].conversationId;
-            if (conversationId && socket) {
-              socket.emit('viewConversation', { conversationId, userId: userProfile?._id });
-              await dispatch(markMessagesReadThunk({ conversationId }));
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch messages:", error);
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
-    fetchMessages();
-  }, [selectedUser?._id, dispatch, socket, userProfile?._id]);
-
-  // Effect for infinite scroll (loading older messages)
-  useEffect(() => {
-    const currentScrollRef = scrollRef.current;
-    if (!currentScrollRef) return;
-
-    const handleScroll = async () => {
-      if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore) {
-        setIsLoadingMore(true);
-        const nextPage = currentPage + 1;
-        prevScrollHeightRef.current = currentScrollRef.scrollHeight;
-        try {
-          const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: nextPage, limit: 20 }));
-          if (getMessageThunk.fulfilled.match(action) && action.payload) {
-            setHasMoreMessages(action.payload.hasMore);
-            setCurrentPage(nextPage);
-          }
-        } catch (error) {
-          console.error("Failed to fetch more messages:", error);
-        } finally {
-          setIsLoadingMore(false);
-        }
-      }
-    };
-
-    currentScrollRef.addEventListener('scroll', handleScroll);
-    return () => currentScrollRef.removeEventListener('scroll', handleScroll);
-  }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser?._id, dispatch]);
-
-  // Socket event listeners
-  useEffect(() => {
-    if (!socket || !selectedConversationId) return;
-
-    const handleNewMessage = (newMessage) => {
-      if (newMessage.conversationId === selectedConversationId) {
-        dispatch(setNewMessage(newMessage)); // Update Redux store
-        dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
-      }
-    };
-
-    const handleTyping = ({ senderId }) => {
-      if (senderId === selectedUser?._id) dispatch(setTyping({ userId: senderId, isTyping: true }));
-    };
-
-    const handleStopTyping = ({ senderId }) => {
-      if (senderId === selectedUser?._id) dispatch(setTyping({ userId: senderId, isTyping: false }));
-    };
-
-    socket.on("newMessage", handleNewMessage);
-    socket.on("typing", handleTyping);
-    socket.on("stopTyping", handleStopTyping);
-
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-      socket.off("typing", handleTyping);
-      socket.off("stopTyping", handleStopTyping);
-    };
-  }, [socket, selectedUser?._id, selectedConversationId, dispatch]);
-
-  // --- SCROLL MANAGEMENT EFFECTS ---
-
-  // Adjust scroll position after prepending older messages
-  useLayoutEffect(() => {
-    const currentScrollRef = scrollRef.current;
-    if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
-      const newScrollHeight = currentScrollRef.scrollHeight;
-      const scrollDifference = newScrollHeight - prevScrollHeightRef.current;
-      currentScrollRef.scrollTop += scrollDifference;
-    }
-  }, [messages, isLoadingMessages, currentPage]);
-
-  // Handle initial scroll to bottom on first load
-  useLayoutEffect(() => {
-    if (isInitialLoadRef.current && messages && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView();
-      isInitialLoadRef.current = false;
-    }
-  }, [messages]);
-
-  // 2. The single, conditional auto-scrolling effect
-  useLayoutEffect(() => {
-    if (isInitialLoadRef.current) return;
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer) return;
-
-    const isScrolledToBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200;
-    if (isScrolledToBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      setShowNewMessageIndicator(false);
-    } else {
-      setShowNewMessageIndicator(true);
-    }
-  }, [lastMessage]);
-
-  // Hide indicator if user scrolls down manually
-  useEffect(() => {
-    const scrollContainer = scrollRef.current;
-    if (!scrollContainer) return;
-
-    const handleManualScroll = () => {
-      if (scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 200) {
-        setShowNewMessageIndicator(false);
-      }
-    };
-    scrollContainer.addEventListener('scroll', handleManualScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleManualScroll);
-  }, []);
-
-  // --- RENDER ---
-  const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-800 relative">

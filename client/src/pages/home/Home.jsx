@@ -42,7 +42,7 @@ const Home = () => {
     dispatch(setSelectedUser(null));
   }, [dispatch]);
 
-  // NO MORE SOCKET LISTENERS HERE. This component is clean.
+  // NO MORE SOCKET LISTENERS HERE. This component is now clean and simple.
 
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">

@@ -4,7 +4,7 @@ import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const sendMessageThunk = createAsyncThunk(
   "message/send",
-  async ({ receiverId, message, timestamp, replyTo }, { dispatch, rejectWithValue }) => {
+  async ({ receiverId, message, timestamp, replyTo }, { rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/api/v1/message/send/${receiverId}`, {
         message,
@@ -12,7 +12,7 @@ export const sendMessageThunk = createAsyncThunk(
         replyTo, // <-- add this
       });
       // After sending message, refresh conversations
-      await dispatch(getConversationsThunk());
+     
       return response.data;
     } catch (error) {
       console.error(error);
@@ -63,7 +63,7 @@ export const markMessagesReadThunk = createAsyncThunk(
   async ({ conversationId }, { dispatch, rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
-      dispatch(getConversationsThunk());
+      
       return response.data;
     } catch (error) {
       console.error(error);

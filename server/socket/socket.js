@@ -19,68 +19,42 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
 });
 
-const userSocketMap = {
-    // userId : socketId,
-}
-
-const getSocketId = (userId) => {
-    return userSocketMap[userId];
-}
-
-export { io, app, server, getSocketId, userSocketMap };
+const userSocketMap = {}; // We still use this to track WHO is online for the "online users" feature.
 
 io.on("connection", (socket) => {
   const userId = socket.handshake.query.userId;
 
-  if (!userId) return;
+  if (userId && userId !== "undefined") {
+    console.log(`User connected: ${userId}, Socket ID: ${socket.id}`);
+    userSocketMap[userId] = socket.id;
+    
+    // --- THE CRUCIAL CHANGE ---
+    // The user joins a room named after their own user ID. This is very reliable.
+    socket.join(userId);
 
-  userSocketMap[userId] = socket.id;
-
-  io.emit("onlineUsers", Object.keys(userSocketMap))
+    // Emit the list of online user IDs to everyone.
+    io.emit("onlineUsers", Object.keys(userSocketMap));
+  }
 
   socket.on("disconnect", () => {
-    delete userSocketMap[userId];
-    io.emit("onlineUsers", Object.keys(userSocketMap));
-  });
-
-  socket.on("typing", ({ senderId, receiverId }) => {
-    const receiverSocketId = getSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("typing", { senderId, receiverId });
+    if (userId && userId !== "undefined") {
+      console.log(`User disconnected: ${userId}`);
+      delete userSocketMap[userId];
+      io.emit("onlineUsers", Object.keys(userSocketMap));
     }
   });
 
-  socket.on("stopTyping", ({ senderId, receiverId }) => {
-    const receiverSocketId = getSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("stopTyping", { senderId, receiverId });
-    }
+  // Typing indicators can still use the old method as they are less critical.
+  socket.on("typing", ({ receiverId }) => {
+    // We emit to the receiver's private room.
+    io.to(receiverId).emit("typing", { senderId: userId });
   });
 
-  // The following events are now handled by API controllers and emit via `io` directly
-  // socket.on('sendMessage', ...)
-  // socket.on('markMessageRead', ...)
-  // socket.on('markConversationRead', ...)
-  // socket.on('viewConversation', ...)
-   // Handle viewConversation event for read receipts
-  socket.on('viewConversation', ({ conversationId, userId }) => {
-    console.log(`User ${userId} viewed conversation ${conversationId}`);
-    // This can be used to track active conversations or implement typing indicators
-  });
-
-  // Handle message events (these are primarily handled by API controllers)
-  socket.on('sendMessage', (data) => {
-    console.log('Message sent via socket:', data);
-    // This would typically be handled by the message controller API
-  });
-
-  socket.on('markMessageRead', (data) => {
-    console.log('Message marked as read:', data);
-    // This would typically be handled by the message controller API
-  });
-
-  socket.on('markConversationRead', (data) => {
-    console.log('Conversation marked as read:', data);
-    // This would typically be handled by the message controller API
+  socket.on("stopTyping", ({ receiverId }) => {
+    // We emit to the receiver's private room.
+    io.to(receiverId).emit("stopTyping", { senderId: userId });
   });
 });
+
+// We no longer need getSocketId for messaging, so it's removed from export.
+export { io, app, server };

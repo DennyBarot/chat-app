@@ -18,7 +18,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     const conversations = useSelector((state) => state.messageReducer.conversations);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
    // 1. Get the clean socket connection from the context.
-   const { socket } = useSocket();
+   const socket = useSocket();
      // Derive the current conversation ID from the Redux state.
   // Derive the current conversation ID from the Redux state.
   const selectedConversationId = useMemo(() => {

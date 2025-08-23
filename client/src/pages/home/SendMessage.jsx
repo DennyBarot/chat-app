@@ -8,7 +8,7 @@ import { useSocket } from "../../context/SocketContext";
 const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const dispatch = useDispatch();
   const { selectedUser, userProfile } = useSelector((state) => state.userReducer);
-  const { socket } = useSocket();
+  const socket = useSocket();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);

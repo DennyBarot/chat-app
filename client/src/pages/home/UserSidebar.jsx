@@ -13,9 +13,7 @@ import { updateSingleConversation } from "../../store/slice/message/message.slic
 import { setOnlineUsers } from "../../store/slice/socket/socket.slice";
 
 const UserSidebar = ({ onUserSelect }) => {
-   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
+
 
 const dispatch = useDispatch();
   const { userProfile } = useSelector((state) => state.userReducer);
@@ -23,7 +21,9 @@ const dispatch = useDispatch();
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
 
   const socket = useSocket(); // Get the clean socket instance directly
-
+     const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
   useEffect(() => {
     document.body.classList.toggle('modal-open', isModalOpen || isAddUserModalOpen);
     return () => document.body.classList.remove('modal-open');

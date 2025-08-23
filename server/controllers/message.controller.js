@@ -7,15 +7,11 @@ import { getSocketId, io } from '../socket/socket.js';
 
 
 // --- HELPER FUNCTION TO GET UPDATED CONVERSATION ---
-// This reusable function gets a single, fully populated conversation object.
 const getUpdatedConversation = async (conversationId, currentUserId) => {
-    // We need to convert the string ID to a MongoDB ObjectId for the aggregation pipeline
     const userObjectId = new mongoose.Types.ObjectId(currentUserId.toString());
     
     const conversationPipeline = await Conversation.aggregate([
-        // Match the specific conversation
         { $match: { _id: new mongoose.Types.ObjectId(conversationId.toString()) } },
-        // Look up the latest message
         {
             $lookup: {
                 from: "messages",
@@ -28,7 +24,6 @@ const getUpdatedConversation = async (conversationId, currentUserId) => {
                 as: "lastMessage"
             }
         },
-        // Calculate unread messages for the current user
         {
             $lookup: {
                 from: "messages",
@@ -39,7 +34,7 @@ const getUpdatedConversation = async (conversationId, currentUserId) => {
                             $expr: {
                                 $and: [
                                     { $eq: ["$conversationId", "$$conversationId"] },
-                                    { $not: { $in: [userObjectId, "$readBy"] } }
+                                    { $not: { $in: [userObjectId, { $ifNull: ["$readBy", []] }] } }
                                 ]
                             }
                         }
@@ -49,7 +44,6 @@ const getUpdatedConversation = async (conversationId, currentUserId) => {
                 as: "unreadMessages"
             }
         },
-        // Look up participant details
         {
             $lookup: {
                 from: "users",
@@ -58,7 +52,6 @@ const getUpdatedConversation = async (conversationId, currentUserId) => {
                 as: "participantsInfo"
             }
         },
-        // Reshape the data
         {
             $project: {
                 _id: 1,
@@ -75,19 +68,14 @@ const getUpdatedConversation = async (conversationId, currentUserId) => {
                 }
             }
         },
-        // Clean up participant data
         {
             $project: {
-                "participants.password": 0,
-                "participants.email": 0,
-                "participants.gender": 0,
-                "participants.createdAt": 0,
-                "participants.updatedAt": 0,
+                "participants.password": 0, "participants.email": 0, "participants.gender": 0,
+                "participants.createdAt": 0, "participants.updatedAt": 0,
             }
         }
     ]);
     
-    // The aggregation returns an array, so we return the first element
     return conversationPipeline.length > 0 ? conversationPipeline[0] : null;
 };
 
@@ -112,16 +100,11 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     }
 
     const newMessage = await Message.create({
-        senderId,
-        receiverId,
-        conversationId: conversation._id,
-        content: message,
-        replyTo,
-        readBy: [senderId],
+        senderId, receiverId, conversationId: conversation._id,
+        content: message, replyTo, readBy: [senderId],
     });
 
     conversation.messages.push(newMessage._id);
-    // Manually update the 'updatedAt' timestamp to ensure correct sorting
     conversation.updatedAt = new Date();
     await conversation.save();
 
@@ -139,17 +122,12 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         } : null,
     };
 
-    // Emit the new message to both users for the main chat window
     const receiverSocketId = getSocketId(receiverId);
-    if (receiverSocketId) {
-        io.to(receiverSocketId).emit("newMessage", formattedMessage);
-    }
+    if (receiverSocketId) io.to(receiverSocketId).emit("newMessage", formattedMessage);
+    
     const senderSocketId = getSocketId(senderId);
-    if (senderSocketId) {
-        io.to(senderSocketId).emit("newMessage", formattedMessage);
-    }
+    if (senderSocketId) io.to(senderSocketId).emit("newMessage", formattedMessage);
 
-    // Emit the updated conversation object to both users for the sidebar
     const senderConversationUpdate = await getUpdatedConversation(conversation._id, senderId);
     const receiverConversationUpdate = await getUpdatedConversation(conversation._id, receiverId);
 
@@ -174,13 +152,10 @@ export const getConversations = asyncHandler(async (req, res, next) => {
         return next(new errorHandler("User ID is required", 400));
     }
 
-    // Convert userId to a string first, then to an ObjectId to avoid the deprecation warning.
     const userObjectId = new mongoose.Types.ObjectId(userId.toString());
 
     const conversations = await Conversation.aggregate([
-        // Stage 1: Find all conversations the user is a part of
         { $match: { participants: userObjectId } },
-        // Stage 2: Look up the latest message for each conversation
         {
             $lookup: {
                 from: "messages",
@@ -193,7 +168,6 @@ export const getConversations = asyncHandler(async (req, res, next) => {
                 as: "lastMessage"
             }
         },
-        // Stage 3: Look up all unread messages for the current user
         {
             $lookup: {
                 from: "messages",
@@ -204,7 +178,9 @@ export const getConversations = asyncHandler(async (req, res, next) => {
                             $expr: {
                                 $and: [
                                     { $eq: ["$conversationId", "$$conversationId"] },
-                                    { $not: { $in: [userObjectId, "$readBy"] } }
+                                    // --- THIS IS THE FIX ---
+                                    // Use $ifNull to provide a default empty array if `readBy` is missing
+                                    { $not: { $in: [userObjectId, { $ifNull: ["$readBy", []] }] } }
                                 ]
                             }
                         }
@@ -214,7 +190,6 @@ export const getConversations = asyncHandler(async (req, res, next) => {
                 as: "unreadMessages"
             }
         },
-        // Stage 4: Look up participant details
         {
             $lookup: {
                 from: "users",
@@ -223,12 +198,9 @@ export const getConversations = asyncHandler(async (req, res, next) => {
                 as: "participantsInfo"
             }
         },
-        // Stage 5: Reshape the output
         {
             $project: {
-                _id: 1,
-                updatedAt: 1,
-                createdAt: 1,
+                _id: 1, updatedAt: 1, createdAt: 1,
                 lastMessage: { $arrayElemAt: ["$lastMessage", 0] },
                 unreadCount: { $ifNull: [{ $arrayElemAt: ["$unreadMessages.count", 0] }, 0] },
                 participants: {
@@ -240,16 +212,11 @@ export const getConversations = asyncHandler(async (req, res, next) => {
                 }
             }
         },
-        // Stage 6: Sort by the most recently updated conversation
         { $sort: { updatedAt: -1 } },
-        // Stage 7: Clean up the participants field to remove sensitive data
         {
             $project: {
-                "participants.password": 0,
-                "participants.email": 0,
-                "participants.gender": 0,
-                "participants.createdAt": 0,
-                "participants.updatedAt": 0,
+                "participants.password": 0, "participants.email": 0, "participants.gender": 0,
+                "participants.createdAt": 0, "participants.updatedAt": 0,
             }
         }
     ]);
@@ -312,7 +279,6 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
         { $addToSet: { readBy: userId } }
     );
 
-    // Only proceed if messages were actually updated
     if (updateResult.modifiedCount > 0) {
         const messagesThatWereRead = await Message.find({ conversationId, readBy: userId }).select('_id');
         const messageIds = messagesThatWereRead.map(msg => msg._id);
@@ -321,19 +287,15 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
         if (conversation) {
             const otherParticipantId = conversation.participants.find(p => p.toString() !== userId.toString());
             
-            // Emit to the other user that their messages were read
             if (otherParticipantId) {
                 const senderSocketId = getSocketId(otherParticipantId.toString());
                 if (senderSocketId) {
                     io.to(senderSocketId).emit('messagesRead', {
-                        messageIds,
-                        readBy: userId,
-                        readAt: new Date()
+                        messageIds, readBy: userId, readAt: new Date()
                     });
                 }
             }
             
-            // Emit an update to the current user's sidebar to set unreadCount to 0
             const currentUserSocketId = getSocketId(userId.toString());
             const updatedConversationForReader = await getUpdatedConversation(conversationId, userId);
             if (currentUserSocketId && updatedConversationForReader) {

@@ -11,8 +11,6 @@ export const sendMessageThunk = createAsyncThunk(
         timestamp,
         replyTo, // <-- add this
       });
-      // After sending message, refresh conversations
-     
       return response.data;
     } catch (error) {
       console.error(error);
@@ -60,7 +58,7 @@ export const getConversationsThunk = createAsyncThunk(
 
 export const markMessagesReadThunk = createAsyncThunk(
   "message/markRead",
-  async ({ conversationId }, { dispatch, rejectWithValue }) => {
+  async ({ conversationId }, {  rejectWithValue }) => {
     try {
       const response = await axiosInstance.post(`/api/v1/message/mark-read/${conversationId}`);
       

@@ -146,11 +146,11 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         replyTo: replyMessage?._id,
         audioData: base64Audio,
         audioDuration: audioDuration
-      }));
-
-      // Reset audio state
-      setAudioBlob(null);
-      if (replyMessage) onCancelReply();
+      })).finally(() => {
+        // Reset audio state
+        setAudioBlob(null);
+        if (replyMessage) onCancelReply();
+      });
       
     } catch (error) {
       console.error("Error sending audio message:", error);

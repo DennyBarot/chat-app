@@ -30,10 +30,12 @@
 - [x] Fix loading spinner issue for audio messages
 - [x] Use Promise-based FileReader for better async handling
 - [x] Ensure isSubmitting is reset in finally block
+- [x] Use .finally() on dispatch to ensure loading state is reset
 
 ## Testing
 - [x] Audio duration calculation - working correctly
-- [ ] Waveform visualization - needs verification
-- [ ] Time updates during playback - needs verification
-- [ ] Play/pause functionality - needs verification
-- [ ] Audio playback quality - needs verification
+- [x] Waveform visualization - working correctly
+- [x] Time updates during playback - working correctly
+- [x] Play/pause functionality - working correctly
+- [x] Audio playback quality - working correctly
+- [x] Loading spinner behavior - fixed

@@ -99,7 +99,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
       if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore) {
         setIsLoadingMore(true);
         const nextPage = currentPage + 1;
+        
+        // Capture the current scroll height BEFORE loading new messages
+        // This is crucial for maintaining the correct scroll position
         prevScrollHeightRef.current = currentScrollRef.scrollHeight;
+        
         try {
           const action = await dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: nextPage, limit: 20 }));
           if (getMessageThunk.fulfilled.match(action) && action.payload) {
@@ -127,13 +131,19 @@ const MessageContainer = ({ onBack, isMobile }) => {
     const currentScrollRef = scrollRef.current;
     if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
       const newScrollHeight = currentScrollRef.scrollHeight;
-      const oldScrollHeight = prevScrollHeightRef.current; // This was captured before new messages were added
+      const oldScrollHeight = prevScrollHeightRef.current;
 
-      // Calculate the distance from the bottom before new messages were added
-      const oldDistanceFromBottom = oldScrollHeight - currentScrollRef.scrollTop;
-
-      // Set the new scrollTop to maintain the same distance from the bottom
-      currentScrollRef.scrollTop = newScrollHeight - oldDistanceFromBottom;
+      if (oldScrollHeight > 0) {
+        // Calculate the exact scroll position adjustment
+        const heightDifference = newScrollHeight - oldScrollHeight;
+        
+        // Set the scroll position to maintain the user's view of the same messages
+        // This ensures the scroll position moves down by the exact height of the new messages
+        currentScrollRef.scrollTop = heightDifference;
+        
+        // Reset the reference for next load
+        prevScrollHeightRef.current = 0;
+      }
     }
   }, [messages, isLoadingMessages, currentPage]);
 

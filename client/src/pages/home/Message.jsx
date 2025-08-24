@@ -85,8 +85,16 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
           }`}
           style={{ position: 'relative' }}
         >
-          {messageDetails.isAudioMessage && messageDetails.audioUrl ? (
-            <audio controls src={messageDetails.audioUrl} className="w-full"></audio>
+          {messageDetails.isAudioMessage ? (
+            messageDetails.audioUrl ? (
+              <audio controls src={messageDetails.audioUrl} className="w-full"></audio>
+            ) : messageDetails.audioData ? (
+              <audio controls src={messageDetails.audioData} className="w-full"></audio>
+            ) : (
+              <p className="whitespace-pre-wrap break-words min-w-[80px]">
+                Audio message not available
+              </p>
+            )
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">
               {messageDetails?.content || '[No content]'}

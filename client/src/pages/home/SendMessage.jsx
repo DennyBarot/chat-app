@@ -20,6 +20,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isLockedRecording, setIsLockedRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [transformStyle, setTransformStyle] = useState({});
   const typingTimeoutRef = useRef(null);
 
   // State for voice recording
@@ -118,16 +119,20 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
 
   const handleRecordAudioStart = (e) => {
     console.log("handleRecordAudioStart triggered"); // Debug log
-    setStartRecordingPos({ x: e.clientX, y: e.clientY });
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    setStartRecordingPos({ x: clientX, y: clientY });
     setIsCancelling(false);
     setIsLockedRecording(false);
     setIsPaused(false); // Reset paused state
+    setTransformStyle({}); // Reset transform style on start
     startRecording();
     setIsRecording(true);
   };
 
   const handleRecordAudioStop = () => {
-    console.log("handleRecordAudioStop triggered. isCancelling:", isCancelling, "isLockedRecording:", isLockedRecording); // Debug log
+    console.log("onStop callback triggered. isCancelling:", isCancelling); // Debug log
+    setTransformStyle({}); // Reset transform style on stop
     if (isCancelling) {
       console.log("handleRecordAudioStop: Cancelling recording."); // Debug log
       stopRecording();
@@ -189,6 +194,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
 
   const handleCancelLockedAudio = () => {
     console.log("handleCancelLockedAudio triggered"); // Debug log
+    setTransformStyle({}); // Reset transform style on cancel
     stopRecording();
     setIsCancelling(true);
   };
@@ -212,25 +218,25 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
 
   const handleMouseMove = useCallback((e) => {
     if (isRecording && !isLockedRecording) {
-      const dx = e.clientX - startRecordingPos.x;
-      const dy = e.clientY - startRecordingPos.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = clientX - startRecordingPos.x;
+      const dy = clientY - startRecordingPos.y;
       const CANCEL_THRESHOLD = 50;
       const LOCK_THRESHOLD = -70;
 
-      if (distance > CANCEL_THRESHOLD) {
+      setTransformStyle({ transform: `translate(${dx}px, ${dy}px)` });
+
+      if (dx < -CANCEL_THRESHOLD) { // Swiping left
         setIsCancelling(true);
-      } else if (dy < LOCK_THRESHOLD) {
+      } else if (dy < LOCK_THRESHOLD) { // Swiping up
         setIsLockedRecording(true);
       }
     }
   }, [isRecording, startRecordingPos, isLockedRecording]);
 
-  const handleMouseLeave = useCallback(() => {
-    if (isRecording && !isLockedRecording) {
-      setIsCancelling(true);
-    }
-  }, [isRecording, isLockedRecording]);
+  // Removed handleMouseLeave as it's not directly applicable to touch events for cancellation.
+  // Cancellation will now primarily be handled by swiping left.
 
   useEffect(() => {
     return () => {
@@ -301,8 +307,10 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
             <button
               onMouseDown={handleRecordAudioStart}
               onMouseUp={handleRecordAudioStop}
-              onMouseMove={handleMouseMove}
-              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleRecordAudioStart}
+              onTouchEnd={handleRecordAudioStop}
+              onTouchMove={handleMouseMove}
+              style={transformStyle}
               className={`p-3 rounded-full ${
                 isRecording
                   ? isCancelling

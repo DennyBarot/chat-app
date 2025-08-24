@@ -15,14 +15,20 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [audioDuration, setAudioDuration] = useState(0);
   const typingTimeoutRef = useRef(null);
 
   // State for voice recording
-  const { status, startRecording, stopRecording, mediaBlobUrl } = useReactMediaRecorder({ 
+  const { status, startRecording, stopRecording, mediaBlobUrl } = useReactMediaRecorder({
     audio: true,
     onStop: (blobUrl, blob) => {
       setAudioBlob(blob);
       setIsRecording(false);
+      // Get audio duration
+      const audio = new Audio(blobUrl);
+      audio.onloadedmetadata = () => {
+        setAudioDuration(audio.duration);
+      };
     }
   });
 
@@ -115,6 +121,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       formData.append('audio', audioBlob);
       formData.append('receiverId', selectedUser?._id);
       formData.append('replyTo', replyMessage?._id || '');
+      formData.append('audioDuration', audioDuration);
 
       // Send the audio message
       await dispatch(sendMessageThunk({

@@ -4,7 +4,7 @@ import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const sendMessageThunk = createAsyncThunk(
   "message/send",
-  async ({ receiverId, message, timestamp, replyTo, audio }, { rejectWithValue }) => {
+  async ({ receiverId, message, timestamp, replyTo, audio, audioDuration }, { rejectWithValue }) => {
     try {
       let response;
       

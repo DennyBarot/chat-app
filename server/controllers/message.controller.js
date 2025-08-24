@@ -25,7 +25,7 @@ const getUpdatedConversationForUser = async (conversationId, userId) => {
 export const sendMessage = asyncHandler(async (req, res, next) => {
     const receiverId = req.params.receiverId;
     const senderId = req.user._id;
-    const { message, replyTo } = req.body;
+    const { message, replyTo, audioDuration } = req.body;
 
     // Check if this is an audio message
     const isAudioMessage = req.files && req.files.audio;
@@ -60,7 +60,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         // For now, we'll just store the filename and handle the upload logic separately
         messageData.audioUrl = `/uploads/audios/${fileName}`;
         messageData.isAudioMessage = true;
-        messageData.audioDuration = 0; // You can calculate this from the audio file
+        messageData.audioDuration = audioDuration; // Use the provided audioDuration
         
         // Save the file to the server (in production, use proper cloud storage)
         const uploadPath = path.join(__dirname, '../uploads/audios', fileName);

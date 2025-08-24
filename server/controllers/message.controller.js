@@ -149,15 +149,37 @@ export const getMessages = asyncHandler(async (req, res, next) => {
 export const markMessagesRead = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
     const { conversationId } = req.params;
-    const updateResult = await Message.updateMany({ conversationId, readBy: { $ne: userId } }, { $addToSet: { readBy: userId } });
+    
+    // Get the messages that were marked as read
+    const updateResult = await Message.updateMany(
+        { conversationId, readBy: { $ne: userId } }, 
+        { $addToSet: { readBy: userId } }
+    );
 
     if (updateResult.modifiedCount > 0) {
         const conversation = await Conversation.findById(conversationId);
         if (conversation) {
             const updatedConversationForReader = await getUpdatedConversationForUser(conversationId, userId);
             if (updatedConversationForReader) {
-                 // Emit to the user's private room.
-                 io.to(userId.toString()).emit('conversationUpdated', updatedConversationForReader);
+                // Emit conversation update to the user's private room
+                io.to(userId.toString()).emit('conversationUpdated', updatedConversationForReader);
+                
+                // Get the other participant in the conversation
+                const otherParticipant = conversation.participants.find(p => p.toString() !== userId.toString());
+                if (otherParticipant) {
+                    // Emit messagesRead event to the other participant to update their message read status
+                    const readMessages = await Message.find({
+                        conversationId,
+                        readBy: userId
+                    }).select('_id');
+                    
+                    const messageIds = readMessages.map(msg => msg._id.toString());
+                    io.to(otherParticipant.toString()).emit('messagesRead', {
+                        messageIds,
+                        readBy: userId,
+                        readAt: new Date()
+                    });
+                }
             }
         }
     }

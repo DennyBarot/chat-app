@@ -42,11 +42,15 @@ export const messageSlice = createSlice({
         const index = state.conversations.findIndex(c => c._id === updatedConversation._id);
 
         if (index !== -1) {
-            // If conversation exists, update it
-            state.conversations[index] = updatedConversation;
+            // If conversation exists, create a new array with the updated conversation
+            state.conversations = [
+                ...state.conversations.slice(0, index),
+                updatedConversation,
+                ...state.conversations.slice(index + 1),
+            ];
         } else {
             // If it's a new conversation, add it to the top
-            state.conversations.unshift(updatedConversation);
+            state.conversations = [updatedConversation, ...state.conversations];
         }
     }
   },

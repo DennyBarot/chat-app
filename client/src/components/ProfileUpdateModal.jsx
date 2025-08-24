@@ -125,7 +125,7 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full border border-foreground rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+              className="w-full border border-foreground rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-background text-text-primary"
               placeholder="Enter your full name"
               required
             />
@@ -139,7 +139,7 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full border border-foreground rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
+                className="w-full border border-foreground rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200 bg-background text-text-primary"
                 placeholder="username"
                 required
               />

@@ -37,6 +37,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
+  const [newMessageCount, setNewMessageCount] = useState(0); // Track the number of new messages
 
   // Refs for managing scroll behavior
   const scrollRef = useRef(null);
@@ -52,6 +53,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     const handleNewMessage = (newMessage) => {
       if (newMessage.conversationId === selectedConversationId) {
         dispatch(setNewMessage(newMessage));
+        setNewMessageCount(prevCount => prevCount + 1); // Increment new message count
         // Since the user is actively watching, we immediately mark the message as read.
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }

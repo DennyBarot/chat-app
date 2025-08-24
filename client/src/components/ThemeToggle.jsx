@@ -23,18 +23,19 @@ const ThemeToggle = () => {
       onClick={() => setIsDark((prev) => !prev)}
       aria-label="Toggle dark mode"
       title="Toggle dark mode"
-      className="ml-3 px-2 py-1 rounded transition-colors bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"
+      className="ml-3 px-4 py-2 rounded transition-colors bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"
     >
-      <span
-        className={`${isDark ? "translate-x-6" : "translate-x-1"}
-          inline-block w-4 h-4 transform rounded-full transition-transform duration-300 flex items-center justify-center`}
-      >
-        {isDark ? "Dark Mode 🌙" : "Light Mode ☀️"}
-      <span
-        className={`${isDark ? "translate-x-6" : "translate-x-1"}
-          inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-300`}
-      />
-      </span>
+      <div className="flex items-center space-x-2">
+        <span className="text-sm font-medium">
+          {isDark ? "Dark Mode 🌙" : "Light Mode ☀️"}
+        </span>
+        <span
+          className={`${isDark ? "translate-x-6" : "translate-x-1"}
+            inline-block w-6 h-6 transform bg-white rounded-full transition-transform duration-300`}
+        />
+      </div>
     </button>
-  )}
+  );
+};
+
 export default ThemeToggle;

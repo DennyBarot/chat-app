@@ -3,7 +3,7 @@ import { IoIosSend, IoIosMic } from "react-icons/io";
 import { useReactMediaRecorder } from "react-media-recorder"; // Importing a library for audio recording
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
-import { axiosInstance } from "../../components/utilities/axiosInstance";
+import { axiosInstance } = "../../components/utilities/axiosInstance";
 import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
@@ -19,13 +19,14 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
   const [isCancelling, setIsCancelling] = useState(false);
   const [isLockedRecording, setIsLockedRecording] = useState(false);
-  const [isPaused, setIsPaused] = useState(false); // New state
+  const [isPaused, setIsPaused] = useState(false);
   const typingTimeoutRef = useRef(null);
 
   // State for voice recording
-  const { status, startRecording, stopRecording, mediaBlobUrl, pauseRecording, resumeRecording } = useReactMediaRecorder({ // Destructure pause/resume
+  const { status, startRecording, stopRecording, mediaBlobUrl, pauseRecording, resumeRecording } = useReactMediaRecorder({
     audio: true,
     onStop: async (blobUrl, blob) => {
+      console.log("onStop callback triggered. isCancelling:", isCancelling); // Debug log
       if (isCancelling) {
         setAudioBlob(null);
         setIsRecording(false);
@@ -46,7 +47,6 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         const arrayBuffer = await blob.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
-        // Calculate duration in seconds and round to nearest integer
         const duration = Math.round(audioBuffer.duration);
         console.log("Audio duration calculated:", duration);
         setAudioDuration(duration);
@@ -117,6 +117,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   }, [socket, userProfile, selectedUser, isTyping]);
 
   const handleRecordAudioStart = (e) => {
+    console.log("handleRecordAudioStart triggered"); // Debug log
     setStartRecordingPos({ x: e.clientX, y: e.clientY });
     setIsCancelling(false);
     setIsLockedRecording(false);
@@ -126,7 +127,9 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   };
 
   const handleRecordAudioStop = () => {
+    console.log("handleRecordAudioStop triggered. isCancelling:", isCancelling, "isLockedRecording:", isLockedRecording); // Debug log
     if (isCancelling) {
+      console.log("handleRecordAudioStop: Cancelling recording."); // Debug log
       stopRecording();
       setAudioBlob(null);
       setAudioDuration(0);
@@ -137,12 +140,15 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       return;
     }
     if (isLockedRecording) {
+      console.log("handleRecordAudioStop: Recording is locked, not stopping."); // Debug log
       return;
     }
+    console.log("handleRecordAudioStop: Stopping recording and preparing to send."); // Debug log
     stopRecording();
   };
 
   const handleSendAudioMessage = async () => {
+    console.log("handleSendAudioMessage triggered. audioBlob:", audioBlob); // Debug log
     if (!audioBlob) return;
 
     setIsSubmitting(true);
@@ -177,15 +183,18 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   };
 
   const handleSendLockedAudio = () => {
+    console.log("handleSendLockedAudio triggered"); // Debug log
     stopRecording();
   };
 
   const handleCancelLockedAudio = () => {
+    console.log("handleCancelLockedAudio triggered"); // Debug log
     stopRecording();
     setIsCancelling(true);
   };
 
   const handleTogglePause = () => {
+    console.log("handleTogglePause triggered. isPaused:", isPaused); // Debug log
     if (isPaused) {
       resumeRecording();
     } else {
@@ -260,10 +269,10 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
               Cancel
             </button>
             <span className="text-text-secondary">
-              {isPaused ? "Paused" : "Recording..."} {/* Update text based on pause state */}
+              {isPaused ? "Paused" : "Recording..."}
             </span>
             <button
-              onClick={handleTogglePause} // New button for pause/resume
+              onClick={handleTogglePause}
               className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
             >
               {isPaused ? "Resume" : "Pause"}

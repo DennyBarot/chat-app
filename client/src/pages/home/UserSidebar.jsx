@@ -156,9 +156,35 @@ const dispatch = useDispatch();
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setIsAddUserModalOpen(true)} title="Add new conversation">...</button>
-          <button onClick={() => setIsModalOpen(true)} title="Edit profile">...</button>
-          <button onClick={handleLogout} title="Logout">...</button>
+           <button
+            onClick={() => setIsAddUserModalOpen(true)}
+            className="p-2 rounded-full bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-100 hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors"
+            title="Add new conversation"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z" />
+            </svg>
+          </button>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="p-2 rounded-full bg-indigo-100 dark:bg-slate-700 text-indigo-700 dark:text-indigo-100 hover:bg-indigo-200 dark:hover:bg-slate-600 transition-colors"
+            title="Edit profile"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+          </button>
+
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-100 hover:bg-red-200 dark:hover:bg-red-800 transition-colors"
+            title="Logout"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V7.414l-4-4H3zm6.293 11.293a1 1 0 001.414 0l4-4a1 1 0 10-1.414-1.414L11 11.586V8a1 1 0 10-2 0v3.586l-2.293-2.293a1 1 0 10-1.414 1.414l4 4z" clipRule="evenodd" />
+            </svg>
+          </button>
         </div>
       </div>
 

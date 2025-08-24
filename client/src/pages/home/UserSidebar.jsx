@@ -66,7 +66,7 @@ const dispatch = useDispatch();
 
 
   const users = useMemo(() => {
-    if (!conversations || conversations.length === 0) return [];
+    if (!conversations || conversations.length === 0 || !userProfile) return [];
 
     let usersList = conversations.map((conv) => {
       const otherUser = conv.participants.find(p => p._id !== userProfile._id);
@@ -88,7 +88,7 @@ const dispatch = useDispatch();
 
     // Sort users by last message time (most recent first)
     return usersList.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  }, [conversations, searchValue, userProfile._id]);
+  }, [conversations, searchValue, userProfile]);
 
   const handleLogout = () => dispatch(logoutUserThunk());
 

@@ -21,7 +21,13 @@
 - [x] Handle audio events (play, pause, ended, timeupdate)
 - [x] Add cleanup for intervals and event listeners
 
+## Audio Duration Fix ✅
+- [x] Implement reliable audio duration calculation using AudioContext
+- [x] Add fallback estimation based on blob size
+- [x] Set default duration if calculation fails
+
 ## Testing
 - [ ] Test audio playback functionality
 - [ ] Verify waveform visualization
 - [ ] Check time updates during playback
+- [ ] Test audio duration calculation

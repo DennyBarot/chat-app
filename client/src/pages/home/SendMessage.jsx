@@ -21,15 +21,28 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   // State for voice recording
   const { status, startRecording, stopRecording, mediaBlobUrl } = useReactMediaRecorder({
     audio: true,
-    onStop: (blobUrl, blob) => {
+    onStop: async (blobUrl, blob) => {
       setAudioBlob(blob);
       setIsRecording(false);
-      // Get audio duration
-      const audio = new Audio(blobUrl);
-      audio.onloadedmetadata = () => {
-        console.log("Audio duration from metadata:", audio.duration);
-        setAudioDuration(audio.duration);
-      };
+      
+      // Get audio duration using a more reliable method
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const arrayBuffer = await blob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        
+        // Calculate duration in seconds and round to nearest integer
+        const duration = Math.round(audioBuffer.duration);
+        console.log("Audio duration calculated:", duration);
+        setAudioDuration(duration);
+      } catch (error) {
+        console.error("Error calculating audio duration:", error);
+        // Fallback: estimate duration based on blob size (very rough estimate)
+        // Average audio bitrate is around 64kbps for voice recordings
+        const estimatedDuration = Math.round((blob.size * 8) / (64 * 1024));
+        console.log("Estimated audio duration:", estimatedDuration);
+        setAudioDuration(estimatedDuration || 5); // Default to 5 seconds if estimation fails
+      }
     }
   });
 

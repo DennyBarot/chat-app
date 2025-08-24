@@ -27,6 +27,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       // Get audio duration
       const audio = new Audio(blobUrl);
       audio.onloadedmetadata = () => {
+        console.log("Audio duration from metadata:", audio.duration);
         setAudioDuration(audio.duration);
       };
     }

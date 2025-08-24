@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from "react-redux";
-import PropTypes from 'prop-types';
 import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
 
 const formatTime = (timestamp) => {
@@ -10,8 +9,12 @@ const formatTime = (timestamp) => {
 };
 
 const Message = ({ messageDetails, onReply, isLastMessage }) => {
-  const [showMenu, setShowMenu] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+  const intervalRef = useRef(null);
+  const [showMenu, setShowMenu] = useState(false);
+
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
     (state) => state.userReducer || { userProfile: null, selectedUser: null }
@@ -28,12 +31,59 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const readTime = useMemo(() => getReadTime(messageDetails, userProfile?._id), [messageDetails, userProfile]);
 
   const handlePlayAudio = () => {
-    if (isPlaying) return; // Prevent multiple plays
-    const audio = new Audio(messageDetails.audioData);
-    audio.play();
+    if (isPlaying) {
+      // Pause if already playing
+      audioRef.current?.pause();
+      clearInterval(intervalRef.current);
+      setIsPlaying(false);
+      return;
+    }
+
+    // Create audio element if it doesn't exist
+    if (!audioRef.current) {
+      audioRef.current = new Audio(messageDetails.audioData);
+    }
+
+    // Play audio
+    audioRef.current.play();
     setIsPlaying(true);
-    audio.onended = () => setIsPlaying(false); // Reset playing state when audio ends
+
+    // Set up interval to update current time
+    intervalRef.current = setInterval(() => {
+      setCurrentTime((prevTime) => {
+        if (prevTime >= messageDetails.audioDuration) {
+          clearInterval(intervalRef.current);
+          setIsPlaying(false);
+          return messageDetails.audioDuration;
+        }
+        return prevTime + 1;
+      });
+    }, 1000);
+
+    // Handle audio end
+    audioRef.current.onended = () => {
+      clearInterval(intervalRef.current);
+      setIsPlaying(false);
+      setCurrentTime(messageDetails.audioDuration);
+    };
+
+    // Handle audio pause
+    audioRef.current.onpause = () => {
+      clearInterval(intervalRef.current);
+      setIsPlaying(false);
+    };
   };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      clearInterval(intervalRef.current);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div
@@ -88,19 +138,54 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
           style={{ position: 'relative' }}
         >
           {messageDetails.isAudioMessage ? (
-            <div className="flex items-center bg-gray-800 p-2 rounded-lg">
-              <button onClick={handlePlayAudio} className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.586-2.143A1 1 0 009 10.5v3a1 1 0 001.166.832l3.586-2.143a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div className="flex items-center bg-gray-800 p-3 rounded-lg">
+              <button 
+                onClick={handlePlayAudio} 
+                className="flex items-center justify-center w-8 h-8 bg-primary rounded-full hover:bg-primary/90 transition-colors"
+              >
+                {isPlaying ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10 9v6m4-6v6" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.586-2.143A1 1 0 009 10.5v3a1 1 0 001.166.832l3.586-2.143a1 1 0 000-1.664z" />
+                  </svg>
+                )}
               </button>
+              
+              {/* Waveform visualization */}
+              <div className="flex-1 mx-3 flex items-center space-x-0.5">
+                {Array.from({ length: 20 }, (_, i) => {
+                  // Simple waveform bars with varying heights
+                  const height = Math.random() * 12 + 4;
+                  const isActive = (i / 20) * messageDetails.audioDuration <= currentTime;
+                  return (
+                    <div
+                      key={i}
+                      className={`w-1 rounded-full transition-all duration-300 ${
+                        isActive ? 'bg-primary' : 'bg-gray-500'
+                      }`}
+                      style={{ height: `${height}px` }}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Progress bar */}
               <div className="flex-1 mx-2">
-                <div className="h-2 bg-gray-600 rounded-full">
-                  <div className="h-full bg-primary" style={{ width: `${(messageDetails.audioDuration / 60) * 100}%` }}></div>
+                <div className="h-1 bg-gray-600 rounded-full">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all duration-300" 
+                    style={{ width: `${(currentTime / messageDetails.audioDuration) * 100}%` }}
+                  />
                 </div>
               </div>
-              <span className="text-white">{messageDetails.audioDuration > 0 ? `${messageDetails.audioDuration}s` : '0s'}</span>
+
+              {/* Time display */}
+              <span className="text-white text-sm font-mono min-w-[60px] text-right">
+                {`${currentTime}s / ${messageDetails.audioDuration}s`}
+              </span>
             </div>
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">

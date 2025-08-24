@@ -135,8 +135,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
   // Handle initial scroll to bottom on first load
   useLayoutEffect(() => {
     if (isInitialLoadRef.current && messages && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView();
-      isInitialLoadRef.current = false;
+      // Ensure scroll happens after messages are rendered
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        isInitialLoadRef.current = false;
+      }, 0); // A small delay to allow DOM to update
     }
   }, [messages]);
 

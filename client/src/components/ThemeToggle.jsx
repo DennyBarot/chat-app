@@ -23,7 +23,7 @@ const ThemeToggle = () => {
       onClick={() => setIsDark((prev) => !prev)}
       aria-label="Toggle dark mode"
       title="Toggle dark mode"
-      className="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-300 focus:outline-none bg-foreground"
+      className="ml-3 px-2 py-1 rounded transition-colors bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-600"
     >
       <span
         className={`${isDark ? "translate-x-6" : "translate-x-1"}

@@ -140,7 +140,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       });
       
       // Send the audio message with Base64 data
-      await dispatch(sendMessageThunk({
+      dispatch(sendMessageThunk({ // Removed await
         receiverId: selectedUser?._id,
         message: '[Voice Message]', // Placeholder text
         replyTo: replyMessage?._id,
@@ -161,10 +161,6 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       console.error("Error sending audio message:", error);
       // In case of error, user can retry sending the audio
       // No need to set setIsSubmitting(false) here, as finally will handle it
-    } finally {
-      // Ensure loading state is cleared after the entire operation completes
-      // This acts as a failsafe in case the setTimeout is somehow missed or delayed
-      setIsSubmitting(false);
     }
   };
 

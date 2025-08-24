@@ -62,5 +62,5 @@ const ThemeToggle = () => {
         )}
       </span>
     </button>
-
+  )}
 export default ThemeToggle;

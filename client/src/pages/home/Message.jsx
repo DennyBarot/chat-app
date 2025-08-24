@@ -98,7 +98,11 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
                   <div className="h-full bg-primary" style={{ width: `${(messageDetails.audioDuration / 60) * 100}%` }}></div>
                 </div>
               </div>
-              <span className="text-white">{messageDetails.audioDuration}s</span>
+              <span className="text-white">{messageDetails.audioDuration > 0 ? `${messageDetails.audioDuration}s` : '0s'}</span>
+              <div className="w-full h-2 bg-gray-600 rounded-full mt-1">
+                {/* Placeholder for waveform visualization */}
+                <div className="h-full bg-primary" style={{ width: '100%' }}></div>
+              </div>
             </div>
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">

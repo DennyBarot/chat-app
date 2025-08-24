@@ -16,14 +16,29 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState(null);
   const [audioDuration, setAudioDuration] = useState(0);
+  const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isLockedRecording, setIsLockedRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false); // New state
   const typingTimeoutRef = useRef(null);
 
   // State for voice recording
-  const { status, startRecording, stopRecording, mediaBlobUrl } = useReactMediaRecorder({
+  const { status, startRecording, stopRecording, mediaBlobUrl, pauseRecording, resumeRecording } = useReactMediaRecorder({ // Destructure pause/resume
     audio: true,
     onStop: async (blobUrl, blob) => {
+      if (isCancelling) {
+        setAudioBlob(null);
+        setIsRecording(false);
+        setIsCancelling(false);
+        setIsLockedRecording(false);
+        setIsPaused(false); // Reset paused state on cancel
+        return;
+      }
+
       setAudioBlob(blob);
       setIsRecording(false);
+      setIsLockedRecording(false);
+      setIsPaused(false); // Reset paused state on stop
       
       // Get audio duration using a more reliable method
       try {
@@ -37,46 +52,36 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         setAudioDuration(duration);
       } catch (error) {
         console.error("Error calculating audio duration:", error);
-        // Fallback: estimate duration based on blob size (very rough estimate)
-        // Average audio bitrate is around 64kbps for voice recordings
         const estimatedDuration = Math.round((blob.size * 8) / (64 * 1024));
         console.log("Estimated audio duration:", estimatedDuration);
-        setAudioDuration(estimatedDuration || 5); // Default to 5 seconds if estimation fails
+        setAudioDuration(estimatedDuration || 5);
       }
+      handleSendAudioMessage();
     }
   });
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim()) return;
 
-    // Optimistically clear the input field immediately
     const messageToSend = message;
     setMessage("");
     if (replyMessage) onCancelReply();
     
-    // Only show loading for a very brief moment to indicate action was triggered
     setIsSubmitting(true);
     
-    // Immediately set submitting to false since message appears via socket
     setTimeout(() => {
       setIsSubmitting(false);
-    }, 100); // Very brief loading state
+    }, 100);
     
     try {
-      // Send message in background without blocking UI
       await dispatch(sendMessageThunk({
         receiverId: selectedUser?._id,
         message: messageToSend,
         replyTo: replyMessage?._id,
       }));
-      // Call scrollToBottom after successful dispatch
-    
     } catch (error) {
       console.error("Error sending message:", error);
-      // Optionally show a toast error here
-      // In case of error, user can retype the message
     } finally {
-      // Ensure typing indicator is off
       if (isTyping) {
         socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
         setIsTyping(false);
@@ -90,24 +95,20 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
 
     if (!socket || !userProfile || !selectedUser) return;
 
-    // If message is not empty and user is not already marked as typing
     if (e.target.value.length > 0 && !isTyping) {
       setIsTyping(true);
       socket.emit("typing", { senderId: userProfile._id, receiverId: selectedUser._id });
     }
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Set a new timeout to emit stopTyping after a delay
     typingTimeoutRef.current = setTimeout(() => {
       setIsTyping(false);
       socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
-    }, 1000); // 1 second debounce
+    }, 1000);
 
-    // If message becomes empty, immediately send stopTyping
     if (e.target.value.length === 0 && isTyping) {
       setIsTyping(false);
       socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
@@ -115,13 +116,30 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     }
   }, [socket, userProfile, selectedUser, isTyping]);
 
-  const handleRecordAudio = () => {
-    if (isRecording) {
+  const handleRecordAudioStart = (e) => {
+    setStartRecordingPos({ x: e.clientX, y: e.clientY });
+    setIsCancelling(false);
+    setIsLockedRecording(false);
+    setIsPaused(false); // Reset paused state
+    startRecording();
+    setIsRecording(true);
+  };
+
+  const handleRecordAudioStop = () => {
+    if (isCancelling) {
       stopRecording();
-    } else {
-      startRecording();
-      setIsRecording(true);
+      setAudioBlob(null);
+      setAudioDuration(0);
+      setIsRecording(false);
+      setIsCancelling(false);
+      setIsLockedRecording(false);
+      setIsPaused(false); // Reset paused state on cancel
+      return;
     }
+    if (isLockedRecording) {
+      return;
+    }
+    stopRecording();
   };
 
   const handleSendAudioMessage = async () => {
@@ -130,7 +148,6 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     setIsSubmitting(true);
     
     try {
-      // Convert audio blob to Base64
       const base64Audio = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
@@ -139,29 +156,42 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         reader.onerror = (error) => reject(error);
       });
       
-      // Send the audio message with Base64 data
-      dispatch(sendMessageThunk({ // Removed await
+      dispatch(sendMessageThunk({
         receiverId: selectedUser?._id,
-        message: '[Voice Message]', // Placeholder text
+        message: '[Voice Message]',
         replyTo: replyMessage?._id,
         audioData: base64Audio,
         audioDuration: audioDuration
       }));
       
-      // Optimistically clear the input field immediately
       setAudioBlob(null);
       if (replyMessage) onCancelReply();
 
-      // Immediately set submitting to false since message appears via socket
       setTimeout(() => {
         setIsSubmitting(false);
-      }, 100); // Very brief loading state
+      }, 100);
       
     } catch (error) {
       console.error("Error sending audio message:", error);
-      // In case of error, user can retry sending the audio
-      // No need to set setIsSubmitting(false) here, as finally will handle it
     }
+  };
+
+  const handleSendLockedAudio = () => {
+    stopRecording();
+  };
+
+  const handleCancelLockedAudio = () => {
+    stopRecording();
+    setIsCancelling(true);
+  };
+
+  const handleTogglePause = () => {
+    if (isPaused) {
+      resumeRecording();
+    } else {
+      pauseRecording();
+    }
+    setIsPaused(!isPaused);
   };
 
   const handleKeyDown = useCallback((e) => {
@@ -171,8 +201,29 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     }
   }, [handleSendMessage]);
 
+  const handleMouseMove = useCallback((e) => {
+    if (isRecording && !isLockedRecording) {
+      const dx = e.clientX - startRecordingPos.x;
+      const dy = e.clientY - startRecordingPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const CANCEL_THRESHOLD = 50;
+      const LOCK_THRESHOLD = -70;
+
+      if (distance > CANCEL_THRESHOLD) {
+        setIsCancelling(true);
+      } else if (dy < LOCK_THRESHOLD) {
+        setIsLockedRecording(true);
+      }
+    }
+  }, [isRecording, startRecordingPos, isLockedRecording]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (isRecording && !isLockedRecording) {
+      setIsCancelling(true);
+    }
+  }, [isRecording, isLockedRecording]);
+
   useEffect(() => {
-    // Cleanup timeout on component unmount
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -200,44 +251,77 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         </div>
       )}
       <div className="flex gap-3 items-center">
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            placeholder="Type your message..."
-            className="w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
-            value={message}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            disabled={isSubmitting}
-          />
-        </div>
+        {isRecording && isLockedRecording ? (
+          <div className="flex-1 flex items-center justify-between">
+            <button
+              onClick={handleCancelLockedAudio}
+              className="p-3 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors flex items-center justify-center"
+            >
+              Cancel
+            </button>
+            <span className="text-text-secondary">
+              {isPaused ? "Paused" : "Recording..."} {/* Update text based on pause state */}
+            </span>
+            <button
+              onClick={handleTogglePause} // New button for pause/resume
+              className="p-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors flex items-center justify-center"
+            >
+              {isPaused ? "Resume" : "Pause"}
+            </button>
+            <button
+              onClick={handleSendLockedAudio}
+              className="p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center"
+            >
+              <IoIosSend className="text-xl" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                placeholder="Type your message..."
+                className="w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                value={message}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                disabled={isSubmitting}
+              />
+            </div>
 
-        <button
-          onClick={handleRecordAudio}
-          className={`p-3 rounded-full ${
-            isRecording
-              ? "bg-red-500 text-white animate-pulse"
-              : "bg-foreground text-text-secondary hover:bg-primary/20"
-          } transition-colors flex items-center justify-center`}
-        >
-          <IoIosMic className="text-xl" />
-        </button>
+            <button
+              onMouseDown={handleRecordAudioStart}
+              onMouseUp={handleRecordAudioStop}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              className={`p-3 rounded-full ${
+                isRecording
+                  ? isCancelling
+                    ? "bg-red-700 text-white animate-pulse"
+                    : "bg-red-500 text-white animate-pulse"
+                  : "bg-foreground text-text-secondary hover:bg-primary/20"
+              } transition-colors flex items-center justify-center`}
+            >
+              <IoIosMic className="text-xl" />
+            </button>
 
-        <button
-          onClick={audioBlob ? handleSendAudioMessage : handleSendMessage}
-          disabled={(!message.trim() && !audioBlob) || isSubmitting}
-          className={`p-3 rounded-full ${
-            (message.trim() || audioBlob) && !isSubmitting
-              ? "bg-primary text-primary-foreground hover:bg-primary/90"
-              : "bg-foreground text-text-secondary cursor-not-allowed"
-          } transition-colors flex items-center justify-center`}
-        >
-          {isSubmitting ? (
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-          ) : (
-            <IoIosSend className="text-xl" />
-          )}
-        </button>
+            <button
+              onClick={handleSendMessage}
+              disabled={!message.trim() || isSubmitting}
+              className={`p-3 rounded-full ${
+                message.trim() && !isSubmitting
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90" 
+                  : "bg-foreground text-text-secondary cursor-not-allowed"
+              } transition-colors flex items-center justify-center`}
+            >
+              {isSubmitting ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                <IoIosSend className="text-xl" />
+              )}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -93,18 +93,15 @@ const dispatch = useDispatch();
   const handleLogout = () => dispatch(logoutUserThunk());
 
   const handleSelectUser = (user) => {
+    dispatch(setSelectedUser(user));
     if (user?._id) {
       const participants = [userProfile._id, user._id];
       dispatch(createConversationThunk({ participants })).then((action) => {
         if (action.payload) {
-          const conversation = action.payload;
-          const otherUser = conversation.participants.find(p => p._id === user._id);
-          dispatch(setSelectedUser(otherUser));
-          if (onUserSelect) onUserSelect(otherUser);
+          if (onUserSelect) onUserSelect(user);
         }
       });
     } else {
-      dispatch(setSelectedUser(user));
       if (onUserSelect) onUserSelect(user);
     }
   };

@@ -146,16 +146,21 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         replyTo: replyMessage?._id,
         audioData: base64Audio,
         audioDuration: audioDuration
-      })).finally(() => {
-        // Reset audio state
-        setAudioBlob(null);
-        if (replyMessage) onCancelReply();
-      });
+      }));
+      
+      // Optimistically clear the input field immediately
+      setAudioBlob(null);
+      if (replyMessage) onCancelReply();
+
+      // Immediately set submitting to false since message appears via socket
+      setTimeout(() => {
+        setIsSubmitting(false);
+      }, 100); // Very brief loading state
       
     } catch (error) {
       console.error("Error sending audio message:", error);
-    } finally {
-      setIsSubmitting(false);
+      // In case of error, user can retry sending the audio
+      setIsSubmitting(false); // Ensure loading state is cleared on error
     }
   };
 

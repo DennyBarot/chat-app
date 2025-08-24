@@ -86,15 +86,20 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
           style={{ position: 'relative' }}
         >
           {messageDetails.isAudioMessage ? (
-            messageDetails.audioUrl ? (
-              <audio controls src={messageDetails.audioUrl} className="w-full"></audio>
-            ) : messageDetails.audioData ? (
-              <audio controls src={messageDetails.audioData} className="w-full"></audio>
-            ) : (
-              <p className="whitespace-pre-wrap break-words min-w-[80px]">
-                Audio message not available
-              </p>
-            )
+            <div className="flex items-center bg-gray-800 p-2 rounded-lg">
+              <button onClick={() => new Audio(messageDetails.audioData).play()} className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.586-2.143A1 1 0 009 10.5v3a1 1 0 001.166.832l3.586-2.143a1 1 0 000-1.664z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+              <div className="flex-1 mx-2">
+                <div className="h-2 bg-gray-600 rounded-full">
+                  <div className="h-full bg-primary" style={{ width: `${(messageDetails.audioDuration / 60) * 100}%` }}></div>
+                </div>
+              </div>
+              <span className="text-white">{messageDetails.audioDuration}s</span>
+            </div>
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">
               {messageDetails?.content || '[No content]'}

@@ -3,7 +3,7 @@ import { IoIosSend, IoIosMic } from "react-icons/io";
 import { useReactMediaRecorder } from "react-media-recorder"; // Importing a library for audio recording
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
-import { axiosInstance } = "../../components/utilities/axiosInstance";
+import { axiosInstance } from "../../components/utilities/axiosInstance";
 import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {

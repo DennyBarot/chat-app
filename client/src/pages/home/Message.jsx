@@ -53,7 +53,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         {/* Reply button above message bubble */}
         {showMenu && (
           <button
-            className="absolute -top-6 right-4 bg-indigo-600 text-white rounded-full p-2 shadow-lg hover:bg-indigo-700 z-20 flex items-center justify-center transition duration-150"
+            className="absolute -top-6 right-4 bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 z-20 flex items-center justify-center transition duration-150"
             onClick={handleReply}
             title="Reply to this message"
           >
@@ -64,15 +64,15 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         )}
         {/* Quoted message block */}
         {messageDetails.quotedMessage && (
-          <div className="bg-indigo-50 border-l-4 border-indigo-400 mb-2 px-3 py-2 text-sm rounded-md shadow-sm flex flex-col">
-            <span className="font-semibold text-indigo-700">
+          <div className="bg-primary/10 border-l-4 border-primary mb-2 px-3 py-2 text-sm rounded-md shadow-sm flex flex-col">
+            <span className="font-semibold text-primary">
               {messageDetails.quotedMessage.senderName || 'Unknown'}:
             </span>
-            <span className="text-indigo-900">
+            <span className="text-text-primary">
               {messageDetails.quotedMessage.content || '[No content]'}
             </span>
             {messageDetails.quotedMessage.replyTo && (
-              <span className="italic text-xs ml-2 text-indigo-500"></span>
+              <span className="italic text-xs ml-2 text-primary"></span>
             )}
           </div>
         )}
@@ -80,8 +80,8 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         <div
           className={`px-4 py-2 rounded-2xl ${
             isSentByMe
-              ? 'bg-indigo-600 text-white rounded-tr-none'
-              : 'bg-white border border-slate-200 text-slate-800 rounded-tl-none shadow-sm'
+              ? 'bg-primary text-primary-foreground rounded-tr-none'
+              : 'bg-background border border-foreground text-text-primary rounded-tl-none shadow-sm'
           }`}
           style={{ position: 'relative' }}
         >
@@ -89,11 +89,11 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
             {messageDetails?.content || '[No content]'}
           </p>
         </div>
-        <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-slate-500`}>
+        <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-text-secondary`}>
           {formatTime(createdAt)}
         </div>
         {isSentByMe && messageRead && isLastMessage && (
-          <div className="text-xs mt-1 text-right mr-1 text-green-600 font-semibold">
+          <div className="text-xs mt-1 text-right mr-1 text-green-500 font-semibold">
             {getRelativeTime(readTime)}
           </div>
         )}

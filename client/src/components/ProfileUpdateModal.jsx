@@ -45,13 +45,13 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity duration-300">
-      <div className="bg-white rounded-xl shadow-2xl p-8 w-[450px] max-w-full transform transition-all duration-300 ease-in-out">
-        <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
-          <h2 className="text-2xl font-bold text-indigo-800">Update Profile</h2>
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex justify-center items-center z-50 transition-opacity duration-300">
+      <div className="bg-background rounded-xl shadow-2xl p-8 w-[450px] max-w-full transform transition-all duration-300 ease-in-out">
+        <div className="flex justify-between items-center mb-6 border-b border-foreground pb-4">
+          <h2 className="text-2xl font-bold text-primary">Update Profile</h2>
           <button 
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+            className="text-text-secondary hover:text-text-primary transition-colors duration-200"
             aria-label="Close modal"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,10 +66,10 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
               <img 
                 src={avatar} 
                 alt="Profile avatar" 
-                className="w-28 h-28 rounded-full object-cover border-4 border-indigo-100 shadow-md transition-all duration-300" 
+                className="w-28 h-28 rounded-full object-cover border-4 border-primary/20 shadow-md transition-all duration-300" 
               />
             ) : (
-              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center text-indigo-500 font-bold text-xl border-4 border-indigo-50 shadow-md">
+              <div className="w-28 h-28 rounded-full bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center text-primary font-bold text-xl border-4 border-primary/10 shadow-md">
                 {fullName ? fullName.charAt(0).toUpperCase() : 'U'}
               </div>
             )}
@@ -77,15 +77,15 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
               <label 
                 htmlFor="avatar-upload" 
-                className="w-full h-full rounded-full flex items-center justify-center bg-indigo-800 bg-opacity-70 text-white cursor-pointer"
+                className="w-full h-full rounded-full flex items-center justify-center bg-primary/80 text-primary-foreground cursor-pointer"
               >
                 <span className="text-sm font-medium">Change</span>
               </label>
             </div>
             
             {isUploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-full">
-                <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
               </div>
             )}
           </div>
@@ -102,7 +102,7 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
             <button
               type="button"
               onClick={() => document.getElementById('avatar-upload').click()}
-              className="px-3 py-1.5 text-sm bg-indigo-50 text-indigo-700 rounded-md hover:bg-indigo-100 transition-colors duration-200 font-medium"
+              className="px-3 py-1.5 text-sm bg-primary/10 text-primary rounded-md hover:bg-primary/20 transition-colors duration-200 font-medium"
             >
               Upload
             </button>
@@ -110,7 +110,7 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
             {avatar && (
               <button
                 onClick={handleRemoveAvatar}
-                className="px-3 py-1.5 text-sm bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors duration-200 font-medium"
+                className="px-3 py-1.5 text-sm bg-red-500/10 text-red-500 rounded-md hover:bg-red-500/20 transition-colors duration-200 font-medium"
               >
                 Remove
               </button>
@@ -120,48 +120,48 @@ const ProfileUpdateModal = ({ isOpen, onClose }) => {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
+            <label className="block text-sm font-medium text-text-secondary">Full Name</label>
             <input
               type="text"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              className="w-full border border-foreground rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
               placeholder="Enter your full name"
               required
             />
           </div>
           
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-gray-700">Username</label>
+            <label className="block text-sm font-medium text-text-secondary">Username</label>
             <div className="relative">
-              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">@</span>
+              <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-text-secondary">@</span>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+                className="w-full border border-foreground rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all duration-200"
                 placeholder="username"
                 required
               />
             </div>
           </div>
           
-          <div className="pt-4 border-t border-gray-100 flex justify-end space-x-3">
+          <div className="pt-4 border-t border-foreground flex justify-end space-x-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2.5 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors duration-200"
+              className="px-5 py-2.5 rounded-lg font-medium text-text-secondary bg-foreground hover:bg-foreground/80 transition-colors duration-200"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={buttonLoading || isUploading}
-              className="px-5 py-2.5 rounded-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-5 py-2.5 rounded-lg font-medium text-primary-foreground bg-primary hover:bg-primary/90 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {buttonLoading ? (
                 <div className="flex items-center">
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin mr-2"></div>
                   Saving...
                 </div>
               ) : (

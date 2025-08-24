@@ -51,13 +51,13 @@ const Signup = () => {
   }, [dispatch, signupData, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md bg-gray-850 p-8 rounded-xl shadow-xl space-y-6 text-white">
-        <h2 className="text-3xl font-semibold text-center text-amber-400">Create Account</h2>
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md bg-foreground p-8 rounded-xl shadow-xl space-y-6 text-text-primary">
+        <h2 className="text-3xl font-semibold text-center text-primary">Create Account</h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-300">Username</label>
+            <label className="block text-sm font-medium text-text-secondary">Username</label>
             <input
               type="text"
               name="username"
@@ -67,48 +67,48 @@ const Signup = () => {
               maxLength="30"
               required
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-background border border-foreground text-text-primary rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">Full Name</label>
+            <label className="block text-sm font-medium text-text-secondary">Full Name</label>
             <input
               type="text"
               name="fullName"
               placeholder="Full Name"
               required
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-background border border-foreground text-text-primary rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">Email</label>
+            <label className="block text-sm font-medium text-text-secondary">Email</label>
             <input
               type="email"
               name="email"
               placeholder="you@example.com"
               required
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-background border border-foreground text-text-primary rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
             />
           </div>
 
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-300">Password</label>
+            <label className="block text-sm font-medium text-text-secondary">Password</label>
             <input
               type={isPasswordVisible ? "text" : "password"}
               name="password"
               placeholder="••••••••"
               required
               onChange={handleInputChange}
-              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-background border border-foreground text-text-primary rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
             />
             <button
               type="button"
               onClick={togglePasswordVisibility}
-              className="absolute top-[2.25rem] right-3 text-gray-400 hover:text-amber-400"
+              className="absolute top-[2.25rem] right-3 text-text-secondary hover:text-primary"
             >
               {isPasswordVisible ? (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
@@ -125,13 +125,13 @@ const Signup = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300">Gender</label>
+            <label className="block text-sm font-medium text-text-secondary">Gender</label>
             <select
               name="gender"
               required
               onChange={handleInputChange}
               defaultValue=""
-              className="w-full px-4 py-2 bg-gray-900 border border-gray-700 text-white rounded-md focus:ring-2 focus:ring-amber-500 focus:outline-none"
+              className="w-full px-4 py-2 bg-background border border-foreground text-text-primary rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
             >
               <option value="" disabled>Pick a gender</option>
               <option>Male</option>
@@ -141,15 +141,15 @@ const Signup = () => {
 
           <button
             onClick={handleSignup}
-            className="w-full py-2 px-4 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-md transition duration-200"
+            className="w-full py-2 px-4 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md transition duration-200"
           >
             Sign Up
           </button>
         </div>
 
-        <div className="text-sm text-center text-gray-400">
+        <div className="text-sm text-center text-text-secondary">
           Already have an account?
-          <Link to="/login" className="text-amber-400 hover:underline ml-1">
+          <Link to="/login" className="text-primary hover:underline ml-1">
             Login
           </Link>
         </div>

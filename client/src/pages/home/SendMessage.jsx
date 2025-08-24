@@ -100,19 +100,19 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   }, []);
 
   return (
-    <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 ">
+    <div className="p-4 bg-background border-t border-foreground">
       {replyMessage && (
-        <div className="bg-indigo-50 border-l-4 border-indigo-400 mb-2 px-3 py-2 text-sm rounded-md shadow flex items-center justify-between">
+        <div className="bg-primary/10 border-l-4 border-primary mb-2 px-3 py-2 text-sm rounded-md shadow flex items-center justify-between">
           <div>
-            <span className="font-semibold text-indigo-700">Replying to:</span>
-            <span className="text-indigo-900 ml-1">{replyMessage.content}</span>
+            <span className="font-semibold text-primary">Replying to:</span>
+            <span className="text-text-primary ml-1">{replyMessage.content}</span>
             {replyMessage.replyTo && (
-              <span className="italic text-xs ml-2 text-indigo-500"></span>
+              <span className="italic text-xs ml-2 text-primary"></span>
             )}
           </div>
           <button
             onClick={onCancelReply}
-            className="ml-4 px-2 py-1 text-xs bg-white border border-indigo-300 rounded hover:bg-indigo-100 transition"
+            className="ml-4 px-2 py-1 text-xs bg-background border border-primary/30 rounded hover:bg-primary/20 transition"
           >
             Cancel
           </button>
@@ -123,7 +123,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
           <input
             type="text"
             placeholder="Type your message..."
-            className="w-full pl-4 pr-12 py-3 rounded-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            className="w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
             value={message}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -136,8 +136,8 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
           disabled={!message.trim() || isSubmitting}
           className={`p-3 rounded-full ${
             message.trim() && !isSubmitting
-              ? "bg-indigo-600 text-white hover:bg-indigo-700"
-              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              ? "bg-primary text-primary-foreground hover:bg-primary/90"
+              : "bg-foreground text-text-secondary cursor-not-allowed"
           } transition-colors flex items-center justify-center`}
         >
           {isSubmitting ? (

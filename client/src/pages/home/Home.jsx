@@ -45,7 +45,7 @@ const Home = () => {
   // NO MORE SOCKET LISTENERS HERE. This component is now clean and simple.
 
   return (
-    <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden">
+    <div className="flex h-screen bg-background text-text-primary overflow-hidden">
       {(!isMobile || !showMessageContainer) && (
         <div className={`${isMobile ? 'w-full' : 'w-80'} transition-all duration-300`}>
           <UserSidebar />

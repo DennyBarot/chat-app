@@ -14,7 +14,8 @@ export const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
-        setNewMessage: (state, action) => {
+          reducers: {
+    setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
       const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
       if (!messageExists) {

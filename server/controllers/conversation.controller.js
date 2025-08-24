@@ -4,34 +4,38 @@ import { asyncHandler } from '../utilities/asyncHandlerUtility.js';
 // Create a new conversation
 export const createConversation = asyncHandler(async (req, res) => {
     const { participants } = req.body;
-
-    if (!participants || participants.length < 2) {
-        return res.status(400).json({ message: 'At least two participants are required' });
-    }
-
-    const existingConversation = await Conversation.findOne({
-        participants: { $all: participants }
-    });
-
-    if (existingConversation) {
-        return res.status(200).json(existingConversation);
-    }
-
-    const newConversation = new Conversation({ participants });
-    await newConversation.save();
-
-    res.status(201).json(newConversation);
+    const conversation = await getOrCreateConversation(participants);
+    res.status(201).json(conversation);
 });
+
+async function getOrCreateConversation(participants) {
+    let conversation = await Conversation.findOne({
+        participants: { $all: participants, $size: participants.length }
+    }).populate('participants', 'username fullName avatar');
+
+    if (!conversation) {
+        conversation = new Conversation({ participants });
+        await conversation.save();
+        conversation = await conversation.populate('participants', 'username fullName avatar');
+    }
+    return conversation;
+}
 
 // Get all conversations for a user
 export const getConversations = asyncHandler(async (req, res) => {
     const { userId } = req.params;
 
     const conversations = await Conversation.find({ participants: userId })
-        .populate('participants', 'username email profilePic')
+        .populate('participants', 'username fullName avatar')
         .sort({ updatedAt: -1 });
 
     res.status(200).json(conversations);
+});
+
+export const getConversationById = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const conversation = await Conversation.findById(id).populate('participants', 'username fullName avatar');
+    res.status(200).json(conversation);
 });
 
 // Update a conversation (e.g., add/remove participants)

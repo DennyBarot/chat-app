@@ -86,3 +86,18 @@ export const getOtherUsersThunk = createAsyncThunk(
     }
   }
 );
+
+export const createConversationThunk = createAsyncThunk(
+  "conversation/create",
+  async ({ participants }, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.post("/api/v1/conversation/", { participants });
+      return response.data;
+    } catch (error) {
+      console.error(error);
+      const errorOutput = error?.response?.data?.errMessage;
+      toast.error(errorOutput);
+      return rejectWithValue(errorOutput);
+    }
+  }
+);

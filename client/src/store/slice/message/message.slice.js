@@ -1,5 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { getMessageThunk, sendMessageThunk, getConversationsThunk, getOtherUsersThunk } from "./message.thunk";
+import { getMessageThunk, sendMessageThunk, getConversationsThunk, getOtherUsersThunk, createConversationThunk } from "./message.thunk";
 
 const initialState = {
   buttonLoading: false,
@@ -14,7 +14,7 @@ export const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
-    setNewMessage: (state, action) => {
+        setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
       const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
       if (!messageExists) {
@@ -98,6 +98,15 @@ export const messageSlice = createSlice({
     // get other users
     builder.addCase(getOtherUsersThunk.fulfilled, (state, action) => {
       state.otherUsers = action.payload?.responseData ?? [];
+    });
+
+    // create conversation
+    builder.addCase(createConversationThunk.fulfilled, (state, action) => {
+      const newConversation = action.payload;
+      const index = state.conversations.findIndex(c => c._id === newConversation._id);
+      if (index === -1) {
+        state.conversations = [newConversation, ...state.conversations];
+      }
     });
   },
 });

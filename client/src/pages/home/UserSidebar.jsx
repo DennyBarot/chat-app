@@ -11,6 +11,7 @@ import ThemeToggle from "../../components/ThemeToggle";
 import { setTyping } from "../../store/slice/typing/typing.slice";
 import { updateSingleConversation } from "../../store/slice/message/message.slice";
 import { setOnlineUsers } from "../../store/slice/socket/socket.slice";
+import { createConversationThunk } from "../../store/slice/message/message.thunk";
 
 const UserSidebar = ({ onUserSelect }) => {
 
@@ -92,8 +93,20 @@ const dispatch = useDispatch();
   const handleLogout = () => dispatch(logoutUserThunk());
 
   const handleSelectUser = (user) => {
-    dispatch(setSelectedUser(user));
-    if (onUserSelect) onUserSelect(user);
+    if (user?._id) {
+      const participants = [userProfile._id, user._id];
+      dispatch(createConversationThunk({ participants })).then((action) => {
+        if (action.payload) {
+          const conversation = action.payload;
+          const otherUser = conversation.participants.find(p => p._id === user._id);
+          dispatch(setSelectedUser(otherUser));
+          if (onUserSelect) onUserSelect(otherUser);
+        }
+      });
+    } else {
+      dispatch(setSelectedUser(user));
+      if (onUserSelect) onUserSelect(user);
+    }
   };
 
   return (

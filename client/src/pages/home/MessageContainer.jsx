@@ -127,11 +127,13 @@ const MessageContainer = ({ onBack, isMobile }) => {
     const currentScrollRef = scrollRef.current;
     if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
       const newScrollHeight = currentScrollRef.scrollHeight;
-      const oldScrollTop = currentScrollRef.scrollTop; // Capture current scrollTop before adjustment
       const oldScrollHeight = prevScrollHeightRef.current; // This was captured before new messages were added
 
-      const scrollDifference = newScrollHeight - oldScrollHeight;
-      currentScrollRef.scrollTop = oldScrollTop + scrollDifference;
+      // Calculate the distance from the bottom before new messages were added
+      const oldDistanceFromBottom = oldScrollHeight - currentScrollRef.scrollTop;
+
+      // Set the new scrollTop to maintain the same distance from the bottom
+      currentScrollRef.scrollTop = newScrollHeight - oldDistanceFromBottom;
     }
   }, [messages, isLoadingMessages, currentPage]);
 

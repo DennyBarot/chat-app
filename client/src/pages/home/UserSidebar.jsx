@@ -69,7 +69,7 @@ const dispatch = useDispatch();
     if (!conversations || conversations.length === 0) return [];
 
     let usersList = conversations.map((conv) => {
-      const otherUser = conv.participants[0];
+      const otherUser = conv.participants.find(p => p._id !== userProfile._id);
       if (!otherUser) return null;
       return {
         ...otherUser,
@@ -88,7 +88,7 @@ const dispatch = useDispatch();
 
     // Sort users by last message time (most recent first)
     return usersList.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  }, [conversations, searchValue]);
+  }, [conversations, searchValue, userProfile._id]);
 
   const handleLogout = () => dispatch(logoutUserThunk());
 

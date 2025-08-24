@@ -14,7 +14,9 @@ export const messageSlice = createSlice({
   name: "message",
   initialState,
   reducers: {
-          reducers: {
+    clearMessages: (state) => {
+      state.messages = [];
+    }, 
     setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
       const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
@@ -113,6 +115,6 @@ export const messageSlice = createSlice({
 });
 
 // Export the new action
-export const { setNewMessage, messagesRead, updateSingleConversation } = messageSlice.actions;
+export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages } = messageSlice.actions;
 
 export default messageSlice.reducer;

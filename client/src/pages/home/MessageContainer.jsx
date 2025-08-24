@@ -78,6 +78,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
     isInitialLoadRef.current = true;
     if (selectedUser?._id) {
       setIsLoadingMessages(true);
+      dispatch(clearMessages());
       dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }))
         .unwrap()
         .then((payload) => {

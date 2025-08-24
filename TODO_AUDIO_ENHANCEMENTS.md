@@ -26,8 +26,14 @@
 - [x] Add fallback estimation based on blob size
 - [x] Set default duration if calculation fails
 
+## Loading Spinner Fix ✅
+- [x] Fix loading spinner issue for audio messages
+- [x] Use Promise-based FileReader for better async handling
+- [x] Ensure isSubmitting is reset in finally block
+
 ## Testing
-- [ ] Test audio playback functionality
-- [ ] Verify waveform visualization
-- [ ] Check time updates during playback
-- [ ] Test audio duration calculation
+- [x] Audio duration calculation - working correctly
+- [ ] Waveform visualization - needs verification
+- [ ] Time updates during playback - needs verification
+- [ ] Play/pause functionality - needs verification
+- [ ] Audio playback quality - needs verification

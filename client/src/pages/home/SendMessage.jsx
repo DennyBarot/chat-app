@@ -131,34 +131,30 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     
     try {
       // Convert audio blob to Base64
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      
-      reader.onload = async () => {
-        const base64Audio = reader.result;
+      const base64Audio = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
         
-        // Send the audio message with Base64 data
-        await dispatch(sendMessageThunk({
-          receiverId: selectedUser?._id,
-          message: '[Voice Message]', // Placeholder text
-          replyTo: replyMessage?._id,
-          audioData: base64Audio,
-          audioDuration: audioDuration
-        }));
-
-        // Reset audio state
-        setAudioBlob(null);
-        if (replyMessage) onCancelReply();
-        setIsSubmitting(false);
-      };
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = (error) => reject(error);
+      });
       
-      reader.onerror = (error) => {
-        console.error("Error converting audio to Base64:", error);
-        setIsSubmitting(false);
-      };
+      // Send the audio message with Base64 data
+      await dispatch(sendMessageThunk({
+        receiverId: selectedUser?._id,
+        message: '[Voice Message]', // Placeholder text
+        replyTo: replyMessage?._id,
+        audioData: base64Audio,
+        audioDuration: audioDuration
+      }));
+
+      // Reset audio state
+      setAudioBlob(null);
+      if (replyMessage) onCancelReply();
       
     } catch (error) {
       console.error("Error sending audio message:", error);
+    } finally {
       setIsSubmitting(false);
     }
   };

@@ -11,13 +11,11 @@ const formatTime = (timestamp) => {
 
 const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const [showMenu, setShowMenu] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
   const messageRef = useRef(null);
   const { userProfile, selectedUser } = useSelector(
     (state) => state.userReducer || { userProfile: null, selectedUser: null }
   );
-
-  // Remove the automatic scrollIntoView to prevent unwanted animations
-  // The scroll positioning is handled by the parent MessageContainer
 
   const createdAt = messageDetails?.createdAt;
   const isSentByMe = userProfile?._id === messageDetails?.senderId;
@@ -26,9 +24,16 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const handleMouseLeave = useCallback(() => setShowMenu(false), []);
   const handleReply = useCallback(() => onReply(messageDetails), [onReply, messageDetails]);
 
-  // Determine if message is read by receiver
   const messageRead = useMemo(() => isMessageRead(messageDetails, userProfile?._id), [messageDetails, userProfile]);
   const readTime = useMemo(() => getReadTime(messageDetails, userProfile?._id), [messageDetails, userProfile]);
+
+  const handlePlayAudio = () => {
+    if (isPlaying) return; // Prevent multiple plays
+    const audio = new Audio(messageDetails.audioData);
+    audio.play();
+    setIsPlaying(true);
+    audio.onended = () => setIsPlaying(false); // Reset playing state when audio ends
+  };
 
   return (
     <div
@@ -50,7 +55,6 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         </div>
       )}
       <div className="max-w-[70%] relative">
-        {/* Reply button above message bubble */}
         {showMenu && (
           <button
             className="absolute -top-6 right-4 bg-primary text-primary-foreground rounded-full p-2 shadow-lg hover:bg-primary/90 z-20 flex items-center justify-center transition duration-150"
@@ -62,7 +66,6 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
             </svg>
           </button>
         )}
-        {/* Quoted message block */}
         {messageDetails.quotedMessage && (
           <div className="bg-primary/10 border-l-4 border-primary mb-2 px-3 py-2 text-sm rounded-md shadow-sm flex flex-col">
             <span className="font-semibold text-primary">
@@ -76,7 +79,6 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
             )}
           </div>
         )}
-        {/* Main message */}
         <div
           className={`px-4 py-2 rounded-2xl ${
             isSentByMe
@@ -87,7 +89,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         >
           {messageDetails.isAudioMessage ? (
             <div className="flex items-center bg-gray-800 p-2 rounded-lg">
-              <button onClick={() => new Audio(messageDetails.audioData).play()} className="flex items-center">
+              <button onClick={handlePlayAudio} className="flex items-center">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.586-2.143A1 1 0 009 10.5v3a1 1 0 001.166.832l3.586-2.143a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -99,10 +101,6 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
                 </div>
               </div>
               <span className="text-white">{messageDetails.audioDuration > 0 ? `${messageDetails.audioDuration}s` : '0s'}</span>
-              <div className="w-full h-2 bg-gray-600 rounded-full mt-1">
-                {/* Placeholder for waveform visualization */}
-                <div className="h-full bg-primary" style={{ width: '100%' }}></div>
-              </div>
             </div>
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">
@@ -135,4 +133,3 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
 };
 
 export default React.memo(Message);
-

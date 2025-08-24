@@ -12,6 +12,11 @@ const messageSchema = new Schema(
   replyTo: { type: Schema.Types.ObjectId, ref: 'Message', default: null },
   quotedContent: { type: String },
   readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  
+  // Audio message fields
+  audioUrl: { type: String }, // URL to the stored audio file
+  audioDuration: { type: Number }, // Duration of the audio in seconds
+  isAudioMessage: { type: Boolean, default: false }, // Flag to identify audio messages
   },
   { timestamps: true }
 );

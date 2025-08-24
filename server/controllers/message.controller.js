@@ -4,6 +4,7 @@ import { asyncHandler } from "../utilities/asyncHandlerUtility.js";
 import { errorHandler } from "../utilities/errorHandlerUtility.js";
 import mongoose from 'mongoose';
 import { io } from '../socket/socket.js';
+import path from 'path';
 
 // --- The Single, Reliable Helper Function ---
 // This function will now be used by both sendMessage and markMessagesRead.
@@ -26,7 +27,10 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     const senderId = req.user._id;
     const { message, replyTo } = req.body;
 
-    if (!senderId || !receiverId || !message) {
+    // Check if this is an audio message
+    const isAudioMessage = req.files && req.files.audio;
+    
+    if (!senderId || !receiverId || (!message && !isAudioMessage)) {
         return next(new errorHandler("Missing required fields.", 400));
     }
 
@@ -35,7 +39,35 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         conversation = await Conversation.create({ participants: [senderId, receiverId] });
     }
 
-    const newMessage = await Message.create({ senderId, receiverId, conversationId: conversation._id, content: message, replyTo, readBy: [senderId] });
+    let messageData = {
+        senderId,
+        receiverId,
+        conversationId: conversation._id,
+        content: message || '[Voice Message]',
+        replyTo,
+        readBy: [senderId]
+    };
+
+    // Handle audio file upload
+    if (isAudioMessage) {
+        const audioFile = req.files.audio;
+        
+        // Generate a unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const fileName = `audio-${uniqueSuffix}.${audioFile.name.split('.').pop()}`;
+        
+        // In a real application, you would upload to cloud storage (S3, Cloudinary, etc.)
+        // For now, we'll just store the filename and handle the upload logic separately
+        messageData.audioUrl = `/uploads/audios/${fileName}`;
+        messageData.isAudioMessage = true;
+        messageData.audioDuration = 0; // You can calculate this from the audio file
+        
+        // Save the file to the server (in production, use proper cloud storage)
+        const uploadPath = path.join(__dirname, '../uploads/audios', fileName);
+        await audioFile.mv(uploadPath);
+    }
+
+    const newMessage = await Message.create(messageData);
     
     conversation.messages.push(newMessage._id);
     conversation.updatedAt = new Date();

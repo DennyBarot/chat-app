@@ -4,13 +4,26 @@ import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const sendMessageThunk = createAsyncThunk(
   "message/send",
-  async ({ receiverId, message, timestamp, replyTo }, { rejectWithValue }) => {
+  async ({ receiverId, message, timestamp, replyTo, audio }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post(`/api/v1/message/send/${receiverId}`, {
-        message,
-        timestamp,
-        replyTo, // <-- add this
-      });
+      let response;
+      
+      if (audio) {
+        // If audio is provided, send as FormData for file upload
+        response = await axiosInstance.post(`/api/v1/message/send/${receiverId}`, audio, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        // Regular text message
+        response = await axiosInstance.post(`/api/v1/message/send/${receiverId}`, {
+          message,
+          timestamp,
+          replyTo,
+        });
+      }
+      
       return response.data;
     } catch (error) {
       console.error(error);

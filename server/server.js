@@ -7,6 +7,7 @@ import express from "express";
 import { connectDB } from "./db/connection1db.js";
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import fileUpload from 'express-fileupload';
 import userRoute from './routes/user.route.js'
 import messageRoute from './routes/message.routes.js'
 import conversationRoute from './routes/conversation.routes.js'
@@ -25,6 +26,10 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' })); 
 app.use(cookieParser());
+app.use(fileUpload({
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  createParentPath: true
+}));
 
 
 const PORT = process.env.PORT || 5000;

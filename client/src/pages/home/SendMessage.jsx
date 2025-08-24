@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { IoIosSend } from "react-icons/io";
+import { IoIosSend, IoIosMic } from "react-icons/io";
+import { useReactMediaRecorder } from "react-media-recorder"; // Importing a library for audio recording
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { axiosInstance } from "../../components/utilities/axiosInstance";
@@ -12,7 +13,18 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
   const typingTimeoutRef = useRef(null);
+
+  // State for voice recording
+  const { status, startRecording, stopRecording, mediaBlobUrl } = useReactMediaRecorder({ 
+    audio: true,
+    onStop: (blobUrl, blob) => {
+      setAudioBlob(blob);
+      setIsRecording(false);
+    }
+  });
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim()) return;
@@ -83,6 +95,46 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     }
   }, [socket, userProfile, selectedUser, isTyping]);
 
+  const handleRecordAudio = () => {
+    if (isRecording) {
+      stopRecording();
+    } else {
+      startRecording();
+      setIsRecording(true);
+    }
+  };
+
+  const handleSendAudioMessage = async () => {
+    if (!audioBlob) return;
+
+    setIsSubmitting(true);
+    
+    try {
+      // Create a FormData object to send the audio file
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      formData.append('receiverId', selectedUser?._id);
+      formData.append('replyTo', replyMessage?._id || '');
+
+      // Send the audio message
+      await dispatch(sendMessageThunk({
+        receiverId: selectedUser?._id,
+        message: '[Voice Message]', // Placeholder text
+        replyTo: replyMessage?._id,
+        audio: formData // Include the audio data
+      }));
+
+      // Reset audio state
+      setAudioBlob(null);
+      if (replyMessage) onCancelReply();
+      
+    } catch (error) {
+      console.error("Error sending audio message:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleKeyDown = useCallback((e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -132,10 +184,21 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         </div>
 
         <button
-          onClick={handleSendMessage}
-          disabled={!message.trim() || isSubmitting}
+          onClick={handleRecordAudio}
           className={`p-3 rounded-full ${
-            message.trim() && !isSubmitting
+            isRecording
+              ? "bg-red-500 text-white animate-pulse"
+              : "bg-foreground text-text-secondary hover:bg-primary/20"
+          } transition-colors flex items-center justify-center`}
+        >
+          <IoIosMic className="text-xl" />
+        </button>
+
+        <button
+          onClick={audioBlob ? handleSendAudioMessage : handleSendMessage}
+          disabled={(!message.trim() && !audioBlob) || isSubmitting}
+          className={`p-3 rounded-full ${
+            (message.trim() || audioBlob) && !isSubmitting
               ? "bg-primary text-primary-foreground hover:bg-primary/90"
               : "bg-foreground text-text-secondary cursor-not-allowed"
           } transition-colors flex items-center justify-center`}

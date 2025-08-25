@@ -120,7 +120,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
       }
     };
 
-    currentScrollRef.addEventListener('scroll', handleScroll);
+    currentScrollRef.addEventListener('scroll', handleScroll, { passive: false });
     return () => {
       if (currentScrollRef) {
         currentScrollRef.removeEventListener('scroll', handleScroll);
@@ -188,7 +188,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
         setShowNewMessageIndicator(false);
       }
     };
-    scrollContainer.addEventListener('scroll', handleManualScroll);
+    scrollContainer.addEventListener('scroll', handleManualScroll, { passive: false });
     return () => {
       if (scrollContainer) {
         scrollContainer.removeEventListener('scroll', handleManualScroll);

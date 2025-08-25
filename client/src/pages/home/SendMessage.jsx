@@ -24,6 +24,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
   const [micTransform, setMicTransform] = useState({});
+  const [swipeHint, setSwipeHint] = useState(null); 
   const isCancelledRef = useRef(false); // Use ref to avoid stale state in callbacks
   const holdTimeoutRef = useRef(null);
 

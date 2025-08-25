@@ -23,6 +23,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
   const [transformStyle, setTransformStyle] = useState({});
   const [swipeDirection, setSwipeDirection] = useState(null); // 'none', 'left', 'up'
   const typingTimeoutRef = useRef(null);
+  const holdTimeoutRef = useRef(null);
 
   // State for voice recording
   const { status, startRecording, stopRecording, mediaBlobUrl, pauseRecording, resumeRecording } = useReactMediaRecorder({
@@ -129,14 +130,37 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     setIsPaused(false); // Reset paused state
     setTransformStyle({}); // Reset transform style on start
     setSwipeDirection(null); // Reset swipe direction on start
-    startRecording();
-    setIsRecording(true);
+    
+    // Clear any existing hold timeout
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+    }
+    
+    // Set a timeout to start recording after a short delay (for hold detection)
+    holdTimeoutRef.current = setTimeout(() => {
+      startRecording();
+      setIsRecording(true);
+    }, 100); // Short delay to detect if this is a hold or click
   };
 
   const handleRecordAudioStop = () => {
-    console.log("onStop callback triggered. isCancelling:", isCancelling); // Debug log
+    console.log("handleRecordAudioStop triggered"); // Debug log
+    
+    // Clear the hold timeout if it exists (user released before hold completed)
+    if (holdTimeoutRef.current) {
+      clearTimeout(holdTimeoutRef.current);
+      holdTimeoutRef.current = null;
+      
+      // If recording hasn't started yet (user released quickly), don't do anything
+      if (!isRecording) {
+        console.log("Quick tap detected, not starting recording");
+        return;
+      }
+    }
+    
     setTransformStyle({}); // Reset transform style on stop
     setSwipeDirection(null); // Reset swipe direction on stop
+    
     if (isCancelling) {
       console.log("handleRecordAudioStop: Cancelling recording."); // Debug log
       stopRecording();
@@ -148,10 +172,12 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       setIsPaused(false); // Reset paused state on cancel
       return;
     }
+    
     if (isLockedRecording) {
       console.log("handleRecordAudioStop: Recording is locked, not stopping."); // Debug log
       return;
     }
+    
     console.log("handleRecordAudioStop: Stopping recording and preparing to send."); // Debug log
     stopRecording();
   };
@@ -209,7 +235,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     setIsPaused(false);
     setAudioBlob(null);
     setAudioDuration(0);
-    setTransformStyle({});
+    setTransformStyle({ transform: 'translate(0px, 0px)' }); // Reset to default position
     setSwipeDirection(null);
   };
 
@@ -286,6 +312,9 @@ const handleMouseMove = useCallback((e) => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
+      }
+      if (holdTimeoutRef.current) {
+        clearTimeout(holdTimeoutRef.current);
       }
     };
   }, []);
@@ -389,6 +418,8 @@ const handleMouseMove = useCallback((e) => {
                     : "bg-red-500 text-white animate-pulse"
                   : "bg-foreground text-text-secondary hover:bg-primary/20"
               } transition-colors flex items-center justify-center`}
+              // Prevent default behavior to avoid issues with touch devices
+              onContextMenu={(e) => e.preventDefault()}
             >
               <IoIosMic className="text-xl" />
             </button>

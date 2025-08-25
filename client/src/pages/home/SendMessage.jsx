@@ -25,7 +25,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
   const [micTransform, setMicTransform] = useState({});
-
+  const [swipeHint, setSwipeHint] = useState(null); 
   const isCancelledRef = useRef(false); // Use ref to avoid stale state in callbacks
   const holdTimeoutRef = useRef(null);
 
@@ -53,6 +53,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     setIsLockedRecording(false);
     setIsPaused(false);
     setMicTransform({});
+    setSwipeHint(null);
    
   };
 
@@ -95,7 +96,15 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     // Visual feedback for the mic button
     setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });
     
-
+       // NEW: Logic for visual feedback
+    if (dy < LOCK_THRESHOLD) {
+      setSwipeHint('lock');
+    } else if (dx < CANCEL_THRESHOLD) {
+      setSwipeHint('cancel');
+    } else {
+      setSwipeHint(null);
+    }
+    
     // Check for swipe left to cancel
     if (dx < CANCEL_THRESHOLD) {
       isCancelledRef.current = true;

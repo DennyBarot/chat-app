@@ -26,6 +26,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [swipeHint, setSwipeHint] = useState(null); 
   const isCancelledRef = useRef(false);
   const holdTimeoutRef = useRef(null);
+  const micButtonRef = useRef(null);
 
   const onStop = async (blobUrl, blob) => {
     if (isCancelledRef.current) {
@@ -64,8 +65,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const handleInteractionMove = useCallback((e) => {
     if (!isRecording || isLockedRecording) return;
     
-    // This is the magic line that prevents the page from scrolling on mobile
-    // when you are dragging the mic button.
     e.preventDefault();
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -111,6 +110,21 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       window.addEventListener('touchend', handleInteractionEnd);
     }, 250);
   }, [startRecording, handleInteractionMove, handleInteractionEnd]);
+
+  useEffect(() => {
+    const micButton = micButtonRef.current;
+    if (micButton) {
+      micButton.addEventListener("touchstart", handleInteractionStart, { passive: false });
+    }
+
+    return () => {
+      if (micButton) {
+        micButton.removeEventListener("touchstart", handleInteractionStart);
+      }
+      clearTimeout(typingTimeoutRef.current);
+      clearTimeout(holdTimeoutRef.current);
+    };
+  }, [handleInteractionStart]);
 
   // --- Sending Logic ---
 
@@ -210,13 +224,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   }, [handleSendMessage]);
 
-  useEffect(() => {
-    return () => {
-      clearTimeout(typingTimeoutRef.current);
-      clearTimeout(holdTimeoutRef.current);
-    };
-  }, []);
-
   return (
     <div className="p-4 bg-background border-t border-foreground">
       {replyMessage && (
@@ -281,8 +288,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
             <div className="flex items-center gap-3">
               {message.trim() === '' && (
                  <button
+                  ref={micButtonRef}
                   onMouseDown={handleInteractionStart}
-                  onTouchStart={handleInteractionStart}
                   style={micTransform}
                   className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${isRecording ? 'bg-red-500 text-white scale-125 animate-pulse' : 'bg-foreground text-text-secondary hover:bg-primary/20'}`}
                   onContextMenu={(e) => e.preventDefault()}

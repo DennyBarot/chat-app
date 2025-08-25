@@ -13,12 +13,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isSubmittingRef = useRef(false);
   // Typing state
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
-  // CORRECTED: Bringing back useState for isSubmitting
- 
+
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [isLockedRecording, setIsLockedRecording] = useState(false);
@@ -26,20 +24,15 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
   const [micTransform, setMicTransform] = useState({});
   const [swipeHint, setSwipeHint] = useState(null); 
-  const isCancelledRef = useRef(false); // Use ref to avoid stale state in callbacks
+  const isCancelledRef = useRef(false);
   const holdTimeoutRef = useRef(null);
-  const micButtonRef = useRef(null);
 
   const onStop = async (blobUrl, blob) => {
-    // If cancellation was triggered, do nothing.
     if (isCancelledRef.current) {
-      isCancelledRef.current = false; // Reset for next time
+      isCancelledRef.current = false;
       return;
     }
-
     if (!blob) return;
-
-    // Send the audio
     handleSendAudioMessage(blob);
     resetRecordingState();
   };
@@ -57,13 +50,54 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     setSwipeHint(null);
   };
 
-  // --- Main Event Handlers for Recording ---
+  const handleInteractionEnd = useCallback(() => {
+    clearTimeout(holdTimeoutRef.current);
+    window.removeEventListener('mousemove', handleInteractionMove);
+    window.removeEventListener('mouseup', handleInteractionEnd);
+    window.removeEventListener('touchmove', handleInteractionMove);
+    window.removeEventListener('touchend', handleInteractionEnd);
+    if (isRecording && !isLockedRecording) {
+      stopRecording();
+    }
+  }, [isRecording, isLockedRecording, stopRecording]);
 
-  const handleInteractionStart = (e) => {
-    // Prevent default behavior like text selection on desktop
+  const handleInteractionMove = useCallback((e) => {
+    if (!isRecording || isLockedRecording) return;
+    
+    // This is the magic line that prevents the page from scrolling on mobile
+    // when you are dragging the mic button.
     e.preventDefault();
-    isCancelledRef.current = false; // Reset cancellation flag
 
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    const dx = clientX - startRecordingPos.x;
+    const dy = clientY - startRecordingPos.y;
+    const CANCEL_THRESHOLD = -50;
+    const LOCK_THRESHOLD = -50;
+
+    setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });
+
+    if (dy < LOCK_THRESHOLD) setSwipeHint('lock');
+    else if (dx < CANCEL_THRESHOLD) setSwipeHint('cancel');
+    else setSwipeHint(null);
+
+    if (dx < CANCEL_THRESHOLD) {
+      isCancelledRef.current = true;
+      stopRecording();
+      resetRecordingState();
+      handleInteractionEnd();
+    }
+
+    if (dy < LOCK_THRESHOLD) {
+      setIsLockedRecording(true);
+      setMicTransform({});
+      handleInteractionEnd();
+    }
+  }, [isRecording, isLockedRecording, startRecordingPos.x, startRecordingPos.y, stopRecording, handleInteractionEnd]);
+
+  const handleInteractionStart = useCallback((e) => {
+    e.preventDefault();
+    isCancelledRef.current = false;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     setStartRecordingPos({ x: clientX, y: clientY });
@@ -71,69 +105,12 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     holdTimeoutRef.current = setTimeout(() => {
       startRecording();
       setIsRecording(true);
-      
-      // Add global listeners to handle movement/release anywhere on the screen
       window.addEventListener('mousemove', handleInteractionMove);
       window.addEventListener('mouseup', handleInteractionEnd);
       window.addEventListener('touchmove', handleInteractionMove, { passive: false });
       window.addEventListener('touchend', handleInteractionEnd);
-    }, 250); // 250ms hold to start recording
-  };
-  
-  const handleInteractionMove = useCallback((e) => {
-    if (!isRecording || isLockedRecording) return;
-    
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-    const dx = clientX - startRecordingPos.x;
-    const dy = clientY - startRecordingPos.y;
-    const CANCEL_THRESHOLD = -50; // Swipe left distance
-    const LOCK_THRESHOLD = -50;   // Swipe up distance
-
-    // Visual feedback for the mic button
-    setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });
-    
-    // NEW: Logic for visual feedback
-    if (dy < LOCK_THRESHOLD) {
-      setSwipeHint('lock');
-    } else if (dx < CANCEL_THRESHOLD) {
-      setSwipeHint('cancel');
-    } else {
-      setSwipeHint(null);
-    }
-    
-    // Check for swipe left to cancel
-    if (dx < CANCEL_THRESHOLD) {
-      isCancelledRef.current = true;
-      stopRecording();
-      resetRecordingState();
-      handleInteractionEnd(); // Clean up listeners
-    }
-    
-    // Check for swipe up to lock
-    if (dy < LOCK_THRESHOLD) {
-      setIsLockedRecording(true);
-      setMicTransform({}); // Snap button back to place
-      handleInteractionEnd(); // Clean up listeners, but recording continues
-    }
-  }, [isRecording, isLockedRecording, startRecordingPos.x, startRecordingPos.y, stopRecording]);
-
-  const handleInteractionEnd = () => {
-    // Clear the hold timeout if user releases before it triggers
-    clearTimeout(holdTimeoutRef.current);
-    
-    // Clean up global event listeners
-    window.removeEventListener('mousemove', handleInteractionMove);
-    window.removeEventListener('mouseup', handleInteractionEnd);
-    window.removeEventListener('touchmove', handleInteractionMove);
-    window.removeEventListener('touchend', handleInteractionEnd);
-
-    // If it wasn't locked or cancelled, releasing the button sends the message
-    if (isRecording && !isLockedRecording) {
-      stopRecording();
-    }
-  };
+    }, 250);
+  }, [startRecording, handleInteractionMove, handleInteractionEnd]);
 
   // --- Sending Logic ---
 
@@ -154,7 +131,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       console.error("Error sending message:", error);
     } finally {
       setIsSubmitting(false);
-      // Stop typing emitter
       if (isTyping) {
         socket.emit("stopTyping", { senderId: userProfile._id, receiverId: selectedUser._id });
         setIsTyping(false);
@@ -196,7 +172,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   };
 
   const handleSendLockedAudio = () => {
-    stopRecording(); // This triggers onStop, which calls handleSendAudioMessage
+    stopRecording();
   };
 
   const handleCancelLockedAudio = () => {
@@ -206,11 +182,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   };
 
   const handleTogglePause = () => {
-    if (isPaused) {
-      resumeRecording();
-    } else {
-      pauseRecording();
-    }
+    if (isPaused) resumeRecording();
+    else pauseRecording();
     setIsPaused(!isPaused);
   };
   
@@ -238,21 +211,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [handleSendMessage]);
 
   useEffect(() => {
-    const micButton = micButtonRef.current;
-
-    if (micButton) {
-      micButton.addEventListener('touchstart', handleInteractionStart, { passive: false });
-    }
-
-    // Cleanup timeouts on unmount
     return () => {
-      if (micButton) {
-        micButton.removeEventListener('touchstart', handleInteractionStart);
-      }
       clearTimeout(typingTimeoutRef.current);
       clearTimeout(holdTimeoutRef.current);
     };
-  }, [handleInteractionStart]);
+  }, []);
 
   return (
     <div className="p-4 bg-background border-t border-foreground">
@@ -318,8 +281,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
             <div className="flex items-center gap-3">
               {message.trim() === '' && (
                  <button
-                  ref={micButtonRef}
                   onMouseDown={handleInteractionStart}
+                  onTouchStart={handleInteractionStart}
                   style={micTransform}
                   className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${isRecording ? 'bg-red-500 text-white scale-125 animate-pulse' : 'bg-foreground text-text-secondary hover:bg-primary/20'}`}
                   onContextMenu={(e) => e.preventDefault()}

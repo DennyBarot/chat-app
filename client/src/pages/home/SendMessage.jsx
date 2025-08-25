@@ -74,10 +74,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       setIsRecording(true);
       
       // Add global listeners to handle movement/release anywhere on the screen
-      window.addEventListener('mousemove', handleInteractionMove);
-      window.addEventListener('mouseup', handleInteractionEnd);
-      window.addEventListener('touchmove', handleInteractionMove);
-      window.addEventListener('touchend', handleInteractionEnd);
+      window.addEventListener('mousemove', handleInteractionMove, { passive: false });
+      window.addEventListener('mouseup', handleInteractionEnd, { passive: false });
+      window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+      window.addEventListener('touchend', handleInteractionEnd, { passive: false });
     }, 250); // 250ms hold to start recording
   };
   
@@ -125,7 +125,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     // Clear the hold timeout if user releases before it triggers
     clearTimeout(holdTimeoutRef.current);
     
-    // Clean up global event listeners
+    // Clean up global event listeners with the same options
     window.removeEventListener('mousemove', handleInteractionMove);
     window.removeEventListener('mouseup', handleInteractionEnd);
     window.removeEventListener('touchmove', handleInteractionMove);

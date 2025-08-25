@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
-import { FaTrash, FaPause, FaPlay } from "react-icons/fa"; // Using better icons
+import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa"; // Using better icons
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
@@ -13,7 +13,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-   const isSubmittingRef = useRef(false);
+  const isSubmittingRef = useRef(false);
   // Typing state
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
@@ -28,6 +28,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [swipeHint, setSwipeHint] = useState(null); 
   const isCancelledRef = useRef(false); // Use ref to avoid stale state in callbacks
   const holdTimeoutRef = useRef(null);
+  const micButtonRef = useRef(null);
 
   const onStop = async (blobUrl, blob) => {
     // If cancellation was triggered, do nothing.
@@ -49,12 +50,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   });
 
   const resetRecordingState = () => {
-      setIsRecording(false);
+    setIsRecording(false);
     setIsLockedRecording(false);
     setIsPaused(false);
     setMicTransform({});
     setSwipeHint(null);
-   
   };
 
   // --- Main Event Handlers for Recording ---
@@ -63,7 +63,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     // Prevent default behavior like text selection on desktop
     e.preventDefault();
     isCancelledRef.current = false; // Reset cancellation flag
-
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -74,10 +73,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       setIsRecording(true);
       
       // Add global listeners to handle movement/release anywhere on the screen
-      window.addEventListener('mousemove', handleInteractionMove, { passive: false });
-      window.addEventListener('mouseup', handleInteractionEnd, { passive: false });
+      window.addEventListener('mousemove', handleInteractionMove);
+      window.addEventListener('mouseup', handleInteractionEnd);
       window.addEventListener('touchmove', handleInteractionMove, { passive: false });
-      window.addEventListener('touchend', handleInteractionEnd, { passive: false });
+      window.addEventListener('touchend', handleInteractionEnd);
     }, 250); // 250ms hold to start recording
   };
   
@@ -89,14 +88,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
     const dx = clientX - startRecordingPos.x;
     const dy = clientY - startRecordingPos.y;
-   console.log(`Drag Distance (dy): ${dy}`);
-    const CANCEL_THRESHOLD = -0; // Swipe left distance
-    const LOCK_THRESHOLD = -40;   // Swipe up distance
+    const CANCEL_THRESHOLD = -50; // Swipe left distance
+    const LOCK_THRESHOLD = -50;   // Swipe up distance
 
     // Visual feedback for the mic button
     setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });
     
-       // NEW: Logic for visual feedback
+    // NEW: Logic for visual feedback
     if (dy < LOCK_THRESHOLD) {
       setSwipeHint('lock');
     } else if (dx < CANCEL_THRESHOLD) {
@@ -125,7 +123,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     // Clear the hold timeout if user releases before it triggers
     clearTimeout(holdTimeoutRef.current);
     
-    // Clean up global event listeners with the same options
+    // Clean up global event listeners
     window.removeEventListener('mousemove', handleInteractionMove);
     window.removeEventListener('mouseup', handleInteractionEnd);
     window.removeEventListener('touchmove', handleInteractionMove);
@@ -137,7 +135,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   };
 
-
   // --- Sending Logic ---
 
   const handleSendMessage = useCallback(async () => {
@@ -146,7 +143,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     const messageToSend = message;
     setMessage("");
     if (replyMessage) onCancelReply();
-     setIsSubmitting(true);
     
     try {
       await dispatch(sendMessageThunk({
@@ -168,7 +164,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch, isSubmitting]);
 
   const handleSendAudioMessage = async (audioBlob) => {
-   // CORRECTED: Use the isSubmitting state here as well
     if (!audioBlob || isSubmitting) return;
     setIsSubmitting(true);
     try {
@@ -243,12 +238,21 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [handleSendMessage]);
 
   useEffect(() => {
+    const micButton = micButtonRef.current;
+
+    if (micButton) {
+      micButton.addEventListener('touchstart', handleInteractionStart, { passive: false });
+    }
+
     // Cleanup timeouts on unmount
     return () => {
+      if (micButton) {
+        micButton.removeEventListener('touchstart', handleInteractionStart);
+      }
       clearTimeout(typingTimeoutRef.current);
       clearTimeout(holdTimeoutRef.current);
     };
-  }, []);
+  }, [handleInteractionStart]);
 
   return (
     <div className="p-4 bg-background border-t border-foreground">
@@ -289,7 +293,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
           <>
             <div className="flex-1 relative">
               <input
-                 type="text"
+                type="text"
                 placeholder={isRecording ? "Slide left to cancel, up to lock" : "Type your message..."}
                 className={`w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all ${isRecording ? 'placeholder:text-center' : ''}`}
                 value={message}
@@ -314,19 +318,18 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
             <div className="flex items-center gap-3">
               {message.trim() === '' && (
                  <button
+                  ref={micButtonRef}
                   onMouseDown={handleInteractionStart}
-                  onTouchStart={handleInteractionStart}
                   style={micTransform}
                   className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${isRecording ? 'bg-red-500 text-white scale-125 animate-pulse' : 'bg-foreground text-text-secondary hover:bg-primary/20'}`}
                   onContextMenu={(e) => e.preventDefault()}
                 >
                   <IoIosMic className="text-xl" />
                 </button>
-                  )}
-            {message.trim() !== '' && (
+              )}
+              {message.trim() !== '' && (
                  <button
                   onClick={handleSendMessage}
-                  // CORRECTED: This is the line that caused the ReferenceError
                   disabled={isSubmitting}
                   className="p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center disabled:bg-foreground disabled:cursor-not-allowed"
                 >
@@ -336,7 +339,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
                     <IoIosSend className="text-xl" />
                   )}
                 </button>
-
               )}
             </div>
           </>

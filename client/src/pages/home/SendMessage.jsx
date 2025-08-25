@@ -598,6 +598,6 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       </div>
     </div>
   );
-};
+
 
 export default SendMessage;

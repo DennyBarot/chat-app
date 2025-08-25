@@ -87,9 +87,9 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
     const dx = clientX - startRecordingPos.x;
     const dy = clientY - startRecordingPos.y;
-
+   console.log(`Drag Distance (dy): ${dy}`);
     const CANCEL_THRESHOLD = -80; // Swipe left distance
-    const LOCK_THRESHOLD = -70;   // Swipe up distance
+    const LOCK_THRESHOLD = -40;   // Swipe up distance
 
     // Visual feedback for the mic button
     setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });

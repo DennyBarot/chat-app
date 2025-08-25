@@ -11,20 +11,21 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const { selectedUser, userProfile } = useSelector((state) => state.userReducer);
   const socket = useSocket();
   const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
    const isSubmittingRef = useRef(false);
   // Typing state
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
   // CORRECTED: Bringing back useState for isSubmitting
-  const [isSubmitting, setIsSubmitting] = useState(false);
+ 
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [isLockedRecording, setIsLockedRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
   const [micTransform, setMicTransform] = useState({});
-  const [swipeHint, setSwipeHint] = useState(null); 
+
   const isCancelledRef = useRef(false); // Use ref to avoid stale state in callbacks
   const holdTimeoutRef = useRef(null);
 
@@ -52,7 +53,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     setIsLockedRecording(false);
     setIsPaused(false);
     setMicTransform({});
-    setSwipeHint(null);
+   
   };
 
   // --- Main Event Handlers for Recording ---
@@ -61,7 +62,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     // Prevent default behavior like text selection on desktop
     e.preventDefault();
     isCancelledRef.current = false; // Reset cancellation flag
-      isSubmittingRef.current = false;
+
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -88,20 +89,12 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     const dx = clientX - startRecordingPos.x;
     const dy = clientY - startRecordingPos.y;
    console.log(`Drag Distance (dy): ${dy}`);
-    const CANCEL_THRESHOLD = -80; // Swipe left distance
+    const CANCEL_THRESHOLD = -0; // Swipe left distance
     const LOCK_THRESHOLD = -40;   // Swipe up distance
 
     // Visual feedback for the mic button
     setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });
     
-        // NEW: Logic for visual feedback
-    if (dy < LOCK_THRESHOLD) {
-      setSwipeHint('lock');
-    } else if (dx < CANCEL_THRESHOLD) {
-      setSwipeHint('cancel');
-    } else {
-      setSwipeHint(null);
-    }
 
     // Check for swipe left to cancel
     if (dx < CANCEL_THRESHOLD) {
@@ -144,7 +137,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     const messageToSend = message;
     setMessage("");
     if (replyMessage) onCancelReply();
-
+     setIsSubmitting(true);
     
     try {
       await dispatch(sendMessageThunk({
@@ -287,15 +280,15 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
           <>
             <div className="flex-1 relative">
               <input
-                type="text"
-                placeholder={isRecording ? "" : "Type your message..."}
+                 type="text"
+                placeholder={isRecording ? "Slide left to cancel, up to lock" : "Type your message..."}
                 className={`w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all ${isRecording ? 'placeholder:text-center' : ''}`}
                 value={message}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                disabled={isRecording|| isSubmitting}
+                disabled={isSubmitting || isRecording}
               />
-              {/* NEW: Visual Hint UI */}
+              
               {isRecording && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                    <span className="text-text-secondary animate-pulse flex items-center gap-4">
@@ -310,7 +303,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
             </div>
             <div className="flex items-center gap-3">
-              {message.trim() === '' ? (
+              {message.trim() === '' && (
                  <button
                   onMouseDown={handleInteractionStart}
                   onTouchStart={handleInteractionStart}
@@ -320,7 +313,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
                 >
                   <IoIosMic className="text-xl" />
                 </button>
-             ) : (
+                  )}
+            {message.trim() !== '' && (
                  <button
                   onClick={handleSendMessage}
                   // CORRECTED: This is the line that caused the ReferenceError

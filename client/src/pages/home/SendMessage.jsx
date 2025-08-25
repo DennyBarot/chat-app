@@ -16,7 +16,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   // Typing state
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
-
+  // CORRECTED: Bringing back useState for isSubmitting
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [isLockedRecording, setIsLockedRecording] = useState(false);
@@ -138,11 +139,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isSubmitting) return;
-
+    setIsSubmitting(true);
     const messageToSend = message;
     setMessage("");
     if (replyMessage) onCancelReply();
-    setIsSubmitting(true);
+
     
     try {
       await dispatch(sendMessageThunk({
@@ -164,9 +165,9 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch, isSubmitting]);
 
   const handleSendAudioMessage = async (audioBlob) => {
-     if (!audioBlob || isSubmittingRef.current) return;
-    isSubmittingRef.current = true;
-    
+   // CORRECTED: Use the isSubmitting state here as well
+    if (!audioBlob || isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const arrayBuffer = await audioBlob.arrayBuffer();
@@ -191,7 +192,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     } catch (error) {
       console.error("Error sending audio message:", error);
     } finally {
-      // setIsSubmitting(false);
+      setIsSubmitting(false);
       if (replyMessage) onCancelReply();
     }
   };
@@ -291,7 +292,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
                 value={message}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                disabled={isRecording}
+                disabled={isRecording|| isSubmitting}
               />
               {/* NEW: Visual Hint UI */}
               {isRecording && (
@@ -318,16 +319,20 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
                 >
                   <IoIosMic className="text-xl" />
                 </button>
-              ):(
+             ) : (
                  <button
                   onClick={handleSendMessage}
-                  disabled={isSubmittingRef.current}
+                  // CORRECTED: This is the line that caused the ReferenceError
+                  disabled={isSubmitting}
                   className="p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center disabled:bg-foreground disabled:cursor-not-allowed"
                 >
-                 
+                  {isSubmitting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
                     <IoIosSend className="text-xl" />
-                  
+                  )}
                 </button>
+
               )}
             </div>
           </>

@@ -160,6 +160,9 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     console.log("handleSendAudioMessage triggered. audioBlob:", audioBlob); // Debug log
     if (!audioBlob) return;
 
+    // Prevent multiple sends
+    if (isSubmitting) return;
+    
     setIsSubmitting(true);
     
     try {
@@ -171,7 +174,7 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         reader.onerror = (error) => reject(error);
       });
       
-      dispatch(sendMessageThunk({
+      await dispatch(sendMessageThunk({
         receiverId: selectedUser?._id,
         message: '[Voice Message]',
         replyTo: replyMessage?._id,
@@ -179,7 +182,8 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         audioDuration: audioDuration
       }));
       
-      setAudioBlob(null);
+      // Reset state after successful send
+      resetRecordingState();
       if (replyMessage) onCancelReply();
 
       setTimeout(() => {
@@ -188,19 +192,31 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
       
     } catch (error) {
       console.error("Error sending audio message:", error);
+      setIsSubmitting(false);
     }
   };
 
-  const handleSendLockedAudio = () => {
+  const handleSendLockedAudio = async () => {
     console.log("handleSendLockedAudio triggered"); // Debug log
-    stopRecording();
+    await stopRecording(); // Ensure recording is stopped before sending
+    handleSendAudioMessage(); // Send the audio message
+    resetRecordingState(); // Reset the state after sending
+  };
+
+  const resetRecordingState = () => {
+    setIsRecording(false);
+    setIsLockedRecording(false);
+    setIsPaused(false);
+    setAudioBlob(null);
+    setAudioDuration(0);
+    setTransformStyle({});
+    setSwipeDirection(null);
   };
 
   const handleCancelLockedAudio = () => {
     console.log("handleCancelLockedAudio triggered"); // Debug log
-    setTransformStyle({}); // Reset transform style on cancel
-    setSwipeDirection(null); // Reset swipe direction on cancel
     stopRecording();
+    resetRecordingState();
     setIsCancelling(true);
   };
 

@@ -39,9 +39,10 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
         return;
       }
 
+      // If not cancelling, proceed to set audio blob and send
       setAudioBlob(blob);
       setIsRecording(false);
-      setIsLockedRecording(false);
+      // setIsLockedRecording(false); // This should be handled by resetRecordingState
       setIsPaused(false); // Reset paused state on stop
       
       // Get audio duration using a more reliable method
@@ -140,7 +141,10 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     holdTimeoutRef.current = setTimeout(() => {
       startRecording();
       setIsRecording(true);
-    }, 100); // Short delay to detect if this is a hold or click
+      // Add global event listeners for mouse events only after recording starts
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleRecordAudioStop);
+    }, 200); // Increased delay to better detect hold
   };
 
   const handleRecordAudioStop = () => {
@@ -161,6 +165,10 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     setTransformStyle({}); // Reset transform style on stop
     setSwipeDirection(null); // Reset swipe direction on stop
     
+    // Remove global event listeners for mouse events
+    window.removeEventListener('mousemove', handleMouseMove);
+    window.removeEventListener('mouseup', handleRecordAudioStop);
+
     if (isCancelling) {
       console.log("handleRecordAudioStop: Cancelling recording."); // Debug log
       stopRecording();
@@ -224,8 +232,8 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
 
   const handleSendLockedAudio = async () => {
     console.log("handleSendLockedAudio triggered"); // Debug log
-    await stopRecording(); // Ensure recording is stopped before sending
-    handleSendAudioMessage(); // Send the audio message
+    stopRecording(); // This will trigger the onStop callback, which now handles sending
+    // No need to call handleSendAudioMessage directly here, onStop will do it
     resetRecordingState(); // Reset the state after sending
   };
 
@@ -265,26 +273,26 @@ const SendMessage = ({ replyMessage, onCancelReply, scrollToBottom }) => {
     }
   }, [handleSendMessage]);
 
-const handleMouseMove = useCallback((e) => {
-  if (isRecording && !isLockedRecording) {
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const dx = clientX - startRecordingPos.x;
-    const dy = clientY - startRecordingPos.y;
+  const handleMouseMove = useCallback((e) => {
+    if (isRecording && !isLockedRecording) {
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const dx = clientX - startRecordingPos.x;
+      const dy = clientY - startRecordingPos.y;
 
-    const CANCEL_THRESHOLD = 50;
-    const LOCK_THRESHOLD = -70; // Negative because moving up decreases Y
+      const CANCEL_THRESHOLD = 50;
+      const LOCK_THRESHOLD = -70; // Negative because moving up decreases Y
 
-    // Update transform style for visual feedback with smooth animation
-    setTransformStyle({ 
-      transform: `translate(${dx}px, ${dy}px)`, 
-      transition: 'transform 0.1s ease'
-    });
+      // Update transform style for visual feedback with smooth animation
+      setTransformStyle({ 
+        transform: `translate(${dx}px, ${dy}px)`, 
+        transition: 'transform 0.1s ease'
+      });
 
-    // Only determine direction if not already determined
-    if (swipeDirection === null) {
-      const absDx = Math.abs(dx);
-      const absDy = Math.abs(dy);
+      // Only determine direction if not already determined
+      if (swipeDirection === null) {
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
 
       // Check for straight left swipe (cancel)
       if (absDx > absDy * 2 && dx < -CANCEL_THRESHOLD) {
@@ -301,9 +309,12 @@ const handleMouseMove = useCallback((e) => {
         // Continue recording in locked mode
         return;
       }
+      
+      // If the swipe direction is determined, reset the transform style
+      setTransformStyle({}); // Reset transform style after swipe
+      }
     }
-  }
-}, [isRecording, startRecordingPos, isLockedRecording, swipeDirection, stopRecording]);
+  }, [isRecording, startRecordingPos, isLockedRecording, swipeDirection, stopRecording]);
 
   // Removed handleMouseLeave as it's not directly applicable to touch events for cancellation.
   // Cancellation will now primarily be handled by swiping left.

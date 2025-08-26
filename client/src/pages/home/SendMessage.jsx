@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
 import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
@@ -48,6 +49,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     onStop,
   });
 
+  // Use a ref to get the latest status inside callbacks without making them dependencies
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
   const resetRecordingUI = useCallback(() => {
     setIsRecording(false);
     setIsLocked(false);
@@ -57,16 +62,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     setShowLockHint(false);
   }, []);
 
-  const removeWindowListeners = useCallback(() => {
-    window.removeEventListener('mousemove', handleInteractionMove);
-    window.removeEventListener('mouseup', handleInteractionEnd);
-    window.removeEventListener('touchmove', handleInteractionMove);
-    window.removeEventListener('touchend', handleInteractionEnd);
-  }, []);
-
   const handleInteractionMove = useCallback((e) => {
-    if (isLocked) return;
-    
+    e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     
@@ -85,29 +82,37 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       isCancelledRef.current = true;
       stopRecording();
       resetRecordingUI();
-      removeWindowListeners();
     } else if (isBeyondLock) {
       setIsLocked(true);
       setDragOffset({ x: 0, y: 0 });
-      removeWindowListeners();
     }
-  }, [isLocked, stopRecording, resetRecordingUI, removeWindowListeners]);
+  }, [resetRecordingUI, stopRecording]);
 
   const handleInteractionEnd = useCallback(() => {
     clearTimeout(holdTimeoutRef.current);
-    if (!isLocked && status === 'recording') {
+    
+    if (statusRef.current === 'recording') {
       stopRecording();
     }
     resetRecordingUI();
-    removeWindowListeners();
-  }, [isLocked, status, stopRecording, resetRecordingUI, removeWindowListeners]);
+  }, [resetRecordingUI, stopRecording]);
 
-  const addWindowListeners = useCallback(() => {
-    window.addEventListener('mousemove', handleInteractionMove);
-    window.addEventListener('mouseup', handleInteractionEnd);
-    window.addEventListener('touchmove', handleInteractionMove, { passive: false });
-    window.addEventListener('touchend', handleInteractionEnd);
-  }, [handleInteractionMove, handleInteractionEnd]);
+  useEffect(() => {
+    // This effect declaratively manages the window event listeners
+    if (isRecording && !isLocked) {
+      window.addEventListener('mousemove', handleInteractionMove);
+      window.addEventListener('mouseup', handleInteractionEnd);
+      window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+      window.addEventListener('touchend', handleInteractionEnd);
+
+      return () => {
+        window.removeEventListener('mousemove', handleInteractionMove);
+        window.removeEventListener('mouseup', handleInteractionEnd);
+        window.removeEventListener('touchmove', handleInteractionMove);
+        window.removeEventListener('touchend', handleInteractionEnd);
+      };
+    }
+  }, [isRecording, isLocked, handleInteractionMove, handleInteractionEnd]);
 
   const handleInteractionStart = useCallback((e) => {
     e.preventDefault();
@@ -124,19 +129,16 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
-      addWindowListeners();
-    }, 200);
-  }, [startRecording, addWindowListeners]);
+    }, 500);
+  }, [startRecording]);
 
   useEffect(() => {
+    // Cleanup timeouts on unmount
     return () => {
       clearTimeout(holdTimeoutRef.current);
       clearInterval(timerRef.current);
-      removeWindowListeners();
     }
-  }, [removeWindowListeners]);
-
-  // --- Sending Logic ---
+  }, []);
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isSubmitting) return;
@@ -210,12 +212,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
   const handleTogglePause = (e) => {
     e.stopPropagation();
-    if (isPaused) resumeRecording();
-    else pauseRecording();
+    if (isPaused) {
+      resumeRecording();
+    } else {
+      pauseRecording();
+    }
     setIsPaused(!isPaused);
   };
-  
-  // --- Input and Typing Handlers ---
   
   const handleInputChange = useCallback((e) => {
     setMessage(e.target.value);
@@ -263,17 +266,17 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       <div className="flex gap-3 items-center">
         {isLocked ? (
           <div className="flex-1 flex items-center justify-between bg-primary/10 p-2 rounded-full">
-            <button onClick={(e) => handleCancelLockedAudio(e)} title="Cancel recording">
+            <button onClick={handleCancelLockedAudio} title="Cancel recording">
               <FaTrash className="text-xl text-red-500 hover:text-red-700 transition-colors" />
             </button>
             <div className="text-text-primary font-medium">
               {formatTime(recordingTime)}
             </div>
             <div className="flex items-center gap-4">
-              <button onClick={(e) => handleTogglePause(e)} title={isPaused ? "Resume" : "Pause"}>
+              <button onClick={handleTogglePause} title={isPaused ? "Resume" : "Pause"}>
                 {isPaused ? <FaPlay className="text-xl text-primary" /> : <FaPause className="text-xl text-primary" />}
               </button>
-              <button onClick={(e) => handleSendLockedAudio(e)} title="Send voice message"
+              <button onClick={handleSendLockedAudio} title="Send voice message"
                  className="p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center shadow-md">
                 <IoIosSend className="text-xl" />
               </button>

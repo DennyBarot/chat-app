@@ -4,11 +4,10 @@ import { getMessageThunk, sendMessageThunk, getConversationsThunk, getOtherUsers
 const initialState = {
   buttonLoading: false,
   screenLoading: false,
-  messages: [], // Initialize as empty array
+  messages: null,
   conversations: [],
   otherUsers: [],
-  sendMessageStatus: 'idle',
-  selectedConversation: null, // Added for context in addReceivedWebRTCAudioMessage
+  sendMessageStatus: 'idle', 
 };
 
 export const messageSlice = createSlice({
@@ -40,65 +39,33 @@ export const messageSlice = createSlice({
         return msg;
       });
     },
+    // --- NEW REDUCER for handling real-time conversation updates ---
     updateSingleConversation: (state, action) => {
         const updatedConversation = action.payload;
         const index = state.conversations.findIndex(c => c._id === updatedConversation._id);
 
         if (index !== -1) {
+            // If conversation exists, create a new array with the updated conversation
             state.conversations = [
                 ...state.conversations.slice(0, index),
                 updatedConversation,
                 ...state.conversations.slice(index + 1),
             ];
         } else {
+            // If it's a new conversation, add it to the top
             state.conversations = [updatedConversation, ...state.conversations];
         }
-    },
-    // NEW REDUCER for adding received WebRTC audio messages
-    addReceivedWebRTCAudioMessage: (state, action) => {
-      const { senderId, audioBlob, audioDuration } = action.payload;
-      // Create a unique URL for the audio blob
-      const audioUrl = URL.createObjectURL(audioBlob);
-
-      // Construct a new message object similar to how server-sent messages are structured
-      const newMessage = {
-        _id: `webrtc-${Date.now()}-${Math.random()}`, // Unique client-side ID
-        senderId: senderId,
-        // Determine receiver based on current selected conversation participants
-        receiverId: state.selectedConversation?.participants.find(p => p._id !== senderId)?._id || null,
-        conversationId: state.selectedConversation?._id || null,
-        content: '[Voice Message]', // Display text
-        isAudioMessage: true,
-        audioUrl: audioUrl, // Store the object URL
-        audioDuration: audioDuration,
-        sentViaWebRTC: true, // Flag to indicate it was WebRTC
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        readBy: [], // Initially not read by anyone
-      };
-      state.messages.push(newMessage);
-    },
-    // Add a reducer to set the selected conversation for context
-    setSelectedConversation: (state, action) => {
-      state.selectedConversation = action.payload;
-    },
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(sendMessageThunk.pending, (state) => {
       state.buttonLoading = true;
       state.sendMessageStatus = 'pending';
     });
-    // The message is added via socket (setNewMessage), so we only need to handle loading state here
-    // and ensure we don't duplicate if it's already added by setNewMessage
-    builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
+    // The message is added via socket, so we only need to handle loading state here
+    builder.addCase(sendMessageThunk.fulfilled, (state) => {
       state.buttonLoading = false;
       state.sendMessageStatus = 'fulfilled';
-      // If the message was sent via WebRTC, it's already added by setNewMessage
-      // if the socket event fires quickly. Otherwise, add it here.
-      const newMessage = action.payload.responseData;
-      if (newMessage && !state.messages.some(msg => msg._id === newMessage._id)) {
-        state.messages.push(newMessage);
-      }
     });
     builder.addCase(sendMessageThunk.rejected, (state) => {
       state.buttonLoading = false;
@@ -148,6 +115,6 @@ export const messageSlice = createSlice({
 });
 
 // Export the new action
-export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages, addReceivedWebRTCAudioMessage, setSelectedConversation } = messageSlice.actions;
+export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages } = messageSlice.actions;
 
 export default messageSlice.reducer;

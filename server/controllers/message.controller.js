@@ -26,10 +26,10 @@ const getUpdatedConversationForUser = async (conversationId, userId) => {
 export const sendMessage = asyncHandler(async (req, res, next) => {
     const receiverId = req.params.receiverId;
     const senderId = req.user._id;
-    const { message, replyTo, audioData, audioDuration, sentViaWebRTC } = req.body; // Destructure sentViaWebRTC
+    const { message, replyTo, audioData, audioDuration } = req.body;
 
-    // Check if this is an audio message (either file upload, Base64 data, or WebRTC confirmed)
-    const isAudioMessage = (req.files && req.files.audio) || (audioData && audioData.length > 0) || sentViaWebRTC;
+    // Check if this is an audio message (either file upload or Base64 data)
+    const isAudioMessage = (req.files && req.files.audio) || (audioData && audioData.length > 0);
     
     if (!senderId || !receiverId || (!message && !isAudioMessage)) {
         return next(new errorHandler("Missing required fields.", 400));
@@ -49,17 +49,13 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         readBy: [senderId]
     };
 
-    // Handle audio message (either file upload, Base64 data, or WebRTC confirmed)
+    // Handle audio message (either file upload or Base64 data)
     if (isAudioMessage) {
         messageData.isAudioMessage = true;
         messageData.audioDuration = audioDuration || 0;
         
-        if (sentViaWebRTC) {
-            // If sent via WebRTC, we don't store audioData or audioUrl on the server
-            // The audio was transferred directly peer-to-peer.
-            console.log("Audio message confirmed via WebRTC. Not storing audio data on server.");
-        } else if (req.files && req.files.audio) {
-            // Handle file upload (for backward compatibility or fallback)
+        if (req.files && req.files.audio) {
+            // Handle file upload (for backward compatibility)
             const audioFile = req.files.audio;
             
             // Generate a unique filename
@@ -75,7 +71,7 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
             const uploadPath = path.join(__dirname, '../uploads/audios', fileName);
             await audioFile.mv(uploadPath);
         } else if (audioData && audioData.length > 0) {
-            // Handle Base64 audio data (fallback)
+            // Handle Base64 audio data
             messageData.audioData = audioData;
         }
     }

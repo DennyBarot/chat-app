@@ -1,8 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from "react-redux";
-import { formatTimeAgo, isMessageRead, getReadTime } from '../../utils/timeUtils'; // Corrected imports
-import { FaReply } from 'react-icons/fa';
-import { IoPlayCircle, IoPauseCircle } from 'react-icons/io5'; // Import play/pause icons
+import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
 
 const formatTime = (timestamp) => {
   if (!timestamp) return "Invalid time";
@@ -10,7 +8,7 @@ const formatTime = (timestamp) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name to 'message'
+const Message = ({ messageDetails, onReply, isLastMessage }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -22,15 +20,15 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
     (state) => state.userReducer || { userProfile: null, selectedUser: null }
   );
 
-  const createdAt = message?.createdAt; // Changed to message
-  const isSentByMe = userProfile?._id === message?.senderId; // Changed to message
+  const createdAt = messageDetails?.createdAt;
+  const isSentByMe = userProfile?._id === messageDetails?.senderId;
 
   const handleMouseEnter = useCallback(() => setShowMenu(true), []);
   const handleMouseLeave = useCallback(() => setShowMenu(false), []);
-  const handleReply = useCallback(() => onReply(message), [onReply, message]); // Changed to message
+  const handleReply = useCallback(() => onReply(messageDetails), [onReply, messageDetails]);
 
-  const messageRead = useMemo(() => isMessageRead(message, userProfile?._id), [message, userProfile]); // Changed to message
-  const readTime = useMemo(() => getReadTime(message, userProfile?._id), [message, userProfile]); // Changed to message
+  const messageRead = useMemo(() => isMessageRead(messageDetails, userProfile?._id), [messageDetails, userProfile]);
+  const readTime = useMemo(() => getReadTime(messageDetails, userProfile?._id), [messageDetails, userProfile]);
 
   const handlePlayAudio = () => {
     if (isPlaying) {
@@ -41,16 +39,9 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
       return;
     }
 
-    // Create audio element if it doesn't exist or if source changes
+    // Create audio element if it doesn't exist
     if (!audioRef.current) {
-      audioRef.current = new Audio();
-    }
-
-    // Set audio source based on whether it's a WebRTC audio or server-stored
-    if (message.audioUrl) {
-      audioRef.current.src = message.audioUrl;
-    } else if (message.audioData) {
-      audioRef.current.src = `data:audio/webm;base64,${message.audioData}`;
+      audioRef.current = new Audio(messageDetails.audioData);
     }
 
     // Play audio
@@ -60,11 +51,10 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
     // Set up interval to update current time
     intervalRef.current = setInterval(() => {
       setCurrentTime((prevTime) => {
-        // Use audioRef.current.duration for total duration
-        if (audioRef.current && prevTime >= audioRef.current.duration) {
+        if (prevTime >= messageDetails.audioDuration) {
           clearInterval(intervalRef.current);
           setIsPlaying(false);
-          return audioRef.current.duration;
+          return messageDetails.audioDuration;
         }
         return prevTime + 1;
       });
@@ -74,7 +64,7 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
     audioRef.current.onended = () => {
       clearInterval(intervalRef.current);
       setIsPlaying(false);
-      setCurrentTime(audioRef.current.duration);
+      setCurrentTime(messageDetails.audioDuration);
     };
 
     // Handle audio pause
@@ -84,7 +74,7 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
     };
   };
 
-  // Cleanup on component unmount and when message changes (for object URLs)
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
       clearInterval(intervalRef.current);
@@ -92,12 +82,8 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
         audioRef.current.pause();
         audioRef.current = null;
       }
-      // Revoke object URL if it was created for WebRTC audio
-      if (message.sentViaWebRTC && message.audioUrl) {
-        URL.revokeObjectURL(message.audioUrl);
-      }
     };
-  }, [message]); // Dependency on message to re-run cleanup if message changes
+  }, []);
 
   return (
     <div
@@ -130,15 +116,15 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
             </svg>
           </button>
         )}
-        {message.quotedMessage && ( // Changed to message
+        {messageDetails.quotedMessage && (
           <div className="bg-primary/10 border-l-4 border-primary mb-2 px-3 py-2 text-sm rounded-md shadow-sm flex flex-col">
             <span className="font-semibold text-primary">
-              {message.quotedMessage.senderName || 'Unknown'}: // Changed to message
+              {messageDetails.quotedMessage.senderName || 'Unknown'}:
             </span>
             <span className="text-text-primary">
-              {message.quotedMessage.content || '[No content]'} // Changed to message
+              {messageDetails.quotedMessage.content || '[No content]'}
             </span>
-            {message.quotedMessage.replyTo && ( // Changed to message
+            {messageDetails.quotedMessage.replyTo && (
               <span className="italic text-xs ml-2 text-primary"></span>
             )}
           </div>
@@ -151,7 +137,7 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
           }`}
           style={{ position: 'relative' }}
         >
-          {message.isAudioMessage ? ( // Changed to message
+          {messageDetails.isAudioMessage ? (
             <div className="flex items-center bg-gray-800 p-3 rounded-lg">
               <button 
                 onClick={handlePlayAudio} 
@@ -173,8 +159,7 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
                 {Array.from({ length: 20 }, (_, i) => {
                   // Simple waveform bars with varying heights
                   const height = Math.random() * 12 + 4;
-                  // Use audioRef.current.duration for accurate progress
-                  const isActive = audioRef.current && (i / 20) * audioRef.current.duration <= currentTime;
+                  const isActive = (i / 20) * messageDetails.audioDuration <= currentTime;
                   return (
                     <div
                       key={i}
@@ -192,19 +177,19 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
                 <div className="h-1 bg-gray-600 rounded-full">
                   <div 
                     className="h-full bg-primary rounded-full transition-all duration-300" 
-                    style={{ width: `${(currentTime / (audioRef.current?.duration || 1)) * 100}%` }} // Use audioRef.current.duration
+                    style={{ width: `${(currentTime / messageDetails.audioDuration) * 100}%` }}
                   />
                 </div>
               </div>
 
               {/* Time display */}
               <span className="text-white text-sm font-mono min-w-[60px] text-right">
-                {`${formatAudioTime(currentTime)} / ${formatAudioTime(audioRef.current?.duration || message.audioDuration)}`} // Use audioRef.current.duration
+                {`${currentTime}s / ${messageDetails.audioDuration}s`}
               </span>
             </div>
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">
-              {message?.content || '[No content]'} // Changed to message
+              {messageDetails?.content || '[No content]'}
             </p>
           )}
         </div>
@@ -213,7 +198,7 @@ const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name 
         </div>
         {isSentByMe && messageRead && isLastMessage && (
           <div className="text-xs mt-1 text-right mr-1 text-green-500 font-semibold">
-            {getReadTime(readTime)}
+            {getRelativeTime(readTime)}
           </div>
         )}
       </div>

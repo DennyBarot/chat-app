@@ -11,12 +11,6 @@ const formatTime = (timestamp) => {
 };
 
 const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name to 'message'
-  // Defensive check: If message is null or undefined, don't render
-  if (!message) {
-    console.warn("Message component received null or undefined message prop.", message);
-    return null;
-  }
-
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);

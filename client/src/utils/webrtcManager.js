@@ -276,7 +276,5 @@ class WebRTCManager {
   }
 }
 
-// Create singleton instance
-const webRTCManager = new WebRTCManager();
-
-export default webRTCManager;
+// Export the class directly so static methods can be accessed
+export default WebRTCManager;

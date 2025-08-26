@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
 import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
@@ -14,6 +13,9 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const socket = useSocket();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Create WebRTCManager instance
+  const webRTCManager = useRef(new WebRTCManager()).current;
 
   // Typing state
   const [isTyping, setIsTyping] = useState(false);
@@ -53,7 +55,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   // WebRTC recording function
   const startWebRTCRecording = useCallback(async (userId, socket) => {
     try {
-      await WebRTCManager.startRecording(userId, socket);
+      await webRTCManager.startRecording(userId, socket);
       setIsRecording(true);
       clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {
@@ -63,7 +65,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       console.error('WebRTC recording failed, falling back to media recorder:', error);
       startMediaRecording();
     }
-  }, [startMediaRecording]);
+  }, [startMediaRecording, webRTCManager]);
 
   // Use a ref to get the latest status inside callbacks without making them dependencies
   const statusRef = useRef(status);
@@ -108,14 +110,14 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     clearTimeout(holdTimeoutRef.current);
     
     if (isRecording) {
-      if (WebRTCManager.isSupported()) {
-        WebRTCManager.stopWebRTCRecording();
+      if (webRTCManager.isSupported()) {
+        webRTCManager.stopWebRTCRecording();
       } else {
         stopRecording();
       }
     }
     resetRecordingUI();
-  }, [resetRecordingUI, stopRecording, isRecording]);
+  }, [resetRecordingUI, stopRecording, isRecording, webRTCManager]);
 
   useEffect(() => {
     // This effect declaratively manages the window event listeners
@@ -143,7 +145,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     startPos.current = { x: clientX, y: clientY };
 
     holdTimeoutRef.current = setTimeout(() => {
-      if (WebRTCManager.isSupported()) {
+      if (webRTCManager.isSupported()) {
         startWebRTCRecording(selectedUser?._id, socket);
       } else {
         startMediaRecording();
@@ -154,7 +156,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         }, 1000);
       }
     }, 500);
-  }, [startWebRTCRecording, startMediaRecording, selectedUser, socket]);
+  }, [startWebRTCRecording, startMediaRecording, selectedUser, socket, webRTCManager]);
 
   useEffect(() => {
     // Cleanup timeouts on unmount
@@ -173,10 +175,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     
     try {
       // Check if WebRTC is supported and use it for audio messages
-      if (WebRTCManager.isSupported()) {
+      if (webRTCManager.isSupported()) {
         const audioBlob = await stopRecording();
         if (audioBlob) {
-          const duration = await WebRTCManager.getAudioDuration(audioBlob);
+          const duration = await webRTCManager.getAudioDuration(audioBlob);
           const base64Audio = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.readAsDataURL(audioBlob);
@@ -185,7 +187,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
           });
 
           // Create WebRTC offer and send audio
-          const peerConnection = await WebRTCManager.createOffer(selectedUser?._id, socket);
+          const peerConnection = await webRTCManager.createOffer(selectedUser?._id, socket);
           await dispatch(sendMessageThunk({
             receiverId: selectedUser?._id,
             message: '[Voice Message]',
@@ -212,7 +214,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         clearTimeout(typingTimeoutRef.current);
       }
     }
-  }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch, isSubmitting]);
+  }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch, isSubmitting, webRTCManager]);
 
   const handleSendAudioMessage = async (audioBlob) => {
     if (!audioBlob || isSubmitting) return;
@@ -248,8 +250,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
   const handleSendLockedAudio = (e) => {
     e.stopPropagation();
-    if (WebRTCManager.isSupported()) {
-      WebRTCManager.stopWebRTCRecording();
+    if (webRTCManager.isSupported()) {
+      webRTCManager.stopWebRTCRecording();
     } else {
       stopRecording();
     }
@@ -259,8 +261,8 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const handleCancelLockedAudio = (e) => {
     e.stopPropagation();
     isCancelledRef.current = true;
-    if (WebRTCManager.isSupported()) {
-      WebRTCManager.stopWebRTCRecording();
+    if (webRTCManager.isSupported()) {
+      webRTCManager.stopWebRTCRecording();
     } else {
       stopRecording();
     }

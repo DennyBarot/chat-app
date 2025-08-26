@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from "react-redux";
 import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
-import { FaClock, FaExclamationCircle } from 'react-icons/fa';
 
 const formatTime = (timestamp) => {
   if (!timestamp) return "Invalid time";
@@ -33,33 +32,49 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
 
   const handlePlayAudio = () => {
     if (isPlaying) {
+      // Pause if already playing
       audioRef.current?.pause();
+      clearInterval(intervalRef.current);
+      setIsPlaying(false);
       return;
     }
 
+    // Create audio element if it doesn't exist
     if (!audioRef.current) {
-      audioRef.current = new Audio(messageDetails.audioUrl || messageDetails.audioData);
+      audioRef.current = new Audio(messageDetails.audioData);
     }
 
+    // Play audio
     audioRef.current.play();
     setIsPlaying(true);
 
+    // Set up interval to update current time
     intervalRef.current = setInterval(() => {
-      setCurrentTime(audioRef.current.currentTime);
-    }, 100);
+      setCurrentTime((prevTime) => {
+        if (prevTime >= messageDetails.audioDuration) {
+          clearInterval(intervalRef.current);
+          setIsPlaying(false);
+          return messageDetails.audioDuration;
+        }
+        return prevTime + 1;
+      });
+    }, 1000);
 
+    // Handle audio end
     audioRef.current.onended = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
       clearInterval(intervalRef.current);
+      setIsPlaying(false);
+      setCurrentTime(messageDetails.audioDuration);
     };
 
+    // Handle audio pause
     audioRef.current.onpause = () => {
-      setIsPlaying(false);
       clearInterval(intervalRef.current);
+      setIsPlaying(false);
     };
   };
 
+  // Cleanup on component unmount
   useEffect(() => {
     return () => {
       clearInterval(intervalRef.current);
@@ -123,10 +138,10 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
           style={{ position: 'relative' }}
         >
           {messageDetails.isAudioMessage ? (
-            <div className="flex items-center gap-2 p-1">
+            <div className="flex items-center bg-gray-800 p-3 rounded-lg">
               <button 
                 onClick={handlePlayAudio} 
-                className="flex items-center justify-center w-8 h-8 bg-primary rounded-full hover:bg-primary/90 transition-colors flex-shrink-0"
+                className="flex items-center justify-center w-8 h-8 bg-primary rounded-full hover:bg-primary/90 transition-colors"
               >
                 {isPlaying ? (
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -139,16 +154,17 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
                 )}
               </button>
               
-              <div className="flex-1 mx-2 flex items-center space-x-0.5 h-8">
-                {Array.from({ length: 30 }, (_, i) => {
-                  const height = Math.random() * 20 + 4;
-                  const progress = messageDetails.audioDuration ? (currentTime / messageDetails.audioDuration) : 0;
-                  const isActive = (i / 30) <= progress;
+              {/* Waveform visualization */}
+              <div className="flex-1 mx-3 flex items-center space-x-0.5">
+                {Array.from({ length: 20 }, (_, i) => {
+                  // Simple waveform bars with varying heights
+                  const height = Math.random() * 12 + 4;
+                  const isActive = (i / 20) * messageDetails.audioDuration <= currentTime;
                   return (
                     <div
                       key={i}
-                      className={`w-0.5 rounded-full transition-all duration-200 ${
-                        isActive ? 'bg-primary-foreground' : 'bg-primary-foreground/40'
+                      className={`w-1 rounded-full transition-all duration-300 ${
+                        isActive ? 'bg-primary' : 'bg-gray-500'
                       }`}
                       style={{ height: `${height}px` }}
                     />
@@ -156,8 +172,19 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
                 })}
               </div>
 
-              <span className="text-sm font-mono min-w-[45px] text-right">
-                {Math.floor(currentTime)}s / {messageDetails.audioDuration}s
+              {/* Progress bar */}
+              <div className="flex-1 mx-2">
+                <div className="h-1 bg-gray-600 rounded-full">
+                  <div 
+                    className="h-full bg-primary rounded-full transition-all duration-300" 
+                    style={{ width: `${(currentTime / messageDetails.audioDuration) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Time display */}
+              <span className="text-white text-sm font-mono min-w-[60px] text-right">
+                {`${currentTime}s / ${messageDetails.audioDuration}s`}
               </span>
             </div>
           ) : (
@@ -166,16 +193,14 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
             </p>
           )}
         </div>
-        <div className={`text-xs mt-1 flex items-center gap-1 ${isSentByMe ? 'justify-end mr-1' : 'ml-1'} text-text-secondary`}>
-          <span>{formatTime(createdAt)}</span>
-          {isSentByMe && messageDetails.status === 'pending' && <FaClock className="text-xs animate-spin" title="Sending..." />}
-          {isSentByMe && messageDetails.status === 'failed' && <FaExclamationCircle className="text-xs text-red-500" title="Failed to send" />}
-          {isSentByMe && !messageDetails.status && messageRead && isLastMessage && (
-            <div className="text-xs text-green-500 font-semibold">
-              {getRelativeTime(readTime)}
-            </div>
-          )}
+        <div className={`text-xs mt-1 ${isSentByMe ? 'text-right mr-1' : 'ml-1'} text-text-secondary`}>
+          {formatTime(createdAt)}
         </div>
+        {isSentByMe && messageRead && isLastMessage && (
+          <div className="text-xs mt-1 text-right mr-1 text-green-500 font-semibold">
+            {getRelativeTime(readTime)}
+          </div>
+        )}
       </div>
       {isSentByMe && (
         <div className="flex-shrink-0 ml-3">

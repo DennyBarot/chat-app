@@ -52,11 +52,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
     const handleNewMessage = (newMessage) => {
       if (newMessage.conversationId === selectedConversationId) {
-        if (newMessage.tempId) {
-          dispatch(finalizeOptimisticMessage({ tempId: newMessage.tempId, finalMessage: newMessage }));
-        } else {
-          dispatch(setNewMessage(newMessage));
-        }
+        dispatch(setNewMessage(newMessage));
         setNewMessageCount(prevCount => prevCount + 1); // Increment new message count
         // Since the user is actively watching, we immediately mark the message as read.
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));

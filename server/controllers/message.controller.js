@@ -26,7 +26,7 @@ const getUpdatedConversationForUser = async (conversationId, userId) => {
 export const sendMessage = asyncHandler(async (req, res, next) => {
     const receiverId = req.params.receiverId;
     const senderId = req.user._id;
-    const { message, replyTo, audioData, audioDuration, tempId } = req.body;
+    const { message, replyTo, audioData, audioDuration } = req.body;
 
     // Check if this is an audio message (either file upload or Base64 data)
     const isAudioMessage = (req.files && req.files.audio) || (audioData && audioData.length > 0);
@@ -83,10 +83,6 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     await conversation.save();
 
     const populatedMessage = await Message.findById(newMessage._id).populate({ path: 'replyTo', populate: { path: 'senderId', select: 'fullName username' } }).lean();
-
-    if (tempId) {
-        populatedMessage.tempId = tempId;
-    }
 
     // --- RELIABLE REAL-TIME EVENTS USING ROOMS ---
     

@@ -28,8 +28,9 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
     const senderId = req.user._id;
     const { message, replyTo, audioData, audioDuration } = req.body;
 
-    const isAudioMessage = audioData && audioData.length > 0;
-
+    // Check if this is an audio message (either file upload or Base64 data)
+    const isAudioMessage = (req.files && req.files.audio) || (audioData && audioData.length > 0);
+    
     if (!senderId || !receiverId || (!message && !isAudioMessage)) {
         return next(new errorHandler("Missing required fields.", 400));
     }
@@ -48,14 +49,31 @@ export const sendMessage = asyncHandler(async (req, res, next) => {
         readBy: [senderId]
     };
 
+    // Handle audio message (either file upload or Base64 data)
     if (isAudioMessage) {
-        // Convert Base64 to Buffer
-        const base64WithoutPrefix = audioData.split(',')[1];
-        const audioBuffer = Buffer.from(base64WithoutPrefix, 'base64');
-
-        messageData.audioData = audioBuffer;
         messageData.isAudioMessage = true;
         messageData.audioDuration = audioDuration || 0;
+        
+        if (req.files && req.files.audio) {
+            // Handle file upload (for backward compatibility)
+            const audioFile = req.files.audio;
+            
+            // Generate a unique filename
+            const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+            const fileName = `audio-${uniqueSuffix}.${audioFile.name.split('.').pop()}`;
+            
+            // Store the file path
+            messageData.audioUrl = `/uploads/audios/${fileName}`;
+            
+            // Save the file to the server
+            const __filename = fileURLToPath(import.meta.url);
+            const __dirname = path.dirname(__filename);
+            const uploadPath = path.join(__dirname, '../uploads/audios', fileName);
+            await audioFile.mv(uploadPath);
+        } else if (audioData && audioData.length > 0) {
+            // Handle Base64 audio data
+            messageData.audioData = audioData;
+        }
     }
 
     const newMessage = await Message.create(messageData);

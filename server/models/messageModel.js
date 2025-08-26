@@ -14,7 +14,8 @@ const messageSchema = new Schema(
   readBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   
   // Audio message fields
-  audioData: { type: Buffer }, // Audio data stored as a Buffer
+  audioUrl: { type: String }, // URL to the stored audio file (for backward compatibility)
+  audioData: { type: String }, // Base64 encoded audio data
   audioDuration: { type: Number }, // Duration of the audio in seconds
   isAudioMessage: { type: Boolean, default: false }, // Flag to identify audio messages
   },

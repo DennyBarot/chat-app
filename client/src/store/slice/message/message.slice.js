@@ -55,14 +55,7 @@ export const messageSlice = createSlice({
             // If it's a new conversation, add it to the top
             state.conversations = [updatedConversation, ...state.conversations];
         }
-    },
-    replaceMessage: (state, action) => {
-      const { tempId, newMessage } = action.payload;
-      const index = state.messages.findIndex((msg) => msg._id === tempId);
-      if (index !== -1) {
-        state.messages[index] = newMessage;
-      }
-    },
+    }
   },
   extraReducers: (builder) => {
     builder.addCase(sendMessageThunk.pending, (state) => {
@@ -122,6 +115,6 @@ export const messageSlice = createSlice({
 });
 
 // Export the new action
-export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages, replaceMessage } = messageSlice.actions;
+export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages } = messageSlice.actions;
 
 export default messageSlice.reducer;

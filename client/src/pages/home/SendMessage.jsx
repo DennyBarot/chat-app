@@ -6,7 +6,7 @@ import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
-import WebRTCManager from "../../utils/webrtcManager";
+import webRTCManager, { WebRTCManager } from "../../utils/webrtcManager";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
@@ -53,7 +53,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   // WebRTC recording function
   const startWebRTCRecording = useCallback(async (userId, socket) => {
     try {
-      await WebRTCManager.startRecording(userId, socket);
+      await webRTCManager.startRecording(userId, socket);
       setIsRecording(true);
       clearInterval(timerRef.current);
       timerRef.current = setInterval(() => {

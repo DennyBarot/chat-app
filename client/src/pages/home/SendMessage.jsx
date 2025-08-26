@@ -195,18 +195,21 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   };
 
-  const handleSendLockedAudio = () => {
+  const handleSendLockedAudio = (e) => {
+    e.stopPropagation();
     stopRecording();
     resetRecordingUI();
   };
 
-  const handleCancelLockedAudio = () => {
+  const handleCancelLockedAudio = (e) => {
+    e.stopPropagation();
     isCancelledRef.current = true;
     stopRecording();
     resetRecordingUI();
   };
 
-  const handleTogglePause = () => {
+  const handleTogglePause = (e) => {
+    e.stopPropagation();
     if (isPaused) resumeRecording();
     else pauseRecording();
     setIsPaused(!isPaused);
@@ -260,17 +263,17 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       <div className="flex gap-3 items-center">
         {isLocked ? (
           <div className="flex-1 flex items-center justify-between bg-primary/10 p-2 rounded-full">
-            <button onClick={handleCancelLockedAudio} title="Cancel recording">
+            <button onClick={(e) => handleCancelLockedAudio(e)} title="Cancel recording">
               <FaTrash className="text-xl text-red-500 hover:text-red-700 transition-colors" />
             </button>
             <div className="text-text-primary font-medium">
               {formatTime(recordingTime)}
             </div>
             <div className="flex items-center gap-4">
-              <button onClick={handleTogglePause} title={isPaused ? "Resume" : "Pause"}>
+              <button onClick={(e) => handleTogglePause(e)} title={isPaused ? "Resume" : "Pause"}>
                 {isPaused ? <FaPlay className="text-xl text-primary" /> : <FaPause className="text-xl text-primary" />}
               </button>
-              <button onClick={handleSendLockedAudio} title="Send voice message"
+              <button onClick={(e) => handleSendLockedAudio(e)} title="Send voice message"
                  className="p-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors flex items-center justify-center shadow-md">
                 <IoIosSend className="text-xl" />
               </button>

@@ -39,73 +39,39 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
       return;
     }
 
-    // Check if we have a WebRTC stream available
-    const webRTCManager = window.webRTCManager;
-    if (webRTCManager && webRTCManager.incomingAudio) {
-      // Use WebRTC stream for direct playback
-      webRTCManager.incomingAudio.play();
-      setIsPlaying(true);
-      
-      // Set up interval to update current time
-      intervalRef.current = setInterval(() => {
-        setCurrentTime((prevTime) => {
-          if (prevTime >= messageDetails.audioDuration) {
-            clearInterval(intervalRef.current);
-            setIsPlaying(false);
-            return messageDetails.audioDuration;
-          }
-          return prevTime + 1;
-        });
-      }, 1000);
-
-      // Handle audio end
-      webRTCManager.incomingAudio.onended = () => {
-        clearInterval(intervalRef.current);
-        setIsPlaying(false);
-        setCurrentTime(messageDetails.audioDuration);
-      };
-
-      // Handle audio pause
-      webRTCManager.incomingAudio.onpause = () => {
-        clearInterval(intervalRef.current);
-        setIsPlaying(false);
-      };
-    } else {
-      // Fallback to Base64 audio data
-      // Create audio element if it doesn't exist
-      if (!audioRef.current) {
-        audioRef.current = new Audio(messageDetails.audioData);
-      }
-
-      // Play audio
-      audioRef.current.play();
-      setIsPlaying(true);
-
-      // Set up interval to update current time
-      intervalRef.current = setInterval(() => {
-        setCurrentTime((prevTime) => {
-          if (prevTime >= messageDetails.audioDuration) {
-            clearInterval(intervalRef.current);
-            setIsPlaying(false);
-            return messageDetails.audioDuration;
-          }
-          return prevTime + 1;
-        });
-      }, 1000);
-
-      // Handle audio end
-      audioRef.current.onended = () => {
-        clearInterval(intervalRef.current);
-        setIsPlaying(false);
-        setCurrentTime(messageDetails.audioDuration);
-      };
-
-      // Handle audio pause
-      audioRef.current.onpause = () => {
-        clearInterval(intervalRef.current);
-        setIsPlaying(false);
-      };
+    // Create audio element if it doesn't exist
+    if (!audioRef.current) {
+      audioRef.current = new Audio(messageDetails.audioData);
     }
+
+    // Play audio
+    audioRef.current.play();
+    setIsPlaying(true);
+
+    // Set up interval to update current time
+    intervalRef.current = setInterval(() => {
+      setCurrentTime((prevTime) => {
+        if (prevTime >= messageDetails.audioDuration) {
+          clearInterval(intervalRef.current);
+          setIsPlaying(false);
+          return messageDetails.audioDuration;
+        }
+        return prevTime + 1;
+      });
+    }, 1000);
+
+    // Handle audio end
+    audioRef.current.onended = () => {
+      clearInterval(intervalRef.current);
+      setIsPlaying(false);
+      setCurrentTime(messageDetails.audioDuration);
+    };
+
+    // Handle audio pause
+    audioRef.current.onpause = () => {
+      clearInterval(intervalRef.current);
+      setIsPlaying(false);
+    };
   };
 
   // Cleanup on component unmount

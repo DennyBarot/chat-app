@@ -6,7 +6,6 @@ import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
 import { useSocket } from "../../context/SocketContext";
-import WebRTCManager from "../../utils/webrtcManager";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
@@ -149,36 +148,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     if (replyMessage) onCancelReply();
     
     try {
-      // Check if WebRTC is supported and use it for audio messages
-      if (WebRTCManager.isSupported()) {
-        const audioBlob = await stopRecording();
-        if (audioBlob) {
-          const duration = await WebRTCManager.getAudioDuration(audioBlob);
-          const base64Audio = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(audioBlob);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = (error) => reject(error);
-          });
-
-          // Create WebRTC offer and send audio
-          const peerConnection = await WebRTCManager.createOffer(selectedUser?._id, socket);
-          await dispatch(sendMessageThunk({
-            receiverId: selectedUser?._id,
-            message: '[Voice Message]',
-            replyTo: replyMessage?._id,
-            audioData: base64Audio,
-            audioDuration: duration,
-          }));
-        }
-      } else {
-        // Fallback to existing method
-        await dispatch(sendMessageThunk({
-          receiverId: selectedUser?._id,
-          message: messageToSend,
-          replyTo: replyMessage?._id,
-        }));
-      }
+      await dispatch(sendMessageThunk({
+        receiverId: selectedUser?._id,
+        message: messageToSend,
+        replyTo: replyMessage?._id,
+      }));
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {

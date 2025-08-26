@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
-import webRTCManager from "../utils/webrtcManager";
 
 // 1. Create the context with a default value of null.
 const SocketContext = createContext(null);
@@ -47,22 +46,6 @@ export const SocketProvider = ({ children }) => {
 
     setSocket(newSocket);
     socketRef.current = newSocket;
-
-    // Make WebRTCManager globally available for message components
-    window.webRTCManager = webRTCManager;
-
-    // Handle WebRTC signaling
-    newSocket.on('webrtc-signal', (data) => {
-      const { type, offer, answer, candidate, targetUserId } = data;
-
-      if (type === 'offer') {
-        webRTCManager.handleOffer(offer, targetUserId, newSocket);
-      } else if (type === 'answer') {
-        webRTCManager.handleAnswer(answer, targetUserId);
-      } else if (type === 'ice-candidate') {
-        webRTCManager.handleIceCandidate(candidate, targetUserId);
-      }
-    });
 
     // Cleanup on unmount.
     return () => {

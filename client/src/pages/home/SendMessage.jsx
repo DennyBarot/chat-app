@@ -214,8 +214,12 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     e.stopPropagation();
     if (isPaused) {
       resumeRecording();
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     } else {
       pauseRecording();
+      clearInterval(timerRef.current);
     }
     setIsPaused(!isPaused);
   };

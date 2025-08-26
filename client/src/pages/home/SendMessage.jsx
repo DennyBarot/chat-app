@@ -45,25 +45,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   };
 
-  const { startRecording: startMediaRecording, stopRecording, pauseRecording, resumeRecording, status } = useReactMediaRecorder({
+  const { startRecording, stopRecording, pauseRecording, resumeRecording, status } = useReactMediaRecorder({
     audio: true,
     onStop,
   });
-
-  // WebRTC recording function
-  const startWebRTCRecording = useCallback(async (userId, socket) => {
-    try {
-      await WebRTCManager.startRecording(userId, socket);
-      setIsRecording(true);
-      clearInterval(timerRef.current);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } catch (error) {
-      console.error('WebRTC recording failed, falling back to media recorder:', error);
-      startMediaRecording();
-    }
-  }, [startMediaRecording]);
 
   // Use a ref to get the latest status inside callbacks without making them dependencies
   const statusRef = useRef(status);
@@ -107,15 +92,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const handleInteractionEnd = useCallback(() => {
     clearTimeout(holdTimeoutRef.current);
     
-    if (isRecording) {
-      if (WebRTCManager.isSupported()) {
-        WebRTCManager.stopWebRTCRecording();
-      } else {
-        stopRecording();
-      }
+    if (statusRef.current === 'recording') {
+      stopRecording();
     }
     resetRecordingUI();
-  }, [resetRecordingUI, stopRecording, isRecording]);
+  }, [resetRecordingUI, stopRecording]);
 
   useEffect(() => {
     // This effect declaratively manages the window event listeners
@@ -143,18 +124,14 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     startPos.current = { x: clientX, y: clientY };
 
     holdTimeoutRef.current = setTimeout(() => {
-      if (WebRTCManager.isSupported()) {
-        startWebRTCRecording(selectedUser?._id, socket);
-      } else {
-        startMediaRecording();
-        setIsRecording(true);
-        clearInterval(timerRef.current);
-        timerRef.current = setInterval(() => {
-          setRecordingTime(prev => prev + 1);
-        }, 1000);
-      }
+      startRecording();
+      setIsRecording(true);
+      clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
     }, 500);
-  }, [startWebRTCRecording, startMediaRecording, selectedUser, socket]);
+  }, [startRecording]);
 
   useEffect(() => {
     // Cleanup timeouts on unmount
@@ -248,22 +225,14 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
   const handleSendLockedAudio = (e) => {
     e.stopPropagation();
-    if (WebRTCManager.isSupported()) {
-      WebRTCManager.stopWebRTCRecording();
-    } else {
-      stopRecording();
-    }
+    stopRecording();
     resetRecordingUI();
   };
 
   const handleCancelLockedAudio = (e) => {
     e.stopPropagation();
     isCancelledRef.current = true;
-    if (WebRTCManager.isSupported()) {
-      WebRTCManager.stopWebRTCRecording();
-    } else {
-      stopRecording();
-    }
+    stopRecording();
     resetRecordingUI();
   };
 

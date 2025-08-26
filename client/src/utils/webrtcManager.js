@@ -43,40 +43,20 @@ class WebRTCManager {
     return this.peerConnections.get(userId);
   }
 
-  // Start audio recording for sending with real-time streaming
-  async startRecording(userId, socket) {
+  // Start audio recording for sending
+  async startRecording() {
     try {
       this.localStream = await navigator.mediaDevices.getUserMedia({ 
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
-          sampleRate: 16000, // Lower sample rate for faster transmission
-          channelCount: 1 // Mono for better compression
+          sampleRate: 44100
         }
       });
       
-      // Create WebRTC connection immediately for real-time streaming
-      const peerConnection = await this.initializeConnection(userId, socket);
-      
-      // Add audio track to peer connection for real-time streaming
-      this.localStream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, this.localStream);
-      });
-
-      // Create and send offer immediately
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-
-      socket.emit('webrtc-signal', {
-        type: 'offer',
-        offer: offer,
-        targetUserId: userId
-      });
-
-      // Set up media recorder for fallback
       this.mediaRecorder = new MediaRecorder(this.localStream, {
         mimeType: 'audio/webm;codecs=opus',
-        audioBitsPerSecond: 64000 // Lower bitrate for faster processing
+        audioBitsPerSecond: 128000
       });
 
       this.recordedChunks = [];
@@ -86,7 +66,7 @@ class WebRTCManager {
         }
       };
 
-      this.mediaRecorder.start(50); // Smaller chunks for faster processing
+      this.mediaRecorder.start(100); // Capture chunks every 100ms
       this.isRecording = true;
       
       return this.localStream;
@@ -116,29 +96,6 @@ class WebRTCManager {
       });
     }
     return null;
-  }
-
-  // Stop WebRTC recording (for real-time streaming)
-  stopWebRTCRecording() {
-    if (this.mediaRecorder && this.isRecording) {
-      return new Promise((resolve) => {
-        this.mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(this.recordedChunks, { 
-            type: 'audio/webm;codecs=opus' 
-          });
-          this.isRecording = false;
-          
-          // Stop local stream tracks
-          if (this.localStream) {
-            this.localStream.getTracks().forEach(track => track.stop());
-          }
-          
-          resolve(audioBlob);
-        };
-        this.mediaRecorder.stop();
-      });
-    }
-    return Promise.resolve(null);
   }
 
   // Create and send offer for WebRTC connection

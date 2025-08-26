@@ -1,11 +1,14 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
 import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
+import { addReceivedWebRTCAudioMessage } from '../../store/slice/message/message.slice'; // Import the new action
 import { useSocket } from "../../context/SocketContext";
+import Peer from 'simple-peer'; // Import simple-peer
+
+const WEBRTC_TIMEOUT = 5000; // 5 seconds timeout for WebRTC connection
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
@@ -32,6 +35,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const isCancelledRef = useRef(false);
   const holdTimeoutRef = useRef(null);
 
+  // --- WebRTC State & Refs ---
+  const peerRef = useRef(null);
+  const streamRef = useRef(null);
+  const dataChannelRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const peerConnectionTimeoutRef = useRef(null); // Ref for the WebRTC connection timeout
+
   const onStop = (blobUrl, blob) => {
     clearInterval(timerRef.current);
     setRecordingTime(0);
@@ -44,7 +54,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   };
 
-  const { startRecording, stopRecording, pauseRecording, resumeRecording, status } = useReactMediaRecorder({
+  const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaRecorder } = useReactMediaRecorder({
     audio: true,
     onStop,
   });
@@ -165,15 +175,10 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch, isSubmitting]);
 
-  const handleSendAudioMessage = async (audioBlob) => {
-    if (!audioBlob || isSubmitting) return;
-    setIsSubmitting(true);
+  // New helper function to send audio via server (fallback)
+  const sendAudioToServer = async (audioBlob, audioDuration) => {
+    console.log("WebRTC failed or timed out, sending audio via server...");
     try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const duration = Math.round(audioBuffer.duration);
-
       const base64Audio = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
@@ -186,16 +191,218 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         message: '[Voice Message]',
         replyTo: replyMessage?._id,
         audioData: base64Audio,
-        audioDuration: duration,
+        audioDuration: audioDuration,
       }));
-
+      console.log("Audio sent to server successfully.");
     } catch (error) {
-      console.error("Error sending audio message:", error);
+      console.error("Error sending audio message to server:", error);
     } finally {
       setIsSubmitting(false);
       if (replyMessage) onCancelReply();
     }
   };
+
+  const handleSendAudioMessage = async (audioBlob) => {
+    if (!audioBlob || isSubmitting || !selectedUser || !userProfile) return;
+    setIsSubmitting(true);
+
+    const audioDuration = Math.round(audioBlob.duration || 0); // Get duration, default to 0
+
+    try {
+      // Attempt WebRTC connection first
+      const mediaStream = mediaRecorder.stream;
+      streamRef.current = mediaStream;
+
+      const peer = new Peer({
+        initiator: true, // Sender initiates the connection
+        trickle: false, // Send all ICE candidates at once
+        stream: mediaStream, // Add the audio stream to the peer connection
+      });
+
+      peerRef.current = peer;
+
+      // Set a timeout for WebRTC connection
+      peerConnectionTimeoutRef.current = setTimeout(() => {
+        console.warn("WebRTC connection timed out. Falling back to server upload.");
+        peer.destroy(); // Clean up the peer connection
+        sendAudioToServer(audioBlob, audioDuration);
+      }, WEBRTC_TIMEOUT);
+
+      peer.on('signal', (data) => {
+        // Send signaling data to the other peer via the server
+        socket.emit('webrtc-signal', {
+          recipientId: selectedUser._id,
+          senderId: userProfile._id,
+          signalData: data,
+        });
+      });
+
+      peer.on('connect', () => {
+        console.log('WebRTC CONNECTED');
+        clearTimeout(peerConnectionTimeoutRef.current); // Clear timeout on successful connection
+
+        // Create a data channel to send the audio blob
+        dataChannelRef.current = peer.createDataChannel('audio-message');
+        dataChannelRef.current.binaryType = 'arraybuffer';
+
+        dataChannelRef.current.onopen = () => {
+          console.log('Data channel opened, sending audio...');
+          // Send the audio blob through the data channel
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            dataChannelRef.current.send(e.target.result);
+            console.log('Audio sent via data channel.');
+            // After sending, notify the server that an audio message was sent
+            dispatch(sendMessageThunk({
+              receiverId: selectedUser._id,
+              message: '[Voice Message]',
+              replyTo: replyMessage?._id,
+              isAudioMessage: true, // Indicate that this is an audio message
+              audioDuration: audioDuration, // Still send duration for display
+              sentViaWebRTC: true, // New flag to indicate WebRTC transfer
+            }));
+            setIsSubmitting(false);
+            if (replyMessage) onCancelReply();
+          };
+          reader.readAsArrayBuffer(audioBlob);
+        };
+
+        dataChannelRef.current.onclose = () => {
+          console.log('Data channel closed.');
+        };
+
+        dataChannelRef.current.onerror = (err) => {
+          console.error('Data channel error:', err);
+          // Fallback to server upload if data channel fails after connection
+          sendAudioToServer(audioBlob, audioDuration);
+        };
+      });
+
+      peer.on('stream', (stream) => {
+        console.log('Received remote stream (should not happen for audio send):', stream);
+      });
+
+      peer.on('error', (err) => {
+        console.error('WebRTC peer error:', err);
+        clearTimeout(peerConnectionTimeoutRef.current); // Clear timeout on error
+        // Fallback to server upload on peer error
+        sendAudioToServer(audioBlob, audioDuration);
+      });
+
+      peer.on('close', () => {
+        console.log('WebRTC peer closed.');
+        clearTimeout(peerConnectionTimeoutRef.current); // Clear timeout on close
+        // If not already handled by connect/error, ensure submitting state is reset
+        if (isSubmitting) {
+          setIsSubmitting(false);
+          if (replyMessage) onCancelReply();
+        }
+        // Clean up stream
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+          streamRef.current = null;
+        }
+      });
+
+    } catch (error) {
+      console.error("Error setting up WebRTC for audio message:", error);
+      clearTimeout(peerConnectionTimeoutRef.current); // Clear timeout on initial setup error
+      // Fallback to server upload on initial setup error
+      sendAudioToServer(audioBlob, audioDuration);
+    }
+  };
+
+  // --- WebRTC Signaling Handling (Receiver Side) ---
+  useEffect(() => {
+    if (!socket || !userProfile) return;
+
+    socket.on('webrtc-signal', async ({ senderId, signalData }) => {
+      console.log('Received WebRTC signal from:', senderId);
+      let peer = peerRef.current;
+
+      if (!peer) {
+        // If no peer exists, create one (this is the receiver's side)
+        peer = new Peer({
+          initiator: false, // Receiver does not initiate
+          trickle: false,
+        });
+        peerRef.current = peer;
+
+        peer.on('signal', (data) => {
+          socket.emit('webrtc-signal', {
+            recipientId: senderId,
+            senderId: userProfile._id,
+            signalData: data,
+          });
+        });
+
+        peer.on('connect', () => {
+          console.log('WebRTC CONNECTED (Receiver)');
+        });
+
+        peer.on('data', (data) => {
+          // Handle incoming audio data
+          console.log('Received audio data via data channel.');
+          audioChunksRef.current.push(data);
+        });
+
+        peer.on('stream', (stream) => {
+          console.log('Received remote stream (Receiver):', stream);
+        });
+
+        peer.on('close', () => {
+          console.log('WebRTC peer closed (Receiver).');
+          // Process received audio chunks
+          if (audioChunksRef.current.length > 0) {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' }); // Adjust type if needed
+            console.log('Final received audio blob:', audioBlob);
+
+            // Dispatch the action to add the received audio message to Redux store
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioBlob.arrayBuffer().then(arrayBuffer => {
+                audioContext.decodeAudioData(arrayBuffer).then(audioBuffer => {
+                    const duration = Math.round(audioBuffer.duration);
+                    dispatch(addReceivedWebRTCAudioMessage({
+                        senderId: senderId, // The sender of the audio
+                        audioBlob: audioBlob,
+                        audioDuration: duration,
+                    }));
+                }).catch(e => console.error("Error decoding audio data:", e));
+            }).catch(e => console.error("Error reading audio blob as array buffer:", e));
+
+            audioChunksRef.current = []; // Clear chunks
+          }
+          // Clean up stream
+          if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+          }
+        });
+
+        peer.on('error', (err) => {
+          console.error('WebRTC peer error (Receiver):', err);
+        });
+      }
+
+      // Apply the received signal data
+      peer.signal(signalData);
+    });
+
+    return () => {
+      socket.off('webrtc-signal');
+      // Clean up peer connection and timeout on unmount or user change
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      clearTimeout(peerConnectionTimeoutRef.current);
+    };
+  }, [socket, userProfile, dispatch]); // Add dispatch to dependencies
+
 
   const handleSendLockedAudio = (e) => {
     e.stopPropagation();

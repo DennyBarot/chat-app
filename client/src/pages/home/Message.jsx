@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useSelector } from "react-redux";
-import { getRelativeTime, isMessageRead, getReadTime } from '../../utils/timeUtils';
+import { formatTimeAgo, isMessageRead, getReadTime } from '../../utils/timeUtils'; // Corrected imports
+import { FaReply } from 'react-icons/fa';
+import { IoPlayCircle, IoPauseCircle } from 'react-icons/io5'; // Import play/pause icons
 
 const formatTime = (timestamp) => {
   if (!timestamp) return "Invalid time";
@@ -8,7 +10,7 @@ const formatTime = (timestamp) => {
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-const Message = ({ messageDetails, onReply, isLastMessage }) => {
+const Message = ({ message, onReply, isLastMessage }) => { // Changed prop name to 'message'
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -20,15 +22,15 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
     (state) => state.userReducer || { userProfile: null, selectedUser: null }
   );
 
-  const createdAt = messageDetails?.createdAt;
-  const isSentByMe = userProfile?._id === messageDetails?.senderId;
+  const createdAt = message?.createdAt; // Changed to message
+  const isSentByMe = userProfile?._id === message?.senderId; // Changed to message
 
   const handleMouseEnter = useCallback(() => setShowMenu(true), []);
   const handleMouseLeave = useCallback(() => setShowMenu(false), []);
-  const handleReply = useCallback(() => onReply(messageDetails), [onReply, messageDetails]);
+  const handleReply = useCallback(() => onReply(message), [onReply, message]); // Changed to message
 
-  const messageRead = useMemo(() => isMessageRead(messageDetails, userProfile?._id), [messageDetails, userProfile]);
-  const readTime = useMemo(() => getReadTime(messageDetails, userProfile?._id), [messageDetails, userProfile]);
+  const messageRead = useMemo(() => isMessageRead(message, userProfile?._id), [message, userProfile]); // Changed to message
+  const readTime = useMemo(() => getReadTime(message, userProfile?._id), [message, userProfile]); // Changed to message
 
   const handlePlayAudio = () => {
     if (isPlaying) {
@@ -39,9 +41,16 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
       return;
     }
 
-    // Create audio element if it doesn't exist
+    // Create audio element if it doesn't exist or if source changes
     if (!audioRef.current) {
-      audioRef.current = new Audio(messageDetails.audioData);
+      audioRef.current = new Audio();
+    }
+
+    // Set audio source based on whether it's a WebRTC audio or server-stored
+    if (message.audioUrl) {
+      audioRef.current.src = message.audioUrl;
+    } else if (message.audioData) {
+      audioRef.current.src = `data:audio/webm;base64,${message.audioData}`;
     }
 
     // Play audio
@@ -51,10 +60,11 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
     // Set up interval to update current time
     intervalRef.current = setInterval(() => {
       setCurrentTime((prevTime) => {
-        if (prevTime >= messageDetails.audioDuration) {
+        // Use audioRef.current.duration for total duration
+        if (audioRef.current && prevTime >= audioRef.current.duration) {
           clearInterval(intervalRef.current);
           setIsPlaying(false);
-          return messageDetails.audioDuration;
+          return audioRef.current.duration;
         }
         return prevTime + 1;
       });
@@ -64,7 +74,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
     audioRef.current.onended = () => {
       clearInterval(intervalRef.current);
       setIsPlaying(false);
-      setCurrentTime(messageDetails.audioDuration);
+      setCurrentTime(audioRef.current.duration);
     };
 
     // Handle audio pause
@@ -74,7 +84,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
     };
   };
 
-  // Cleanup on component unmount
+  // Cleanup on component unmount and when message changes (for object URLs)
   useEffect(() => {
     return () => {
       clearInterval(intervalRef.current);
@@ -82,8 +92,12 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      // Revoke object URL if it was created for WebRTC audio
+      if (message.sentViaWebRTC && message.audioUrl) {
+        URL.revokeObjectURL(message.audioUrl);
+      }
     };
-  }, []);
+  }, [message]); // Dependency on message to re-run cleanup if message changes
 
   return (
     <div
@@ -116,15 +130,15 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
             </svg>
           </button>
         )}
-        {messageDetails.quotedMessage && (
+        {message.quotedMessage && ( // Changed to message
           <div className="bg-primary/10 border-l-4 border-primary mb-2 px-3 py-2 text-sm rounded-md shadow-sm flex flex-col">
             <span className="font-semibold text-primary">
-              {messageDetails.quotedMessage.senderName || 'Unknown'}:
+              {message.quotedMessage.senderName || 'Unknown'}: // Changed to message
             </span>
             <span className="text-text-primary">
-              {messageDetails.quotedMessage.content || '[No content]'}
+              {message.quotedMessage.content || '[No content]'} // Changed to message
             </span>
-            {messageDetails.quotedMessage.replyTo && (
+            {message.quotedMessage.replyTo && ( // Changed to message
               <span className="italic text-xs ml-2 text-primary"></span>
             )}
           </div>
@@ -137,7 +151,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
           }`}
           style={{ position: 'relative' }}
         >
-          {messageDetails.isAudioMessage ? (
+          {message.isAudioMessage ? ( // Changed to message
             <div className="flex items-center bg-gray-800 p-3 rounded-lg">
               <button 
                 onClick={handlePlayAudio} 
@@ -159,7 +173,8 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
                 {Array.from({ length: 20 }, (_, i) => {
                   // Simple waveform bars with varying heights
                   const height = Math.random() * 12 + 4;
-                  const isActive = (i / 20) * messageDetails.audioDuration <= currentTime;
+                  // Use audioRef.current.duration for accurate progress
+                  const isActive = audioRef.current && (i / 20) * audioRef.current.duration <= currentTime;
                   return (
                     <div
                       key={i}
@@ -177,19 +192,19 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
                 <div className="h-1 bg-gray-600 rounded-full">
                   <div 
                     className="h-full bg-primary rounded-full transition-all duration-300" 
-                    style={{ width: `${(currentTime / messageDetails.audioDuration) * 100}%` }}
+                    style={{ width: `${(currentTime / (audioRef.current?.duration || 1)) * 100}%` }} // Use audioRef.current.duration
                   />
                 </div>
               </div>
 
               {/* Time display */}
               <span className="text-white text-sm font-mono min-w-[60px] text-right">
-                {`${currentTime}s / ${messageDetails.audioDuration}s`}
+                {`${formatAudioTime(currentTime)} / ${formatAudioTime(audioRef.current?.duration || message.audioDuration)}`} // Use audioRef.current.duration
               </span>
             </div>
           ) : (
             <p className="whitespace-pre-wrap break-words min-w-[80px]">
-              {messageDetails?.content || '[No content]'}
+              {message?.content || '[No content]'} // Changed to message
             </p>
           )}
         </div>
@@ -198,7 +213,7 @@ const Message = ({ messageDetails, onReply, isLastMessage }) => {
         </div>
         {isSentByMe && messageRead && isLastMessage && (
           <div className="text-xs mt-1 text-right mr-1 text-green-500 font-semibold">
-            {getRelativeTime(readTime)}
+            {getReadTime(readTime)}
           </div>
         )}
       </div>

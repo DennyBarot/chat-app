@@ -54,6 +54,12 @@ io.on("connection", (socket) => {
     // We emit to the receiver's private room.
     io.to(receiverId).emit("stopTyping", { senderId: userId });
   });
+
+  // --- WebRTC Signaling --- 
+  socket.on('webrtc-signal', ({ recipientId, senderId, signalData }) => {
+    console.log(`Forwarding WebRTC signal from ${senderId} to ${recipientId}`);
+    io.to(recipientId).emit('webrtc-signal', { senderId, signalData });
+  });
 });
 
 // We no longer need getSocketId for messaging, so it's removed from export.

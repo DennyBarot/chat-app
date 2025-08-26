@@ -280,4 +280,3 @@ class WebRTCManager {
 const webRTCManager = new WebRTCManager();
 
 export default webRTCManager;
-export { WebRTCManager };

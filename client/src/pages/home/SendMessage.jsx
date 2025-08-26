@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
 import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
+import { setNewMessage, replaceMessage } from "../../store/slice/message/message.slice";
 import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
@@ -45,7 +45,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   };
 
   const { startRecording, stopRecording, pauseRecording, resumeRecording, status } = useReactMediaRecorder({
-    audio: true,
+    audio: {
+      noiseSuppression: true,
+      echoCancellation: true,
+      audioBitsPerSecond: 24000,
+    },
     onStop,
   });
 
@@ -168,33 +172,61 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const handleSendAudioMessage = async (audioBlob) => {
     if (!audioBlob || isSubmitting) return;
     setIsSubmitting(true);
+
+    const tempId = crypto.randomUUID();
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const duration = await getAudioDuration(audioUrl);
+
+    const optimisticMessage = {
+      _id: tempId,
+      sender: userProfile,
+      receiver: selectedUser,
+      message: "[Voice Message]",
+      audioUrl,
+      audioDuration: duration,
+      createdAt: new Date().toISOString(),
+      isOptimistic: true,
+      replyTo: replyMessage?._id,
+    };
+
+    dispatch(setNewMessage(optimisticMessage));
+    if (replyMessage) onCancelReply();
+
     try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const duration = Math.round(audioBuffer.duration);
-
-      const base64Audio = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = (error) => reject(error);
-      });
-
-      await dispatch(sendMessageThunk({
-        receiverId: selectedUser?._id,
-        message: '[Voice Message]',
-        replyTo: replyMessage?._id,
-        audioData: base64Audio,
-        audioDuration: duration,
-      }));
-
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = async () => {
+        const base64Data = reader.result;
+        const finalMessage = await dispatch(
+          sendMessageThunk({
+            receiverId: selectedUser?._id,
+            audioData: base64Data, // Sending Base64 data now
+            audioDuration: duration,
+            message: "[Voice Message]",
+            replyTo: replyMessage?._id,
+          })
+        ).unwrap();
+        dispatch(replaceMessage({ tempId, newMessage: finalMessage.responseData }));
+      };
     } catch (error) {
       console.error("Error sending audio message:", error);
+      // Here you might want to dispatch an action to remove the optimistic message
     } finally {
       setIsSubmitting(false);
-      if (replyMessage) onCancelReply();
+      URL.revokeObjectURL(audioUrl); // Clean up the blob URL
     }
+  };
+
+  const audioRef = useRef(new Audio());
+
+  const getAudioDuration = (url) => {
+    return new Promise((resolve) => {
+      const audio = audioRef.current;
+      audio.onloadedmetadata = () => {
+        resolve(Math.round(audio.duration));
+      };
+      audio.src = url;
+    });
   };
 
   const handleSendLockedAudio = (e) => {

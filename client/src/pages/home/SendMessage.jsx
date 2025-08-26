@@ -304,11 +304,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
                 <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none bg-primary/10 rounded-full">
                    <span className={`text-text-secondary flex items-center gap-2 transition-opacity ${showCancelHint ? 'opacity-100' : 'opacity-50'}`}>
                       <FaTrash className="text-red-500 text-lg" />
-                      Slide to cancel
+                      Slide left to cancel
                    </span>
                    <span className="text-text-primary font-mono animate-pulse">{formatTime(recordingTime)}</span>
                    <span className={`text-text-secondary flex items-center gap-2 transition-opacity ${showLockHint ? 'opacity-100' : 'opacity-50'}`}>
-                      Slide to lock
+                      Slide up to lock
                       <FaLock className="text-blue-500 text-lg" />
                    </span>
                 </div>

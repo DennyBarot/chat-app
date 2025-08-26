@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
 import { useSelector } from "react-redux";
-import WebRTCManager from "../utils/webrtcManager";
+import webRTCManager from "../utils/webrtcManager";
 
 // 1. Create the context with a default value of null.
 const SocketContext = createContext(null);
@@ -18,7 +18,6 @@ export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer);
   const [socket, setSocket] = useState(null);
   const socketRef = useRef(null);
-  const webRTCManager = useRef(new WebRTCManager()).current;
 
   useEffect(() => {
     // Disconnect if the user is not logged in.

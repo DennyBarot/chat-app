@@ -24,6 +24,21 @@ export const messageSlice = createSlice({
         state.messages = [...oldMessages, action.payload];
       }
     },
+    addOptimisticMessage: (state, action) => {
+      state.messages = [...(state.messages || []), action.payload];
+    },
+    finalizeOptimisticMessage: (state, action) => {
+      const { tempId, finalMessage } = action.payload;
+      state.messages = state.messages.map(msg => 
+          msg._id === tempId ? finalMessage : msg
+      );
+    },
+    updateOptimisticMessageStatus: (state, action) => {
+      const { tempId, status } = action.payload;
+      state.messages = state.messages.map(msg => 
+          msg._id === tempId ? { ...msg, status } : msg
+      );
+    },
     messagesRead: (state, action) => {
       const { messageIds, readBy, readAt } = action.payload;
       if (!state.messages || !messageIds) return;
@@ -115,6 +130,6 @@ export const messageSlice = createSlice({
 });
 
 // Export the new action
-export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages } = messageSlice.actions;
+export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages, addOptimisticMessage, finalizeOptimisticMessage, updateOptimisticMessageStatus } = messageSlice.actions;
 
 export default messageSlice.reducer;

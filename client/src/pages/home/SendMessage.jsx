@@ -1,15 +1,16 @@
-
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
 import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
+import { addOptimisticMessage, updateOptimisticMessageStatus } from "../../store/slice/message/message.slice";
 import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
   const dispatch = useDispatch();
   const { selectedUser, userProfile } = useSelector((state) => state.userReducer);
+  const { conversations } = useSelector((state) => state.messageReducer);
   const socket = useSocket();
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,9 +50,16 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     onStop,
   });
 
-  // Use a ref to get the latest status inside callbacks without making them dependencies
   const statusRef = useRef(status);
   statusRef.current = status;
+
+  const selectedConversationId = useMemo(() => {
+    if (!selectedUser || !conversations) return null;
+    const conversation = conversations.find(conv => 
+      conv.participants.some(p => p._id === selectedUser._id)
+    );
+    return conversation?._id;
+  }, [selectedUser, conversations]);
 
   const resetRecordingUI = useCallback(() => {
     setIsRecording(false);
@@ -98,7 +106,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [resetRecordingUI, stopRecording]);
 
   useEffect(() => {
-    // This effect declaratively manages the window event listeners
     if (isRecording && !isLocked) {
       window.addEventListener('mousemove', handleInteractionMove);
       window.addEventListener('mouseup', handleInteractionEnd);
@@ -133,7 +140,6 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [startRecording]);
 
   useEffect(() => {
-    // Cleanup timeouts on unmount
     return () => {
       clearTimeout(holdTimeoutRef.current);
       clearInterval(timerRef.current);
@@ -166,14 +172,37 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   }, [message, selectedUser, replyMessage, onCancelReply, isTyping, socket, userProfile, dispatch, isSubmitting]);
 
   const handleSendAudioMessage = async (audioBlob) => {
-    if (!audioBlob || isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const arrayBuffer = await audioBlob.arrayBuffer();
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const duration = Math.round(audioBuffer.duration);
+    if (!audioBlob) return;
 
+    const tempId = `temp_${Date.now()}`;
+    const audioUrl = URL.createObjectURL(audioBlob);
+    
+    const audio = new Audio(audioUrl);
+    const duration = await new Promise(resolve => {
+        audio.onloadedmetadata = () => {
+            resolve(Math.round(audio.duration));
+        }
+    });
+
+    const optimisticMessage = {
+      _id: tempId,
+      senderId: userProfile._id,
+      receiverId: selectedUser._id,
+      conversationId: selectedConversationId,
+      content: '[Voice Message]',
+      audioUrl: audioUrl,
+      audioDuration: duration,
+      isAudioMessage: true,
+      createdAt: new Date().toISOString(),
+      status: 'pending',
+      readBy: [],
+    };
+
+    dispatch(addOptimisticMessage(optimisticMessage));
+
+    if (replyMessage) onCancelReply();
+
+    try {
       const base64Audio = await new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
@@ -182,6 +211,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       });
 
       await dispatch(sendMessageThunk({
+        tempId: tempId,
         receiverId: selectedUser?._id,
         message: '[Voice Message]',
         replyTo: replyMessage?._id,
@@ -191,9 +221,7 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
     } catch (error) {
       console.error("Error sending audio message:", error);
-    } finally {
-      setIsSubmitting(false);
-      if (replyMessage) onCancelReply();
+      dispatch(updateOptimisticMessageStatus({ tempId, status: 'failed' }));
     }
   };
 
@@ -304,11 +332,11 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
                 <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none bg-primary/10 rounded-full">
                    <span className={`text-text-secondary flex items-center gap-2 transition-opacity ${showCancelHint ? 'opacity-100' : 'opacity-50'}`}>
                       <FaTrash className="text-red-500 text-lg" />
-                      Slide left to cancel
+                      Slide to cancel
                    </span>
                    <span className="text-text-primary font-mono animate-pulse">{formatTime(recordingTime)}</span>
                    <span className={`text-text-secondary flex items-center gap-2 transition-opacity ${showLockHint ? 'opacity-100' : 'opacity-50'}`}>
-                      Slide up to lock
+                      Slide to lock
                       <FaLock className="text-blue-500 text-lg" />
                    </span>
                 </div>

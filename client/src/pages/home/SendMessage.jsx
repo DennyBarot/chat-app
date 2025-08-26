@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
-import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa"; // Using better icons
+import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
@@ -17,114 +17,124 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
   const [isTyping, setIsTyping] = useState(false);
   const typingTimeoutRef = useRef(null);
 
-  // Recording State
+  // --- Voice Recording State & Refs ---
   const [isRecording, setIsRecording] = useState(false);
-  const [isLockedRecording, setIsLockedRecording] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [startRecordingPos, setStartRecordingPos] = useState({ x: 0, y: 0 });
-  const [micTransform, setMicTransform] = useState({});
-  const [swipeHint, setSwipeHint] = useState(null); 
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [showCancelHint, setShowCancelHint] = useState(false);
+  const [showLockHint, setShowLockHint] = useState(false);
+  
+  const startPos = useRef({ x: 0, y: 0 });
+  const timerRef = useRef(null);
   const isCancelledRef = useRef(false);
   const holdTimeoutRef = useRef(null);
-  const micButtonRef = useRef(null);
 
-  const onStop = async (blobUrl, blob) => {
+  const onStop = (blobUrl, blob) => {
+    clearInterval(timerRef.current);
+    setRecordingTime(0);
     if (isCancelledRef.current) {
       isCancelledRef.current = false;
       return;
     }
-    if (!blob) return;
-    handleSendAudioMessage(blob);
-    resetRecordingState();
+    if (blob) {
+      handleSendAudioMessage(blob);
+    }
   };
 
-  const { startRecording, stopRecording, pauseRecording, resumeRecording } = useReactMediaRecorder({
+  const { startRecording, stopRecording, pauseRecording, resumeRecording, status } = useReactMediaRecorder({
     audio: true,
-    onStop: onStop,
+    onStop,
   });
 
-  const resetRecordingState = () => {
+  const resetRecordingUI = useCallback(() => {
     setIsRecording(false);
-    setIsLockedRecording(false);
+    setIsLocked(false);
     setIsPaused(false);
-    setMicTransform({});
-    setSwipeHint(null);
-  };
+    setDragOffset({ x: 0, y: 0 });
+    setShowCancelHint(false);
+    setShowLockHint(false);
+  }, []);
 
-  const handleInteractionEnd = useCallback(() => {
-    clearTimeout(holdTimeoutRef.current);
+  const removeWindowListeners = useCallback(() => {
     window.removeEventListener('mousemove', handleInteractionMove);
     window.removeEventListener('mouseup', handleInteractionEnd);
     window.removeEventListener('touchmove', handleInteractionMove);
     window.removeEventListener('touchend', handleInteractionEnd);
-    if (isRecording && !isLockedRecording) {
-      stopRecording();
-    }
-  }, [isRecording, isLockedRecording, stopRecording]);
+  }, []);
 
   const handleInteractionMove = useCallback((e) => {
-    if (!isRecording || isLockedRecording) return;
+    if (isLocked) return;
     
-    e.preventDefault();
-
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const dx = clientX - startRecordingPos.x;
-    const dy = clientY - startRecordingPos.y;
-    const CANCEL_THRESHOLD = -50;
-    const LOCK_THRESHOLD = -50;
+    
+    const dx = clientX - startPos.current.x;
+    const dy = clientY - startPos.current.y;
 
-    setMicTransform({ transform: `translate(${dx}px, ${dy}px)` });
+    setDragOffset({ x: dx, y: dy });
 
-    if (dy < LOCK_THRESHOLD) setSwipeHint('lock');
-    else if (dx < CANCEL_THRESHOLD) setSwipeHint('cancel');
-    else setSwipeHint(null);
+    const isBeyondCancel = dx < -80;
+    const isBeyondLock = dy < -80;
 
-    if (dx < CANCEL_THRESHOLD) {
+    setShowCancelHint(isBeyondCancel);
+    setShowLockHint(isBeyondLock);
+
+    if (isBeyondCancel) {
       isCancelledRef.current = true;
       stopRecording();
-      resetRecordingState();
-      handleInteractionEnd();
+      resetRecordingUI();
+      removeWindowListeners();
+    } else if (isBeyondLock) {
+      setIsLocked(true);
+      setDragOffset({ x: 0, y: 0 });
+      removeWindowListeners();
     }
+  }, [isLocked, stopRecording, resetRecordingUI, removeWindowListeners]);
 
-    if (dy < LOCK_THRESHOLD) {
-      setIsLockedRecording(true);
-      setMicTransform({});
-      handleInteractionEnd();
+  const handleInteractionEnd = useCallback(() => {
+    clearTimeout(holdTimeoutRef.current);
+    if (!isLocked && status === 'recording') {
+      stopRecording();
     }
-  }, [isRecording, isLockedRecording, startRecordingPos.x, startRecordingPos.y, stopRecording, handleInteractionEnd]);
+    resetRecordingUI();
+    removeWindowListeners();
+  }, [isLocked, status, stopRecording, resetRecordingUI, removeWindowListeners]);
+
+  const addWindowListeners = useCallback(() => {
+    window.addEventListener('mousemove', handleInteractionMove);
+    window.addEventListener('mouseup', handleInteractionEnd);
+    window.addEventListener('touchmove', handleInteractionMove, { passive: false });
+    window.addEventListener('touchend', handleInteractionEnd);
+  }, [handleInteractionMove, handleInteractionEnd]);
 
   const handleInteractionStart = useCallback((e) => {
     e.preventDefault();
     isCancelledRef.current = false;
+    
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    setStartRecordingPos({ x: clientX, y: clientY });
+    startPos.current = { x: clientX, y: clientY };
 
     holdTimeoutRef.current = setTimeout(() => {
       startRecording();
       setIsRecording(true);
-      window.addEventListener('mousemove', handleInteractionMove);
-      window.addEventListener('mouseup', handleInteractionEnd);
-      window.addEventListener('touchmove', handleInteractionMove, { passive: false });
-      window.addEventListener('touchend', handleInteractionEnd);
-    }, 250);
-  }, [startRecording, handleInteractionMove, handleInteractionEnd]);
+      clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+      addWindowListeners();
+    }, 200);
+  }, [startRecording, addWindowListeners]);
 
   useEffect(() => {
-    const micButton = micButtonRef.current;
-    if (micButton) {
-      micButton.addEventListener("touchstart", handleInteractionStart, { passive: false });
-    }
-
     return () => {
-      if (micButton) {
-        micButton.removeEventListener("touchstart", handleInteractionStart);
-      }
-      clearTimeout(typingTimeoutRef.current);
       clearTimeout(holdTimeoutRef.current);
-    };
-  }, [handleInteractionStart]);
+      clearInterval(timerRef.current);
+      removeWindowListeners();
+    }
+  }, [removeWindowListeners]);
 
   // --- Sending Logic ---
 
@@ -187,12 +197,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
 
   const handleSendLockedAudio = () => {
     stopRecording();
+    resetRecordingUI();
   };
 
   const handleCancelLockedAudio = () => {
     isCancelledRef.current = true;
     stopRecording();
-    resetRecordingState();
+    resetRecordingUI();
   };
 
   const handleTogglePause = () => {
@@ -224,6 +235,12 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     }
   }, [handleSendMessage]);
 
+  const formatTime = (time) => {
+    const minutes = Math.floor(time / 60).toString().padStart(2, '0');
+    const seconds = (time % 60).toString().padStart(2, '0');
+    return `${minutes}:${seconds}`;
+  }
+
   return (
     <div className="p-4 bg-background border-t border-foreground">
       {replyMessage && (
@@ -241,13 +258,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         </div>
       )}
       <div className="flex gap-3 items-center">
-        {isLockedRecording ? (
+        {isLocked ? (
           <div className="flex-1 flex items-center justify-between bg-primary/10 p-2 rounded-full">
             <button onClick={handleCancelLockedAudio} title="Cancel recording">
               <FaTrash className="text-xl text-red-500 hover:text-red-700 transition-colors" />
             </button>
             <div className="text-text-primary font-medium">
-              {isPaused ? "Paused" : "Recording..."}
+              {formatTime(recordingTime)}
             </div>
             <div className="flex items-center gap-4">
               <button onClick={handleTogglePause} title={isPaused ? "Resume" : "Pause"}>
@@ -264,40 +281,42 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder={isRecording ? "Slide left to cancel, up to lock" : "Type your message..."}
-                className={`w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all ${isRecording ? 'placeholder:text-center' : ''}`}
+                placeholder="Type your message..."
+                className={`w-full pl-4 pr-12 py-3 rounded-full border border-foreground bg-background text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all`}
                 value={message}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 disabled={isSubmitting || isRecording}
+                style={{ opacity: isRecording ? 0 : 1 }}
               />
               
               {isRecording && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                   <span className="text-text-secondary animate-pulse flex items-center gap-4">
-                      {swipeHint === 'cancel' && <FaTrash className="text-red-500 text-xl" />}
-                      Slide left to cancel
-                      <span className="mx-4">|</span>
-                      Slide up to lock
-                      {swipeHint === 'lock' && <FaLock className="text-blue-500 text-xl" />}
+                <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none bg-primary/10 rounded-full">
+                   <span className={`text-text-secondary flex items-center gap-2 transition-opacity ${showCancelHint ? 'opacity-100' : 'opacity-50'}`}>
+                      <FaTrash className="text-red-500 text-lg" />
+                      Slide to cancel
+                   </span>
+                   <span className="text-text-primary font-mono animate-pulse">{formatTime(recordingTime)}</span>
+                   <span className={`text-text-secondary flex items-center gap-2 transition-opacity ${showLockHint ? 'opacity-100' : 'opacity-50'}`}>
+                      Slide to lock
+                      <FaLock className="text-blue-500 text-lg" />
                    </span>
                 </div>
               )}
 
             </div>
             <div className="flex items-center gap-3">
-              {message.trim() === '' && (
+              {message.trim() === '' ? (
                  <button
-                  ref={micButtonRef}
+                  style={{ transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)` }}
+                  className={`p-3 rounded-full transition-transform flex items-center justify-center cursor-pointer ${isRecording ? 'bg-red-500 text-white scale-125 animate-pulse' : 'bg-foreground text-text-secondary hover:bg-primary/20'}`}
                   onMouseDown={handleInteractionStart}
-                  style={micTransform}
-                  className={`p-3 rounded-full transition-all flex items-center justify-center cursor-pointer ${isRecording ? 'bg-red-500 text-white scale-125 animate-pulse' : 'bg-foreground text-text-secondary hover:bg-primary/20'}`}
+                  onTouchStart={handleInteractionStart}
                   onContextMenu={(e) => e.preventDefault()}
                 >
                   <IoIosMic className="text-xl" />
                 </button>
-              )}
-              {message.trim() !== '' && (
+              ) : (
                  <button
                   onClick={handleSendMessage}
                   disabled={isSubmitting}

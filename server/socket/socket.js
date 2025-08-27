@@ -90,6 +90,35 @@ io.on("connection", async (socket) => {
     // We emit to the receiver's private room.
     io.to(receiverId).emit("stopTyping", { senderId: userId });
   });
+
+  // Voice recording/call status events
+  socket.on("voiceRecordingStart", ({ receiverId }) => {
+    io.to(receiverId).emit("voiceRecordingStatus", { 
+      senderId: userId, 
+      status: "recording" 
+    });
+  });
+
+  socket.on("voiceRecordingStop", ({ receiverId }) => {
+    io.to(receiverId).emit("voiceRecordingStatus", { 
+      senderId: userId, 
+      status: "stopped" 
+    });
+  });
+
+  socket.on("voiceCallStart", ({ receiverId }) => {
+    io.to(receiverId).emit("voiceCallStatus", { 
+      senderId: userId, 
+      status: "in_call" 
+    });
+  });
+
+  socket.on("voiceCallEnd", ({ receiverId }) => {
+    io.to(receiverId).emit("voiceCallStatus", { 
+      senderId: userId, 
+      status: "ended" 
+    });
+  });
 });
 
 // We no longer need getSocketId for messaging, so it's removed from export.

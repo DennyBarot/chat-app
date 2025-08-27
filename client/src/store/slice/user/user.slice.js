@@ -18,7 +18,7 @@ const initialState = {
   selectedUser: JSON.parse(localStorage.getItem('selectedUser')),
   buttonLoading: false,
   screenLoading: true,
-  userStatus: {}, // Track online status of users { userId: { isOnline, lastSeen } }
+  userStatus: {}, // Track online status of users { userId: { isOnline, lastSeen, isRecording, isInCall } }
 };
 
 export const userSlice = createSlice({
@@ -33,8 +33,15 @@ export const userSlice = createSlice({
       state.screenLoading = false;
     },
     updateUserStatus: (state, action) => {
-      const { userId, isOnline, lastSeen } = action.payload;
-      state.userStatus[userId] = { isOnline, lastSeen };
+      const { userId, isOnline, lastSeen, isRecording, isInCall } = action.payload;
+      const currentStatus = state.userStatus[userId] || {};
+      state.userStatus[userId] = { 
+        ...currentStatus,
+        isOnline: isOnline !== undefined ? isOnline : currentStatus.isOnline,
+        lastSeen: lastSeen || currentStatus.lastSeen,
+        isRecording: isRecording !== undefined ? isRecording : currentStatus.isRecording,
+        isInCall: isInCall !== undefined ? isInCall : currentStatus.isInCall
+      };
     },
     updateUsersStatus: (state, action) => {
       const statusUpdates = action.payload;

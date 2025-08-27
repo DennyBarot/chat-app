@@ -169,22 +169,32 @@ export const getMessages = asyncHandler(async (req, res, next) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
+
     const conversation = await Conversation.findOne({ participants: { $all: [userId, otherParticipantId] } });
+
     if (!conversation) {
-        return res.status(200).json({ messages: [], totalMessages: 0, hasMore: false });
+        return res.status(200).json({ messages: [], hasMore: false });
     }
-    const totalMessages = await Message.countDocuments({ conversationId: conversation._id });
+
+    // Optimized message fetching: fetch one extra message to determine if there are more pages
     const messages = await Message.find({ conversationId: conversation._id })
         .populate({ path: 'replyTo', populate: { path: 'senderId', select: 'fullName username' } })
-        .sort({ createdAt: -1 }).skip(skip).limit(limit);
-    const formattedMessages = messages.reverse().map(msg => ({
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit + 1); // Fetch one extra
+
+    const hasMore = messages.length > limit;
+    const paginatedMessages = hasMore ? messages.slice(0, limit) : messages;
+
+    const formattedMessages = paginatedMessages.reverse().map(msg => ({
         ...msg.toObject(),
         quotedMessage: msg.replyTo ? {
             content: msg.replyTo.content || '[No content]',
             senderName: (msg.replyTo.senderId?.fullName || 'Unknown'),
         } : null,
     }));
-    res.json({ messages: formattedMessages, totalMessages, currentPage: page, hasMore: totalMessages > (page * limit) });
+
+    res.json({ messages: formattedMessages, currentPage: page, hasMore });
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {

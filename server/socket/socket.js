@@ -106,19 +106,6 @@ io.on("connection", async (socket) => {
     });
   });
 
-  socket.on("voiceCallStart", ({ receiverId }) => {
-    io.to(receiverId).emit("voiceCallStatus", { 
-      senderId: userId, 
-      status: "in_call" 
-    });
-  });
-
-  socket.on("voiceCallEnd", ({ receiverId }) => {
-    io.to(receiverId).emit("voiceCallStatus", { 
-      senderId: userId, 
-      status: "ended" 
-    });
-  });
 });
 
 // We no longer need getSocketId for messaging, so it's removed from export.

@@ -69,14 +69,6 @@ export const SocketProvider = ({ children }) => {
       }));
     });
 
-    // Listen for voice call status
-    newSocket.on("voiceCallStatus", (data) => {
-      dispatch(updateUserStatus({ 
-        userId: data.senderId, 
-        isInCall: data.status === "in_call",
-        lastSeen: new Date()
-      }));
-    });
 
     setSocket(newSocket);
     socketRef.current = newSocket;

@@ -26,15 +26,13 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
   const userStatusInfo = userStatus[userDetails?._id] || { 
     isOnline: false, 
     lastSeen: null, 
-    isRecording: false, 
-    isInCall: false 
+    isRecording: false
   };
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
 
   const isUserOnline = userStatusInfo.isOnline;
   const isUserRecording = userStatusInfo.isRecording;
-  const isUserInCall = userStatusInfo.isInCall;
 
   const handleUserClick = useCallback(() => {
     dispatch(setSelectedUser(userDetails));

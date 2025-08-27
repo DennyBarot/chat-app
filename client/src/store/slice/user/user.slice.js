@@ -33,14 +33,14 @@ export const userSlice = createSlice({
       state.screenLoading = false;
     },
     updateUserStatus: (state, action) => {
-      const { userId, isOnline, lastSeen, isRecording, isInCall } = action.payload;
+      const { userId, isOnline, lastSeen, isRecording } = action.payload;
       const currentStatus = state.userStatus[userId] || {};
       state.userStatus[userId] = { 
         ...currentStatus,
         isOnline: isOnline !== undefined ? isOnline : currentStatus.isOnline,
         lastSeen: lastSeen || currentStatus.lastSeen,
         isRecording: isRecording !== undefined ? isRecording : currentStatus.isRecording,
-        isInCall: isInCall !== undefined ? isInCall : currentStatus.isInCall
+       
       };
     },
     updateUsersStatus: (state, action) => {

@@ -60,7 +60,12 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
     setDragOffset({ x: 0, y: 0 });
     setShowCancelHint(false);
     setShowLockHint(false);
-  }, []);
+    
+    // Emit voice recording stop event
+    if (socket && userProfile && selectedUser) {
+      socket.emit("voiceRecordingStop", { receiverId: selectedUser._id });
+    }
+  }, [socket, userProfile, selectedUser]);
 
   const handleInteractionMove = useCallback((e) => {
     e.preventDefault();
@@ -129,8 +134,13 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
       timerRef.current = setInterval(() => {
         setRecordingTime(prev => prev + 1);
       }, 1000);
+      
+      // Emit voice recording start event
+      if (socket && userProfile && selectedUser) {
+        socket.emit("voiceRecordingStart", { receiverId: selectedUser._id });
+      }
     }, 500);
-  }, [startRecording]);
+  }, [startRecording, socket, userProfile, selectedUser]);
 
   useEffect(() => {
     // Cleanup timeouts on unmount

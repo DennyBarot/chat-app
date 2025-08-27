@@ -4,6 +4,7 @@ dotenv.config();
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import User from "../models/userModel.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -21,12 +22,22 @@ const io = new Server(server, {
 
 const userSocketMap = {}; // We still use this to track WHO is online for the "online users" feature.
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
 
   if (userId && userId !== "undefined") {
     console.log(`User connected: ${userId}, Socket ID: ${socket.id}`);
     userSocketMap[userId] = socket.id;
+    
+    // Update user status to online and set last seen to now
+    try {
+      await User.findByIdAndUpdate(userId, {
+        isOnline: true,
+        lastSeen: new Date()
+      });
+    } catch (error) {
+      console.error("Error updating user online status:", error);
+    }
     
     // --- THE CRUCIAL CHANGE ---
     // The user joins a room named after their own user ID. This is very reliable.
@@ -34,13 +45,38 @@ io.on("connection", (socket) => {
 
     // Emit the list of online user IDs to everyone.
     io.emit("onlineUsers", Object.keys(userSocketMap));
+    
+    // Emit user status update to all clients
+    io.emit("userStatusUpdate", {
+      userId,
+      isOnline: true,
+      lastSeen: new Date()
+    });
   }
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     if (userId && userId !== "undefined") {
       console.log(`User disconnected: ${userId}`);
       delete userSocketMap[userId];
+      
+      // Update user status to offline and set last seen to now
+      try {
+        await User.findByIdAndUpdate(userId, {
+          isOnline: false,
+          lastSeen: new Date()
+        });
+      } catch (error) {
+        console.error("Error updating user offline status:", error);
+      }
+      
       io.emit("onlineUsers", Object.keys(userSocketMap));
+      
+      // Emit user status update to all clients
+      io.emit("userStatusUpdate", {
+        userId,
+        isOnline: false,
+        lastSeen: new Date()
+      });
     }
   });
 

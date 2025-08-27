@@ -246,4 +246,59 @@ export const getAllUsers = asyncHandler(async (req, res, next) => {
   });
 });
 
+// Get user status (online/offline and last seen)
+export const getUserStatus = asyncHandler(async (req, res, next) => {
+  const { userId } = req.params;
+  
+  if (!userId) {
+    return next(errorHandler(400, "User ID is required"));
+  }
+
+  const user = await User.findById(userId).select('isOnline lastSeen username fullName avatar');
+  
+  if (!user) {
+    return next(errorHandler(404, "User not found"));
+  }
+
+  res.status(200).json({
+    success: true,
+    responseData: {
+      userId: user._id,
+      username: user.username,
+      fullName: user.fullName,
+      avatar: user.avatar,
+      isOnline: user.isOnline,
+      lastSeen: user.lastSeen
+    }
+  });
+});
+
+// Get status for multiple users
+export const getUsersStatus = asyncHandler(async (req, res, next) => {
+  const { userIds } = req.body;
+  
+  if (!userIds || !Array.isArray(userIds)) {
+    return next(errorHandler(400, "Array of user IDs is required"));
+  }
+
+  const users = await User.find({ _id: { $in: userIds } }).select('isOnline lastSeen username fullName avatar');
+  
+  const statusMap = users.reduce((acc, user) => {
+    acc[user._id.toString()] = {
+      userId: user._id,
+      username: user.username,
+      fullName: user.fullName,
+      avatar: user.avatar,
+      isOnline: user.isOnline,
+      lastSeen: user.lastSeen
+    };
+    return acc;
+  }, {});
+
+  res.status(200).json({
+    success: true,
+    responseData: statusMap
+  });
+});
+
 

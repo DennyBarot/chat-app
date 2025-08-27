@@ -22,11 +22,12 @@ const formatTime = (timestamp) => {
 };
 
 const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayType = 'sidebar' }) => {
+  const { userStatus } = useSelector((state) => state.userReducer);
+  const userStatusInfo = userStatus[userDetails?._id] || { isOnline: false, lastSeen: null };
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
-    const { onlineUsers } = useSelector((state) => state.socketReducer || { onlineUsers: null });
 
-  const isUserOnline = useMemo(() => onlineUsers?.includes(userDetails?._id), [onlineUsers, userDetails]);
+  const isUserOnline = userStatusInfo.isOnline;
 
   const handleUserClick = useCallback(() => {
     dispatch(setSelectedUser(userDetails));

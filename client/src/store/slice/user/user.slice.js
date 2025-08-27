@@ -18,6 +18,7 @@ const initialState = {
   selectedUser: JSON.parse(localStorage.getItem('selectedUser')),
   buttonLoading: false,
   screenLoading: true,
+  userStatus: {}, // Track online status of users { userId: { isOnline, lastSeen } }
 };
 
 export const userSlice = createSlice({
@@ -30,6 +31,16 @@ export const userSlice = createSlice({
     },
     setScreenLoadingFalse: (state) => {
       state.screenLoading = false;
+    },
+    updateUserStatus: (state, action) => {
+      const { userId, isOnline, lastSeen } = action.payload;
+      state.userStatus[userId] = { isOnline, lastSeen };
+    },
+    updateUsersStatus: (state, action) => {
+      const statusUpdates = action.payload;
+      Object.entries(statusUpdates).forEach(([userId, status]) => {
+        state.userStatus[userId] = status;
+      });
     },
   },
   extraReducers: (builder) => {
@@ -131,7 +142,7 @@ export const userSlice = createSlice({
   },
 });
 
-export const { setSelectedUser } = userSlice.actions;
+export const { setSelectedUser, updateUserStatus, updateUsersStatus } = userSlice.actions;
 
 
 export const selectAllUsers = createSelector(

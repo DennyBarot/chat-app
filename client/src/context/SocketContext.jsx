@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { io } from "socket.io-client";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { updateUserStatus } from "../store/slice/user/user.slice";
 
 // 1. Create the context with a default value of null.
 const SocketContext = createContext(null);
@@ -17,6 +18,8 @@ export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer);
   const [socket, setSocket] = useState(null);
   const socketRef = useRef(null);
+
+  const dispatch = useDispatch();
 
   useEffect(() => {
     // Disconnect if the user is not logged in.
@@ -44,6 +47,19 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("connect", () => console.log("Socket connected:", newSocket.id));
     newSocket.on("disconnect", () => console.log("Socket disconnected."));
 
+    // Listen for user status updates
+    newSocket.on("userStatusUpdate", (statusData) => {
+      dispatch(updateUserStatus(statusData));
+    });
+
+    // Listen for online users list
+    newSocket.on("onlineUsers", (onlineUserIds) => {
+      // Update status for all online users
+      onlineUserIds.forEach(userId => {
+        dispatch(updateUserStatus({ userId, isOnline: true, lastSeen: new Date() }));
+      });
+    });
+
     setSocket(newSocket);
     socketRef.current = newSocket;
 
@@ -53,7 +69,7 @@ export const SocketProvider = ({ children }) => {
       socketRef.current = null;
       setSocket(null);
     };
-  }, [userProfile?._id]);
+  }, [userProfile?._id, dispatch]);
 
   // 4. Provide the raw socket object as the value.
   return (

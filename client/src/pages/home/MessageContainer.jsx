@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffe
 import User from "./User";
 import Message from "./Message";
 import DateSeparator from "./DateSeparator";
-import { SkeletonMessageList } from "../../components/SkeletonMessage";
-import { getMessageThunk, markMessagesReadThunk, clearMessageCache } from "../../store/slice/message/message.thunk";
+import { useDispatch, useSelector } from "react-redux";
+import { getMessageThunk, markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 import { messagesRead, setNewMessage, clearMessages } from "../../store/slice/message/message.slice";
 import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
@@ -252,8 +252,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
           {/* 3. Add 'relative' class for positioning the indicator button */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-background to-foreground relative">
             {isLoadingMessages && currentPage === 1 ? (
-              <div className="space-y-4">
-                <SkeletonMessageList count={8} />
+              <div className="flex justify-center items-center h-full">
+                <span className="loading loading-spinner loading-lg text-primary"></span>
               </div>
             ) : messages?.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-text-secondary">
@@ -261,12 +261,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
               </div>
             ) : (
               <div className="space-y-4">
-                {isLoadingMore && (
-                  <div className="flex justify-center items-center py-2">
-                    <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                    <span className="ml-2 text-sm text-text-secondary">Loading more messages...</span>
-                  </div>
-                )}
+                {isLoadingMore && <div className="flex justify-center"><div className="custom-spinner"></div></div>}
                 {messagesWithSeparators.map((item, index) => {
                   if (item.type === "date-separator") return <DateSeparator key={item.id} label={item.label} />;
                   return <Message key={item.id} messageDetails={item.messageDetails} onReply={handleReply} isLastMessage={index === lastMessageIndex} />;
@@ -282,7 +277,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                   </svg>
-                  {newMessageCount > 1 ? `${newMessageCount} New Messages` : 'New Message'}
+                  New Message
                 </button>
               </div>
             )}

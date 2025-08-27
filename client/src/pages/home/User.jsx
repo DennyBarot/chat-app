@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
-import { markMessagesReadThunk, getMessageThunk } from "../../store/slice/message/message.thunk";
+import { markMessagesReadThunk } from "../../store/slice/message/message.thunk";
 
 const formatTime = (timestamp) => {
   if (!timestamp) return "";
   const date = new Date(timestamp);
   const now = new Date();
+  
   
   if (date.toDateString() === now.toDateString()) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -16,29 +17,20 @@ const formatTime = (timestamp) => {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   }
   
+ 
   return date.toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayType = 'sidebar' }) => {
   const dispatch = useDispatch();
   const { selectedUser } = useSelector((state) => state.userReducer);
-  const { onlineUsers } = useSelector((state) => state.socketReducer || { onlineUsers: null });
+    const { onlineUsers } = useSelector((state) => state.socketReducer || { onlineUsers: null });
 
   const isUserOnline = useMemo(() => onlineUsers?.includes(userDetails?._id), [onlineUsers, userDetails]);
 
-  const handleUserHover = useCallback(() => {
-    // Pre-fetch messages when user is hovered
-    if (userDetails?._id) {
-      dispatch(getMessageThunk({ otherParticipantId: userDetails._id, page: 1, limit: 20 }))
-        .unwrap()
-        .catch(console.error);
-    }
-  }, [dispatch, userDetails]);
-
-  const handleUserClick = useCallback((event) => {
-    event.stopPropagation(); // Prevent event bubbling
+  const handleUserClick = useCallback(() => {
     dispatch(setSelectedUser(userDetails));
-    if (userDetails?.conversationId) {
+     if (userDetails?.conversationId) {
       dispatch(markMessagesReadThunk({ conversationId: userDetails.conversationId }));
     }
   }, [dispatch, userDetails]);
@@ -46,7 +38,6 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
   return (
     <div
       onClick={handleUserClick}
-      onMouseEnter={handleUserHover} // Add hover event
       className={`flex gap-3 items-center p-3 rounded-lg cursor-pointer transition-all duration-200 hover:bg-primary/10 ${
         userDetails?._id === selectedUser?._id ? "bg-primary/20" : ""
       }`}

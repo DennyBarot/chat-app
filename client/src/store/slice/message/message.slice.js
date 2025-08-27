@@ -17,21 +17,11 @@ export const messageSlice = createSlice({
     clearMessages: (state) => {
       state.messages = [];
     }, 
-    addPendingMessage: (state, action) => {
-      const oldMessages = state.messages ?? [];
-      state.messages = [...oldMessages, { ...action.payload, status: 'pending' }];
-    },
     setNewMessage: (state, action) => {
       const oldMessages = state.messages ?? [];
       const messageExists = oldMessages.some(msg => msg._id === action.payload._id);
       if (!messageExists) {
         state.messages = [...oldMessages, action.payload];
-      } else {
-        // If message already exists (e.g., it was a pending message that now has a real ID)
-        // Update the existing message with the new data from the server
-        state.messages = oldMessages.map(msg =>
-          msg._id === action.payload._id ? { ...msg, ...action.payload, status: 'sent' } : msg
-        );
       }
     },
     messagesRead: (state, action) => {
@@ -73,21 +63,13 @@ export const messageSlice = createSlice({
       state.sendMessageStatus = 'pending';
     });
     // The message is added via socket, so we only need to handle loading state here
-    builder.addCase(sendMessageThunk.fulfilled, (state, action) => {
+    builder.addCase(sendMessageThunk.fulfilled, (state) => {
       state.buttonLoading = false;
       state.sendMessageStatus = 'fulfilled';
-      // Find the pending message by its temporary ID and update it
-      state.messages = state.messages.map(msg =>
-        msg._id === action.payload.tempId ? { ...msg, ...action.payload.message, status: 'sent' } : msg
-      );
     });
-    builder.addCase(sendMessageThunk.rejected, (state, action) => {
+    builder.addCase(sendMessageThunk.rejected, (state) => {
       state.buttonLoading = false;
       state.sendMessageStatus = 'rejected';
-      // Find the pending message by its temporary ID and mark as failed
-      state.messages = state.messages.map(msg =>
-        msg._id === action.meta.arg.tempId ? { ...msg, status: 'failed' } : msg
-      );
     });
 
     // get messages
@@ -100,10 +82,8 @@ export const messageSlice = createSlice({
         state.messages = fetchedMessages || [];
       } else {
         const existingMessages = state.messages || [];
-        // Use a Set for faster lookup to prevent duplicates
-        const existingIds = new Set(existingMessages.map(msg => msg._id));
         const uniqueNewMessages = fetchedMessages.filter(
-          (newMessage) => !existingIds.has(newMessage._id)
+          (newMessage) => !existingMessages.some((existing) => existing._id === newMessage._id)
         );
         state.messages = [...uniqueNewMessages, ...existingMessages];
       }
@@ -135,6 +115,6 @@ export const messageSlice = createSlice({
 });
 
 // Export the new action
-export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages, addPendingMessage } = messageSlice.actions;
+export const { setNewMessage, messagesRead, updateSingleConversation, clearMessages } = messageSlice.actions;
 
 export default messageSlice.reducer;

@@ -4,7 +4,7 @@ import { axiosInstance } from "../../../components/utilities/axiosInstance";
 
 export const sendMessageThunk = createAsyncThunk(
   "message/send",
-  async ({ receiverId, message, timestamp, replyTo, audio, audioData, audioDuration }, { rejectWithValue }) => {
+  async ({ receiverId, message, timestamp, replyTo, audio, audioData, audioDuration, tempId }, { rejectWithValue }) => {
     try {
       let response;
       
@@ -33,15 +33,18 @@ export const sendMessageThunk = createAsyncThunk(
         });
       }
       
-      return response.data;
+      return { message: response.data, tempId };
     } catch (error) {
       console.error(error);
       const errorOutput = error?.response?.data?.errMessage;
       toast.error(errorOutput);
-      return rejectWithValue(errorOutput);
+      return rejectWithValue({ error: errorOutput, tempId });
     }
   }
 );
+
+// Client-side message cache
+const messageCache = new Map();
 
 export const getMessageThunk = createAsyncThunk(
   "message/get",
@@ -51,9 +54,26 @@ export const getMessageThunk = createAsyncThunk(
       toast.error(errorOutput);
       return rejectWithValue(errorOutput);
     }
+    
+    // Check cache first
+    const cacheKey = `${otherParticipantId}-${page}-${limit}`;
+    const cachedData = messageCache.get(cacheKey);
+    
+    if (cachedData && Date.now() - cachedData.timestamp < 30000) { // 30 second cache
+      return { ...cachedData.data, fromCache: true };
+    }
+    
     try {
       const response = await axiosInstance.get(`/api/v1/message/get-messages/${otherParticipantId}?page=${page}&limit=${limit}`);
-      return response.data;
+      const responseData = response.data;
+      
+      // Cache the response
+      messageCache.set(cacheKey, {
+        data: responseData,
+        timestamp: Date.now()
+      });
+      
+      return responseData;
     } catch (error) {
       console.error(error);
       const errorOutput = error?.response?.data?.errMessage;
@@ -62,6 +82,15 @@ export const getMessageThunk = createAsyncThunk(
     }
   }
 );
+
+// Clear cache for a specific conversation when needed
+export const clearMessageCache = (otherParticipantId) => {
+  for (const [key] of messageCache.entries()) {
+    if (key.startsWith(`${otherParticipantId}-`)) {
+      messageCache.delete(key);
+    }
+  }
+};
 
 export const getConversationsThunk = createAsyncThunk(
   "message/getConversations",

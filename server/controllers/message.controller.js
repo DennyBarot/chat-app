@@ -138,7 +138,7 @@ export const getConversations = asyncHandler(async (req, res, next) => {
                 ], as: "unreadMessages"
             }
         },
-        { $lookup: { from: "users", localField: "participants", foreignField: "_id", as: "participantsInfo" } },
+        { $lookup: { from: "users", localField: "participants", foreignField: '_id', as: "participantsInfo" } },
         {
             $project: {
                 _id: 1, updatedAt: 1, createdAt: 1,
@@ -163,28 +163,70 @@ export const getConversations = asyncHandler(async (req, res, next) => {
     res.status(200).json({ success: true, responseData: conversations });
 });
 
+const messageCache = {}; // In-memory cache for messages
+
 export const getMessages = asyncHandler(async (req, res, next) => {
     const userId = req.user._id;
     const otherParticipantId = req.params.otherParticipantId;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
-    const conversation = await Conversation.findOne({ participants: { $all: [userId, otherParticipantId] } });
+    
+    // Check cache first
+    const cacheKey = `${userId}-${otherParticipantId}-${page}`;
+    if (messageCache[cacheKey]) {
+        return res.json({ 
+            messages: messageCache[cacheKey], 
+            totalMessages: messageCache[cacheKey].length, 
+            currentPage: page, 
+            hasMore: messageCache[cacheKey].length > (page * limit) 
+        });
+    }
+    
+    // Find conversation using indexed query
+    const conversation = await Conversation.findOne({ 
+        participants: { $all: [userId, otherParticipantId] } 
+    }).select('_id');
+    
     if (!conversation) {
         return res.status(200).json({ messages: [], totalMessages: 0, hasMore: false });
     }
-    const totalMessages = await Message.countDocuments({ conversationId: conversation._id });
-    const messages = await Message.find({ conversationId: conversation._id })
-        .populate({ path: 'replyTo', populate: { path: 'senderId', select: 'fullName username' } })
-        .sort({ createdAt: -1 }).skip(skip).limit(limit);
+    
+    // Use parallel execution for count and messages query
+    const [totalMessages, messages] = await Promise.all([
+        Message.countDocuments({ conversationId: conversation._id }),
+        Message.find({ conversationId: conversation._id })
+            .populate({ 
+                path: 'replyTo', 
+                populate: { 
+                    path: 'senderId', 
+                    select: 'fullName username' 
+                } 
+            })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean() // Use lean for faster query execution
+    ]);
+    
+    // Format messages efficiently
     const formattedMessages = messages.reverse().map(msg => ({
-        ...msg.toObject(),
+        ...msg,
         quotedMessage: msg.replyTo ? {
             content: msg.replyTo.content || '[No content]',
             senderName: (msg.replyTo.senderId?.fullName || 'Unknown'),
         } : null,
     }));
-    res.json({ messages: formattedMessages, totalMessages, currentPage: page, hasMore: totalMessages > (page * limit) });
+    
+    // Store in cache
+    messageCache[cacheKey] = formattedMessages;
+    
+    res.json({ 
+        messages: formattedMessages, 
+        totalMessages, 
+        currentPage: page, 
+        hasMore: totalMessages > (page * limit) 
+    });
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {

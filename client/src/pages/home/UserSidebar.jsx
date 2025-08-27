@@ -106,6 +106,16 @@ const dispatch = useDispatch();
     }
   };
 
+  // Pre-fetch messages when user is hovered
+  const handleUserHover = (user) => {
+    if (user?._id) {
+      // Pre-fetch first page of messages in the background
+      dispatch(getMessageThunk({ otherParticipantId: user._id, page: 1, limit: 20 }))
+        .unwrap()
+        .catch(console.error);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col bg-background text-text-primary shadow-lg z-10">
       {/* Header */}

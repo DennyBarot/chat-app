@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { IoIosSend, IoIosMic } from "react-icons/io";
 import { FaLock, FaTrash, FaPause, FaPlay } from "react-icons/fa";
 import { useReactMediaRecorder } from "react-media-recorder";
 import { useDispatch, useSelector } from "react-redux";
 import { sendMessageThunk } from "../../store/slice/message/message.thunk";
+import { addPendingMessage } from "../../store/slice/message/message.slice"; // Import addPendingMessage
 import { useSocket } from "../../context/SocketContext";
 
 const SendMessage = ({ replyMessage, onCancelReply }) => {
@@ -181,12 +181,31 @@ const SendMessage = ({ replyMessage, onCancelReply }) => {
         reader.onerror = (error) => reject(error);
       });
 
+      const tempId = Date.now().toString(); // Generate a temporary ID
+
+      const pendingMessage = {
+        _id: tempId,
+        sender: userProfile._id, // Assuming userProfile has _id
+        receiver: selectedUser._id, // Assuming selectedUser has _id
+        content: '[Voice Message]',
+        audio: {
+          data: base64Audio,
+          duration: duration,
+        },
+        replyTo: replyMessage?._id,
+        timestamp: new Date().toISOString(),
+        status: 'pending', // Add a status field
+      };
+
+      dispatch(addPendingMessage(pendingMessage)); // Add to Redux store immediately
+
       await dispatch(sendMessageThunk({
         receiverId: selectedUser?._id,
         message: '[Voice Message]',
         replyTo: replyMessage?._id,
         audioData: base64Audio,
         audioDuration: duration,
+        tempId: tempId, // Pass the temporary ID
       }));
 
     } catch (error) {

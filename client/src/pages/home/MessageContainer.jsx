@@ -4,7 +4,7 @@ import Message from "./Message";
 import DateSeparator from "./DateSeparator";
 import { useDispatch, useSelector } from "react-redux";
 import { getMessageThunk, markMessagesReadThunk } from "../../store/slice/message/message.thunk";
-import { messagesRead, setNewMessage, clearMessages } from "../../store/slice/message/message.slice";
+import { messagesRead, setNewMessage } from "../../store/slice/message/message.slice";
 import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
@@ -14,13 +14,10 @@ import { setTyping } from "../../store/slice/typing/typing.slice";
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
-  const messages = useSelector((state) => state.messageReducer.messages);
-    const conversations = useSelector((state) => state.messageReducer.conversations);
+  const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
-   // 1. Get the clean socket connection from the context.
-   const socket = useSocket();
-     // Derive the current conversation ID from the Redux state.
-  // Derive the current conversation ID from the Redux state.
+  const socket = useSocket();
+
   const selectedConversationId = useMemo(() => {
     if (!selectedUser || !conversations) return null;
     const conversation = conversations.find(conv => 
@@ -28,71 +25,69 @@ const MessageContainer = ({ onBack, isMobile }) => {
     );
     return conversation?._id;
   }, [selectedUser, conversations]);
-  
 
-  // Local component state
+  const messages = useMemo(() => messagesByConversation[selectedConversationId] || [], [messagesByConversation, selectedConversationId]);
+
   const [replyMessage, setReplyMessage] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
-  const [newMessageCount, setNewMessageCount] = useState(0); // Track the number of new messages
 
-  // Refs for managing scroll behavior
   const scrollRef = useRef(null);
   const messagesEndRef = useRef(null);
   const prevScrollHeightRef = useRef(0);
   const isInitialLoadRef = useRef(true);
- 
-    // 2. This effect is the single source of truth for all real-time events related to the open chat.
+
   useEffect(() => {
-    // The socket can be null initially, and we only listen if a conversation is open.
     if (!socket || !selectedConversationId) return;
 
     const handleNewMessage = (newMessage) => {
       if (newMessage.conversationId === selectedConversationId) {
         dispatch(setNewMessage(newMessage));
-        setNewMessageCount(prevCount => prevCount + 1); // Increment new message count
-        // Since the user is actively watching, we immediately mark the message as read.
         dispatch(markMessagesReadThunk({ conversationId: selectedConversationId }));
       }
     };
 
     const handleMessagesRead = (data) => {
-      // This handles the "read receipt" update when the other user reads your messages.
-      dispatch(messagesRead(data));
+      dispatch(messagesRead({ ...data, conversationId: selectedConversationId }));
     };
 
-    // Set up the listeners.
     socket.on("newMessage", handleNewMessage);
     socket.on("messagesRead", handleMessagesRead);
 
-    // Cleanup function to remove listeners.
     return () => {
       socket.off("newMessage", handleNewMessage);
       socket.off("messagesRead", handleMessagesRead);
     };
   }, [socket, selectedConversationId, dispatch]);
 
- // Effect to fetch initial messages when a user is selected.
   useEffect(() => {
     isInitialLoadRef.current = true;
-    if (selectedUser?._id) {
-      setIsLoadingMessages(true);
-      dispatch(clearMessages());
-      dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }))
-        .unwrap()
-        .then((payload) => {
-          setHasMoreMessages(payload.hasMore);
-          setCurrentPage(1);
-        })
-        .catch(console.error)
-        .finally(() => setIsLoadingMessages(false));
+    if (selectedUser?._id && selectedConversationId) {
+      const cachedMessages = messagesByConversation[selectedConversationId];
+      if (!cachedMessages || cachedMessages.length === 0) {
+        setIsLoadingMessages(true);
+        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }))
+          .unwrap()
+          .then((payload) => {
+            setHasMoreMessages(payload.hasMore);
+            setCurrentPage(1);
+          })
+          .catch(console.error)
+          .finally(() => setIsLoadingMessages(false));
+      } else {
+        dispatch(getMessageThunk({ otherParticipantId: selectedUser._id, page: 1, limit: 20 }))
+          .unwrap()
+          .then((payload) => {
+            setHasMoreMessages(payload.hasMore);
+            setCurrentPage(1);
+          });
+      }
     }
-  }, [selectedUser?._id, dispatch]);
+  }, [selectedUser?._id, selectedConversationId, dispatch]);
 
-  // Effect for infinite scroll (loading older messages)
   useEffect(() => {
     const currentScrollRef = scrollRef.current;
     if (!currentScrollRef) return;
@@ -101,9 +96,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
       if (currentScrollRef.scrollTop === 0 && hasMoreMessages && !isLoadingMessages && !isLoadingMore) {
         setIsLoadingMore(true);
         const nextPage = currentPage + 1;
-        
-        // Capture the current scroll height BEFORE loading new messages
-        // This is crucial for maintaining the correct scroll position
         prevScrollHeightRef.current = currentScrollRef.scrollHeight;
         
         try {
@@ -128,7 +120,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
   }, [currentPage, hasMoreMessages, isLoadingMessages, isLoadingMore, selectedUser?._id, dispatch]);
 
-  // Adjust scroll position after prepending older messages
   useLayoutEffect(() => {
     const currentScrollRef = scrollRef.current;
     if (currentScrollRef && !isLoadingMessages && currentPage > 1) {
@@ -136,34 +127,24 @@ const MessageContainer = ({ onBack, isMobile }) => {
       const oldScrollHeight = prevScrollHeightRef.current;
 
       if (oldScrollHeight > 0) {
-        // Calculate the exact scroll position adjustment
         const heightDifference = newScrollHeight - oldScrollHeight;
-        
-        // Set the scroll position to maintain the user's view of the same messages
-        // This ensures the scroll position moves down by the exact height of the new messages
         currentScrollRef.scrollTop = heightDifference;
-        
-        // Reset the reference for next load
         prevScrollHeightRef.current = 0;
       }
     }
   }, [messages, isLoadingMessages, currentPage]);
 
-  // Handle initial scroll to bottom on first load
   useLayoutEffect(() => {
     if (isInitialLoadRef.current && messages && messages.length > 0) {
-      // Ensure scroll happens after messages are rendered
       setTimeout(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
         isInitialLoadRef.current = false;
-      }, 0); // A small delay to allow DOM to update
+      }, 0);
     }
   }, [messages]);
 
-  // Use the Redux 'messages' state for all derivations
   const lastMessage = useMemo(() => (messages ? messages[messages.length - 1] : null), [messages]);
   
-   // Conditional auto-scrolling effect
   useLayoutEffect(() => {
     if (isInitialLoadRef.current) return;
     const scrollContainer = scrollRef.current;
@@ -178,7 +159,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
     }
   }, [lastMessage]);
 
-   // Hide indicator if user scrolls down manually
   useEffect(() => {
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
@@ -196,7 +176,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
     };
   }, []);
 
-
   const getDateLabel = useCallback((dateString) => {
     const date = parseISO(dateString);
     if (isToday(date)) return "Today";
@@ -206,7 +185,7 @@ const MessageContainer = ({ onBack, isMobile }) => {
 
   const messagesWithSeparators = useMemo(() => {
     const safeMessages = Array.isArray(messages) ? messages : [];
-    const sortedMessages = [...safeMessages].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    const sortedMessages = [...safeMessages];
     const result = [];
     let lastDate = null;
 
@@ -232,9 +211,6 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const handleReply = useCallback((message) => setReplyMessage(message), []);
    const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
-
-
-
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-text-primary relative">
       {isMobile && (
@@ -249,9 +225,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
           <div className="p-4 border-b border-foreground shadow-sm">
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
           </div>
-          {/* 3. Add 'relative' class for positioning the indicator button */}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-background to-foreground relative">
-            {isLoadingMessages && currentPage === 1 ? (
+            {isLoadingMessages && messages.length === 0 ? (
               <div className="flex justify-center items-center h-full">
                 <span className="loading loading-spinner loading-lg text-primary"></span>
               </div>

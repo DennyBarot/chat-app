@@ -194,7 +194,7 @@ export const getMessages = asyncHandler(async (req, res, next) => {
         } : null,
     }));
 
-    res.json({ messages: formattedMessages, currentPage: page, hasMore });
+    res.json({ messages: formattedMessages, currentPage: page, hasMore, conversationId: conversation._id });
 });
 
 export const markMessagesRead = asyncHandler(async (req, res, next) => {
@@ -226,6 +226,7 @@ export const markMessagesRead = asyncHandler(async (req, res, next) => {
                     
                     const messageIds = readMessages.map(msg => msg._id.toString());
                     io.to(otherParticipant.toString()).emit('messagesRead', {
+                        conversationId,
                         messageIds,
                         readBy: userId,
                         readAt: new Date()

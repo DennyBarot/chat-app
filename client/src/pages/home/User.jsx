@@ -88,6 +88,10 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
         <div className="flex items-baseline">
           {isTyping ? (
             <p className="text-sm text-primary animate-pulse">typing...</p>
+          ) : isUserRecording ? (
+            <p className="text-sm text-primary animate-pulse">Voice recording...</p>
+          ) : isUserInCall ? (
+            <p className="text-sm text-primary animate-pulse">In a call...</p>
           ) : displayType === 'sidebar' ? (
             userDetails?.lastMessage ? (
               <p className="text-sm text-text-secondary truncate">

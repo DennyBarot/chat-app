@@ -18,4 +18,7 @@ const conversationSchema = new mongoose.Schema(
 },
     { timestamps: true })
 
+// Add an index on the participants field for faster conversation lookups
+conversationSchema.index({ participants: 1 });
+
 export default mongoose.model("Conversation", conversationSchema);

@@ -22,4 +22,7 @@ const messageSchema = new Schema(
   { timestamps: true }
 );
 
+// Add a compound index for faster message retrieval and sorting
+messageSchema.index({ conversationId: 1, createdAt: -1 });
+
 export default model("Message", messageSchema);

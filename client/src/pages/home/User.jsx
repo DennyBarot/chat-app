@@ -76,7 +76,16 @@ const User = ({ userDetails, showUnreadCount = true, isTyping = false, displayTy
               <p className="text-xs text-text-secondary mr-1">@{userDetails?.username}</p>
             )
           ) : (
-            <p className="text-xs text-text-secondary mr-1">@{userDetails?.username}</p>
+            // Show last seen information in header
+            <p className="text-xs text-text-secondary mr-1">
+              {userStatusInfo.isOnline ? (
+                "Online"
+              ) : userStatusInfo.lastSeen ? (
+                `Last seen ${formatTime(userStatusInfo.lastSeen)}`
+              ) : (
+                `@${userDetails?.username}`
+              )}
+            </p>
           )}
           {showUnreadCount && userDetails?.unreadCount > 0 && (
             <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">

@@ -26,6 +26,14 @@ function App() {
   const connectionRef = useRef();
 
   useEffect(() => {
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then((currentStream) => {
+        dispatch(setStream(currentStream));
+        if (myVideo.current) {
+          myVideo.current.srcObject = currentStream;
+        }
+      });
+
     (async () => {
       if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/signup")) {
         return;
@@ -65,7 +73,7 @@ function App() {
   const answerCall = () => {
     dispatch(setCallAccepted(true));
 
-    const peer = new Peer({ initiator: false, trickle: false, stream });
+    const peer = new Peer({ initiator: false, trickle: false, stream: stream });
 
     peer.on("signal", (data) => {
       socket.emit("answerCall", { signal: data, to: caller });
@@ -81,7 +89,7 @@ function App() {
   };
 
   const callUser = (id) => {
-    const peer = new Peer({ initiator: true, trickle: false, stream });
+    const peer = new Peer({ initiator: true, trickle: false, stream: stream });
 
     peer.on("signal", (data) => {
       socket.emit("callUser", { userToCall: id, signalData: data, from: userProfile._id, name: userProfile.fullName });

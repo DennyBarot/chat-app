@@ -19,7 +19,7 @@ function App() {
   const dispatch = useDispatch();
   const socket = useSocket();
   const { userProfile } = useSelector((state) => state.userReducer);
-  const { call, callAccepted, callEnded, stream, caller, callerSignal } = useSelector((state) => state.callReducer);
+  const { call, callAccepted, callEnded, stream, caller, callerSignal } = useSelector((state) => state.callReducer || {});
 
   const myVideo = useRef();
   const userVideo = useRef();
@@ -110,33 +110,58 @@ function App() {
     const peer = new Peer({ initiator: false, trickle: false, stream: stream });
 
     peer.on("signal", (data) => {
-      socket.emit("answerCall", { signal: data, to: caller });
+      if (socket && caller) {
+        socket.emit("answerCall", { signal: data, to: caller });
+      }
     });
 
     peer.on("stream", (currentStream) => {
-      userVideo.current.srcObject = currentStream;
+      if (userVideo.current) {
+        userVideo.current.srcObject = currentStream;
+      }
     });
 
-    peer.signal(callerSignal);
+    if (callerSignal) {
+      peer.signal(callerSignal);
+    }
 
     connectionRef.current = peer;
   };
 
   const callUser = (id) => {
+    if (!stream || !userProfile?._id) {
+      console.error("Cannot make call: stream or user profile not available");
+      return;
+    }
+
     const peer = new Peer({ initiator: true, trickle: false, stream: stream });
 
     peer.on("signal", (data) => {
-      socket.emit("callUser", { userToCall: id, signalData: data, from: userProfile._id, name: userProfile.fullName });
+      if (socket) {
+        socket.emit("callUser", { userToCall: id, signalData: data, from: userProfile._id, name: userProfile.fullName });
+      }
     });
 
     peer.on("stream", (currentStream) => {
-      userVideo.current.srcObject = currentStream;
+      if (userVideo.current) {
+        userVideo.current.srcObject = currentStream;
+      }
     });
 
-    socket.on("callAccepted", (signal) => {
+    const handleCallAccepted = (signal) => {
       dispatch(setCallAccepted(true));
-      peer.signal(signal);
-    });
+      if (peer) {
+        peer.signal(signal);
+      }
+      // Remove the listener after it's used
+      if (socket) {
+        socket.off("callAccepted", handleCallAccepted);
+      }
+    };
+
+    if (socket) {
+      socket.on("callAccepted", handleCallAccepted);
+    }
 
     connectionRef.current = peer;
   };

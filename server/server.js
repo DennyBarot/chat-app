@@ -1,6 +1,5 @@
 import dotenv from 'dotenv';
 dotenv.config();
-console.log("All env vars starting with CLIENT_:", Object.keys(process.env).filter(key => key.startsWith("CLIENT_")).map(key => ({ [key]: process.env[key] })));
 
 import {app, server} from './socket/socket.js';
 import express from "express";
@@ -11,6 +10,7 @@ import fileUpload from 'express-fileupload';
 import userRoute from './routes/user.route.js'
 import messageRoute from './routes/message.routes.js'
 import conversationRoute from './routes/conversation.routes.js'
+import callRoute from './routes/call.routes.js'
 import { errorMiddleware } from './middlewares/errorMiddleware.js';
 connectDB();
 
@@ -37,6 +37,7 @@ const PORT = process.env.PORT || 5000;
 app.use('/api/v1/user', userRoute)
 app.use('/api/v1/message', messageRoute)
 app.use('/api/v1/conversation', conversationRoute)
+app.use('/api/v1/call', callRoute)
 app.use(errorMiddleware);
 console.log("CLIENT_URL:", process.env.CLIENT_URL);
 server.listen(PORT, () => {

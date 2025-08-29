@@ -106,17 +106,51 @@ io.on("connection", async (socket) => {
     });
   });
 
-  // Call events
+  // Call events with timeout handling
+  const callTimeouts = {}; // Track call timeouts by caller ID
+
   socket.on("callUser", ({ userToCall, signalData, from, name }) => {
+    // Check if user is online before initiating call
+    if (!userSocketMap[userToCall]) {
+      socket.emit("callFailed", { reason: "User is offline" });
+      return;
+    }
+
     io.to(userToCall).emit("callUser", { signal: signalData, from, name });
+    
+    // Set timeout to auto-reject call after 30 seconds
+    callTimeouts[from] = setTimeout(() => {
+      io.to(userToCall).emit("callEnded", { reason: "Call timeout" });
+      socket.emit("callFailed", { reason: "No answer" });
+      delete callTimeouts[from];
+    }, 30000);
   });
 
   socket.on("answerCall", (data) => {
+    // Clear timeout if call is answered
+    if (callTimeouts[data.to]) {
+      clearTimeout(callTimeouts[data.to]);
+      delete callTimeouts[data.to];
+    }
     io.to(data.to).emit("callAccepted", data.signal);
   });
 
-  socket.on("callEnded", ({ to }) => {
-    io.to(to).emit("callEnded");
+  socket.on("callEnded", ({ to, reason }) => {
+    // Clear timeout if call is ended
+    if (callTimeouts[to]) {
+      clearTimeout(callTimeouts[to]);
+      delete callTimeouts[to];
+    }
+    io.to(to).emit("callEnded", { reason: reason || "Call ended by user" });
+  });
+
+  socket.on("callRejected", ({ to }) => {
+    // Clear timeout if call is rejected
+    if (callTimeouts[to]) {
+      clearTimeout(callTimeouts[to]);
+      delete callTimeouts[to];
+    }
+    io.to(to).emit("callEnded", { reason: "Call rejected" });
   });
 });
 

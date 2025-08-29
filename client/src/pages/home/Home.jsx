@@ -6,10 +6,9 @@ import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getConversationsThunk, getOtherUsersThunk } from "../../store/slice/message/message.thunk";
 import { useOutletContext } from "react-router-dom";
 
-const Home = () => {
+const Home = ({ callUser }) => {
   const dispatch = useDispatch();
   const { isAuthenticated, userProfile, selectedUser } = useSelector((state) => state.userReducer);
-  const { callUser } = useOutletContext();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);

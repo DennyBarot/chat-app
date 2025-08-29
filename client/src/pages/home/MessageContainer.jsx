@@ -11,7 +11,7 @@ import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { setTyping } from "../../store/slice/typing/typing.slice";
 
-const MessageContainer = ({ onBack, isMobile, callUser }) => {
+const MessageContainer = ({ onBack, isMobile, callUser, userProfile, stream }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);

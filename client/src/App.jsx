@@ -202,45 +202,38 @@ function App() {
     }
   };
 
-  const callUser = (id) => {
+  const callUser = async (id) => {
     console.log("Calling user:", id);
     
-    // Check if we have media permissions
-    if (!stream) {
-      console.error("No media stream available - requesting permissions again");
+    // Check if we have media permissions - if not, get them first
+    let currentStream = stream;
+    if (!currentStream) {
+      console.log("No media stream available - requesting permissions");
       
-      // Show immediate feedback to user
-      toast.error("Microphone access required. Please allow permissions when prompted.");
-      
-      // Try to reinitialize media with user interaction context
-      const initializeMedia = async () => {
-        try {
-          const audioStream = await navigator.mediaDevices.getUserMedia({ 
-            audio: true,
-            video: false 
-          });
-          dispatch(setStream(audioStream));
-          dispatch(setIsStreamReady(true));
-          toast.success("Microphone access granted! Please try calling again.");
-        } catch (error) {
-          console.error("Failed to get audio devices on retry:", error);
-          
-          // Provide specific guidance based on error type
-          if (error.name === 'NotAllowedError') {
-            toast.error("Permission denied. Please check browser settings and allow microphone access.");
-          } else if (error.name === 'NotFoundError') {
-            toast.error("No microphone found on this device.");
-          } else if (error.name === 'NotReadableError') {
-            toast.error("Microphone is in use by another application. Please close other apps using your microphone.");
-          } else {
-            toast.error("Could not access microphone. Please check browser permissions.");
-          }
+      try {
+        // Get media stream with user interaction context
+        currentStream = await navigator.mediaDevices.getUserMedia({ 
+          audio: true,
+          video: false 
+        });
+        dispatch(setStream(currentStream));
+        dispatch(setIsStreamReady(true));
+        console.log("Media stream obtained successfully");
+      } catch (error) {
+        console.error("Failed to get media devices:", error);
+        
+        // Provide specific guidance based on error type
+        if (error.name === 'NotAllowedError') {
+          toast.error("Permission denied. Please check browser settings and allow microphone access.");
+        } else if (error.name === 'NotFoundError') {
+          toast.error("No microphone found on this device.");
+        } else if (error.name === 'NotReadableError') {
+          toast.error("Microphone is in use by another application. Please close other apps using your microphone.");
+        } else {
+          toast.error("Could not access microphone. Please check browser permissions.");
         }
-      };
-      
-      // Use setTimeout to ensure the toast message is shown before the permission prompt
-      setTimeout(initializeMedia, 1000);
-      return;
+        return;
+      }
     }
     
     if (!userProfile?._id) {
@@ -255,7 +248,7 @@ function App() {
     }
 
     try {
-      const peer = new Peer({ initiator: true, trickle: false, stream: stream });
+      const peer = new Peer({ initiator: true, trickle: false, stream: currentStream });
 
       peer.on("signal", (data) => {
         console.log("Call signal generated:", data);

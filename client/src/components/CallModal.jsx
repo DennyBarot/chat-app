@@ -120,14 +120,19 @@ const CallModal = () => {
     }
 
     // Caller: Receives the answer and sets remote description
-    if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current?.signalingState === 'have-local-offer') {
-      peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer))
-        .then(() => {
-          // Process any queued candidates for the caller
-          pendingCandidates.forEach(candidate => peerConnectionRef.current.addIceCandidate(candidate));
-          setPendingCandidates([]);
-        })
-        .catch(e => console.error("Failed to set remote description for answer:", e));
+    if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current) {
+      // Only set remote description if we're in the right signaling state
+      if (peerConnectionRef.current.signalingState === 'have-local-offer') {
+        peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer))
+          .then(() => {
+            // Process any queued candidates for the caller
+            pendingCandidates.forEach(candidate => peerConnectionRef.current.addIceCandidate(candidate));
+            setPendingCandidates([]);
+          })
+          .catch(e => console.error("Failed to set remote description for answer:", e));
+      } else {
+        console.log('Skipping setRemoteDescription - signaling state is:', peerConnectionRef.current.signalingState);
+      }
     }
 
   }, [outgoingCall, call, callRejected, dispatch, socket, setupPeerConnection, handleHangup, pendingCandidates]);

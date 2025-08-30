@@ -37,4 +37,4 @@ User1 can see User2's audio/video, but User2 cannot see User1's audio/video.
 - [x] Add debug logging to CallModal.jsx
 - [x] Fix callee media track setup
 - [x] Verify signaling flow
-- [ ] Test call functionality
+- [x] Test call functionality and fix signaling state issue

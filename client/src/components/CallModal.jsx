@@ -16,31 +16,15 @@ const CallModal = () => {
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
   const peerConnectionRef = useRef();
-  const [localStream, setLocalStream] = useState(null);
-  const [pendingIceCandidates, setPendingIceCandidates] = useState([]);
+  const localStreamRef = useRef();
+  const pendingIceCandidatesRef = useRef([]);
 
-  // Process incoming ICE candidates from Redux
-  useEffect(() => {
-    if (iceCandidate && iceCandidate.candidate) {
-      const candidate = new RTCIceCandidate(iceCandidate.candidate);
-
-      if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
-        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding received ICE candidate", e));
-      } else {
-        setPendingIceCandidates(prev => [...prev, candidate]);
-      }
-      dispatch(setIceCandidate(null)); // Clear the candidate from Redux
-    }
-  }, [iceCandidate, dispatch]);
-
-  const createPeerConnection = async (remoteUserId) => {
+  const setupPeerConnection = async (remoteUserId) => {
     if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
+      peerConnectionRef.current.close();
     }
 
-    const pc = new RTCPeerConnection({
-      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-    });
+    const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
@@ -56,70 +40,105 @@ const CallModal = () => {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
+      localStreamRef.current = stream;
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
     } catch (error) {
       console.error("Error accessing media devices.", error);
       handleHangup();
     }
-    
+
     peerConnectionRef.current = pc;
     return pc;
   };
 
-  // Effect for outgoing calls
+  const handleHangup = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => track.stop());
+      localStreamRef.current = null;
+    }
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    const remoteUserId = call?.from?._id || call?.to || incomingCall?.from?._id;
+    if (remoteUserId && socket) {
+      socket.emit('call-rejected', { to: remoteUserId });
+    }
+    dispatch(clearCallState());
+  };
+
+  // Unified effect for the entire call lifecycle
   useEffect(() => {
+    // 1. Handle Outgoing Call
     if (outgoingCall && !call) {
       const startCall = async () => {
-        const pc = await createPeerConnection(outgoingCall.to);
+        const remoteUserId = outgoingCall.to;
+        const pc = await setupPeerConnection(remoteUserId);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        socket.emit('call-user', { to: outgoingCall.to, offer });
-        dispatch(setCall({ to: outgoingCall.to, type: 'outgoing' }));
+        socket.emit('call-user', { to: remoteUserId, offer });
+        dispatch(setCall({ to: remoteUserId, type: 'outgoing' }));
       };
       startCall();
     }
-  }, [outgoingCall, call, dispatch, socket]);
 
-  // Effect to set the answer for the outgoing call
-  useEffect(() => {
-    const setAnswer = async () => {
-      if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current?.signalingState === 'have-local-offer') {
+    // 2. Handle Answer to Outgoing Call
+    if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current?.signalingState === 'have-local-offer') {
+      const setAnswer = async () => {
         await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer));
-        // Process any candidates that arrived before the answer was set
-        if (pendingIceCandidates.length > 0) {
-          await Promise.all(pendingIceCandidates.map(candidate => peerConnectionRef.current.addIceCandidate(candidate)));
-          setPendingIceCandidates([]);
-        }
-      }
+        // Process any pending ICE candidates
+        pendingIceCandidatesRef.current.forEach(candidate => peerConnectionRef.current.addIceCandidate(candidate));
+        pendingIceCandidatesRef.current = [];
+      };
+      setAnswer();
     }
-    setAnswer();
-  }, [call?.answer]);
 
-  // Effect for call rejection
-  useEffect(() => {
+    // 3. Handle Incoming Call
+    if (incomingCall && call?.type === 'incoming' && call.status === 'active') {
+        // This state is handled by the active call UI
+    }
+
+    // 4. Handle ICE Candidates
+    if (iceCandidate?.candidate) {
+      const candidate = new RTCIceCandidate(iceCandidate.candidate);
+      if (peerConnectionRef.current?.remoteDescription) {
+        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding ICE candidate:", e));
+      } else {
+        pendingIceCandidatesRef.current.push(candidate);
+      }
+      dispatch(setIceCandidate(null));
+    }
+
+    // 5. Handle Call Rejection/Hangup
     if (callRejected) {
       handleHangup();
     }
-  }, [callRejected]);
+
+    // Cleanup on unmount
+    return () => {
+      if (call || incomingCall || outgoingCall) {
+        // handleHangup(); // This might be too aggressive, consider if it's needed
+      }
+    };
+  }, [outgoingCall, incomingCall, call, iceCandidate, callRejected, dispatch, socket]);
 
   const handleAnswer = async () => {
     if (!incomingCall) return;
-    const pc = await createPeerConnection(incomingCall.from._id);
+    const remoteUserId = incomingCall.from._id;
+    const pc = await setupPeerConnection(remoteUserId);
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
     
-    // Process any candidates that arrived before the offer was set
-    if (pendingIceCandidates.length > 0) {
-        await Promise.all(pendingIceCandidates.map(candidate => pc.addIceCandidate(candidate)));
-        setPendingIceCandidates([]);
-    }
-
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    socket.emit('make-answer', { to: incomingCall.from._id, answer });
+
+    // Process any pending ICE candidates right after setting the offer
+    pendingIceCandidatesRef.current.forEach(candidate => pc.addIceCandidate(candidate));
+    pendingIceCandidatesRef.current = [];
+
+    socket.emit('make-answer', { to: remoteUserId, answer });
     dispatch(setCall({ from: incomingCall.from, type: 'incoming', status: 'active' }));
     dispatch(setIncomingCall(null));
   };
@@ -130,32 +149,16 @@ const CallModal = () => {
     dispatch(clearCallState());
   };
 
-  const handleHangup = () => {
-    if (localStream) {
-      localStream.getTracks().forEach((track) => track.stop());
-      setLocalStream(null);
-    }
-    if (peerConnectionRef.current) {
-      peerConnectionRef.current.close();
-      peerConnectionRef.current = null;
-    }
-    const remoteUserId = call?.from?._id || call?.to || incomingCall?.from?._id;
-    if (remoteUserId) {
-      socket.emit('call-rejected', { to: remoteUserId });
-    }
-    dispatch(clearCallState());
-  };
+  const isCallActive = call?.status === 'active';
+  const isRinging = !!incomingCall;
+  const isCalling = call?.type === 'outgoing' && !call.status;
 
-  const isCallActive = call && call.status === 'active';
-  const isRinging = incomingCall || (call && call.type === 'outgoing' && !call.status);
-
-  if (!isRinging && !isCallActive) return null;
+  if (!isRinging && !isCalling && !isCallActive) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-gray-800 text-white rounded-lg p-8 shadow-lg w-full max-w-md mx-auto">
-        {/* Incoming Call UI */}
-        {incomingCall && !isCallActive && (
+        {isRinging && !isCallActive && (
           <div className="text-center">
             <p className="text-2xl font-bold mb-2">Incoming Call</p>
             <div className="flex items-center justify-center mb-4">
@@ -169,8 +172,7 @@ const CallModal = () => {
           </div>
         )}
 
-        {/* Outgoing Call UI */}
-        {call && call.type === 'outgoing' && !isCallActive && (
+        {isCalling && (
             <div className="text-center">
                 <p className="text-2xl font-bold mb-4">Calling...</p>
                 <div className="flex justify-center">
@@ -179,7 +181,6 @@ const CallModal = () => {
             </div>
         )}
 
-        {/* Active Call UI */}
         {isCallActive && (
           <div>
             <div className="relative mb-4">

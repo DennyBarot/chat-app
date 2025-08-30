@@ -75,8 +75,8 @@ export const SocketProvider = ({ children }) => {
       dispatch(setIncomingCall({ from, offer }));
     });
 
-    newSocket.on("answer-made", ({ answer }) => {
-      dispatch(setCall({ answer, status: 'active' }));
+    newSocket.on("answer-made", ({ from, answer }) => {
+      dispatch(setCall({ from, answer }));
     });
 
     newSocket.on("ice-candidate", ({ from, candidate }) => {

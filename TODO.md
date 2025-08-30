@@ -14,6 +14,7 @@
 - [x] Fix null socket errors in CallModal.jsx
 - [x] Fix null userProfile.name error in call button
 - [x] Add Redux Provider to App.jsx to connect store
+- [x] Add null checks to call button in MessageContainer.jsx
 
 ## Pending
 - [ ] Test call functionality

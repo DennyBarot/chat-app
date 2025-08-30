@@ -7,9 +7,7 @@ import { getMessageThunk, markMessagesReadThunk } from "../../store/slice/messag
 import { messagesRead, setNewMessage } from "../../store/slice/message/message.slice";
 import { useSocket } from "../../context/SocketContext";
 import SendMessage from "./SendMessage";
-import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
-import { setTyping } from "../../store/slice/typing/typing.slice";
 import { setIdToCall, setName } from "../../store/slice/call/call.slice";
 
 const MessageContainer = ({ onBack, isMobile }) => {
@@ -227,8 +225,8 @@ const MessageContainer = ({ onBack, isMobile }) => {
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
             <button
               onClick={() => {
-                dispatch(setIdToCall(selectedUser._id));
-                if (userProfile?.name) {
+                if (selectedUser?._id && userProfile?.name) {
+                  dispatch(setIdToCall(selectedUser._id));
                   dispatch(setName(userProfile.name));
                 }
               }}

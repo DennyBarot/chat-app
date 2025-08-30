@@ -19,7 +19,7 @@ function App() {
   const dispatch = useDispatch();
   const socket = useSocket();
   const { userProfile } = useSelector((state) => state.userReducer);
-  const { call, callAccepted, callEnded, stream, caller, callerSignal } = useSelector((state) => state.callReducer || {});
+  const { call, callAccepted, callEnded, stream, caller, callerSignal, isStreamReady } = useSelector((state) => state.callReducer || {});
 
   const myVideo = useRef();
   const userVideo = useRef();

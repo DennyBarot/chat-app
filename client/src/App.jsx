@@ -18,7 +18,7 @@ import { setCall, setCallAccepted, setCallEnded, setCaller, setCallerSignal, set
 function App() {
   const dispatch = useDispatch();
   const socket = useSocket();
-  const { userProfile, screenLoading } = useSelector((state) => state.userReducer);
+  const { userProfile } = useSelector((state) => state.userReducer);
   const { call, callAccepted, callEnded, stream, caller, callerSignal, isStreamReady } = useSelector((state) => state.callReducer || { call: null, callAccepted: false, callEnded: false, stream: null, caller: '', callerSignal: null, isStreamReady: false });
 
   const myVideo = useRef();
@@ -218,9 +218,6 @@ function App() {
         });
         dispatch(setStream(currentStream));
         dispatch(setIsStreamReady(true));
-        if (myVideo.current) {
-          myVideo.current.srcObject = currentStream;
-        }
         console.log("Media stream obtained successfully");
       } catch (error) {
         console.error("Failed to get media devices:", error);
@@ -240,8 +237,8 @@ function App() {
     }
     
     if (!userProfile?._id) {
-      console.error("User profile not available - current userProfile:", userProfile);
-      toast.error("User profile not available. Please refresh the page and try again.");
+      console.error("User profile not available");
+      toast.error("User profile not available. Please try again.");
       return;
     }
     if (!socket || !socket.connected) {
@@ -355,7 +352,7 @@ function App() {
       children: [
         {
           path: "/",
-          element: <Home callUser={callUser} isStreamReady={isStreamReady} screenLoading={screenLoading} />,
+          element: <Home callUser={callUser} isStreamReady={isStreamReady} />,
         },
       ],
     },

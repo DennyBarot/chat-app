@@ -6,7 +6,6 @@ import {
   setCall,
   setIceCandidate,
   setIncomingCall,
-  setOutgoingCall,
 } from '../store/slice/call/call.slice';
 
 const CallModal = () => {
@@ -18,6 +17,7 @@ const CallModal = () => {
   const remoteVideoRef = useRef();
   const peerConnectionRef = useRef();
   const localStreamRef = useRef();
+  const [pendingCandidates, setPendingCandidates] = useState([]);
 
   const handleHangup = useCallback(() => {
     if (localStreamRef.current) {
@@ -33,6 +33,7 @@ const CallModal = () => {
       socket.emit('call-rejected', { to: remoteUserId });
     }
     dispatch(clearCallState());
+    setPendingCandidates([]);
   }, [dispatch, socket, call, incomingCall]);
 
   const setupPeerConnection = useCallback(async (remoteUserId) => {
@@ -58,13 +59,26 @@ const CallModal = () => {
       }
       stream.getTracks().forEach(track => pc.addTrack(track, stream));
     } catch (error) {
-      console.error("Error accessing media devices.", error);
+      console.error("Error accessing media devices:", error);
       handleHangup();
     }
 
     peerConnectionRef.current = pc;
     return pc;
   }, [socket, handleHangup]);
+
+  // Effect to queue incoming ICE candidates
+  useEffect(() => {
+    if (iceCandidate?.candidate) {
+      const candidate = new RTCIceCandidate(iceCandidate.candidate);
+      if (peerConnectionRef.current?.remoteDescription) {
+        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding ICE candidate immediately:", e));
+      } else {
+        setPendingCandidates(prev => [...prev, candidate]);
+      }
+      dispatch(setIceCandidate(null));
+    }
+  }, [iceCandidate, dispatch]);
 
   // Main call lifecycle effect
   useEffect(() => {
@@ -85,34 +99,32 @@ const CallModal = () => {
       startCall();
     }
 
-    // Caller: Receives the answer
-    if (call?.type === 'outgoing' && call.answer) {
-      const pc = peerConnectionRef.current;
-      if (pc && pc.signalingState === 'have-local-offer') {
-        pc.setRemoteDescription(new RTCSessionDescription(call.answer))
-          .catch(e => console.error("Failed to set remote description for answer:", e));
-      }
+    // Caller: Receives the answer and sets remote description
+    if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current?.signalingState === 'have-local-offer') {
+      peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer))
+        .then(() => {
+          // Process any queued candidates for the caller
+          pendingCandidates.forEach(candidate => peerConnectionRef.current.addIceCandidate(candidate));
+          setPendingCandidates([]);
+        })
+        .catch(e => console.error("Failed to set remote description for answer:", e));
     }
 
-    // Callee & Caller: Receives ICE candidates
-    if (iceCandidate?.candidate) {
-      const pc = peerConnectionRef.current;
-      if (pc) {
-        pc.addIceCandidate(new RTCIceCandidate(iceCandidate.candidate))
-          .catch(e => console.error("Error adding received ICE candidate", e));
-      }
-      dispatch(setIceCandidate(null));
-    }
-
-  }, [outgoingCall, call, iceCandidate, callRejected, dispatch, socket, setupPeerConnection, handleHangup]);
+  }, [outgoingCall, call, callRejected, dispatch, socket, setupPeerConnection, handleHangup, pendingCandidates]);
 
   const handleAnswer = async () => {
     if (!incomingCall) return;
     const remoteUserId = incomingCall.from._id;
     const pc = await setupPeerConnection(remoteUserId);
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+    
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
+
+    // Process any candidates that arrived before answering
+    pendingCandidates.forEach(candidate => pc.addIceCandidate(candidate));
+    setPendingCandidates([]);
+
     socket.emit('make-answer', { to: remoteUserId, answer });
     dispatch(setCall({ from: incomingCall.from, type: 'incoming', status: 'active' }));
     dispatch(setIncomingCall(null));

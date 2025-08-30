@@ -107,16 +107,26 @@ io.on("connection", async (socket) => {
   });
   
   // WebRTC Signaling events
-  socket.on("call-user", (data) => {
-    io.to(data.to).emit("incoming-call", {
-      from: userId,
-      offer: data.offer,
-    });
+  socket.on("call-user", async (data) => {
+    try {
+      const callingUser = await User.findById(userId).select("fullName profilePic").lean();
+      if (callingUser) {
+        io.to(data.to).emit("incoming-call", {
+          from: {
+            _id: userId,
+            fullName: callingUser.fullName,
+            profilePic: callingUser.profilePic,
+          },
+          offer: data.offer,
+        });
+      }
+    } catch (error) {
+      console.error("Error handling call-user event:", error);
+    }
   });
 
   socket.on("make-answer", (data) => {
     io.to(data.to).emit("answer-made", {
-      from: userId,
       answer: data.answer,
     });
   });

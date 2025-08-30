@@ -209,10 +209,7 @@ function App() {
     if (!stream) {
       console.error("No media stream available - requesting permissions again");
       
-      // Show immediate feedback to user
-      toast.error("Microphone access required. Please allow permissions when prompted.");
-      
-      // Try to reinitialize media with user interaction context
+      // Try to reinitialize media
       const initializeMedia = async () => {
         try {
           const audioStream = await navigator.mediaDevices.getUserMedia({ 
@@ -221,25 +218,14 @@ function App() {
           });
           dispatch(setStream(audioStream));
           dispatch(setIsStreamReady(true));
-          toast.success("Microphone access granted! Please try calling again.");
+          toast.success("Microphone access granted. You can now make calls.");
         } catch (error) {
           console.error("Failed to get audio devices on retry:", error);
-          
-          // Provide specific guidance based on error type
-          if (error.name === 'NotAllowedError') {
-            toast.error("Permission denied. Please check browser settings and allow microphone access.");
-          } else if (error.name === 'NotFoundError') {
-            toast.error("No microphone found on this device.");
-          } else if (error.name === 'NotReadableError') {
-            toast.error("Microphone is in use by another application. Please close other apps using your microphone.");
-          } else {
-            toast.error("Could not access microphone. Please check browser permissions.");
-          }
+          toast.error("Please allow microphone access to make calls.");
         }
       };
       
-      // Use setTimeout to ensure the toast message is shown before the permission prompt
-      setTimeout(initializeMedia, 1000);
+      initializeMedia();
       return;
     }
     

@@ -16,17 +16,19 @@ import { useSocket } from '../context/SocketContext';
 const CallModal = () => {
   const dispatch = useDispatch();
   const socket = useSocket();
+  const callState = useSelector((state) => state.callReducer) || {};
+  console.log('CallModal callState:', callState);
   const {
-    callAccepted,
-    callEnded,
-    stream,
-    receivingCall,
-    caller,
-    callerSignal,
-    me,
-    idToCall,
-    name
-  } = useSelector((state) => state.callReducer);
+    callAccepted = false,
+    callEnded = false,
+    stream = null,
+    receivingCall = false,
+    caller = "",
+    callerSignal = null,
+    me = "",
+    idToCall = "",
+    name = ""
+  } = callState;
 
   const myVideo = useRef();
   const userVideo = useRef();

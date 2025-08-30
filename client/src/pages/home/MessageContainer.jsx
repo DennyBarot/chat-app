@@ -225,9 +225,13 @@ const MessageContainer = ({ onBack, isMobile }) => {
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
             <button
               onClick={() => {
+                console.log('Call button clicked', { selectedUser: selectedUser?._id, userProfile: userProfile?.name });
                 if (selectedUser?._id && userProfile?.name) {
+                  console.log('Dispatching call actions');
                   dispatch(setIdToCall(selectedUser._id));
                   dispatch(setName(userProfile.name));
+                } else {
+                  console.log('Missing required data for call');
                 }
               }}
               className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"

@@ -211,9 +211,6 @@ const MessageContainer = ({ onBack, isMobile, callUser, userProfile, stream, isS
   const handleReply = useCallback((message) => setReplyMessage(message), []);
    const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
 
-  console.log("isStreamReady:", isStreamReady);
-  console.log("userProfile:", userProfile);
-
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-text-primary relative">
       {isMobile && (

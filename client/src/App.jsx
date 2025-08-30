@@ -144,8 +144,12 @@ function App() {
   };
 
   const callUser = (id) => {
-    if (!stream || !userProfile?._id) {
-      console.error("Cannot make call: stream or user profile not available");
+    if (!stream) {
+      toast.error("Microphone/camera access denied or not available.");
+      return;
+    }
+    if (!userProfile?._id) {
+      toast.error("User profile not available. Please try again.");
       return;
     }
 
@@ -210,7 +214,7 @@ function App() {
       children: [
         {
           path: "/",
-          element: <Home callUser={callUser} />,
+          element: <Home callUser={callUser} isStreamReady={isStreamReady} />,
         },
       ],
     },

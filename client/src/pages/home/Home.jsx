@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getConversationsThunk, getOtherUsersThunk } from "../../store/slice/message/message.thunk";
 
-const Home = ({ callUser, isStreamReady }) => {
+const Home = ({ callUser, isStreamReady, screenLoading }) => {
   const dispatch = useDispatch();
   const { isAuthenticated, userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const { stream } = useSelector((state) => state.callReducer);
@@ -54,7 +54,7 @@ const Home = ({ callUser, isStreamReady }) => {
       )}
       {(!isMobile || showMessageContainer) && (
         <div className={`flex-1 transition-all duration-300 ${isMobile ? 'w-full' : ''}`}>
-          <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} callUser={callUser} userProfile={userProfile} stream={stream} isStreamReady={isStreamReady} />
+          <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} callUser={callUser} userProfile={userProfile} stream={stream} isStreamReady={isStreamReady} screenLoading={screenLoading} />
         </div>
       )}
     </div>

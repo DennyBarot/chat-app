@@ -10,6 +10,7 @@ const initialState = {
   caller: '',
   receiver: '',
   callerSignal: null,
+  isStreamReady: false,
 };
 
 const callSlice = createSlice({
@@ -40,6 +41,9 @@ const callSlice = createSlice({
     setCallerSignal: (state, action) => {
       state.callerSignal = action.payload;
     },
+    setIsStreamReady: (state, action) => {
+      state.isStreamReady = action.payload;
+    },
   },
 });
 
@@ -52,6 +56,7 @@ export const {
   setCaller,
   setReceiver,
   setCallerSignal,
+  setIsStreamReady,
 } = callSlice.actions;
 
 export default callSlice.reducer;

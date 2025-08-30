@@ -13,7 +13,7 @@ import ProtectedRoute from './components/ProtectedRoutes.jsx';
 import { SocketProvider, useSocket } from './context/SocketContext.jsx';
 import CallModal from "./components/CallModal.jsx";
 import Peer from "simple-peer";
-import { setCall, setCallAccepted, setCallEnded, setCaller, setCallerSignal, setStream, setIsStreamReady } from "./store/slice/call/call.slice.js";
+import { setCall, setCallAccepted, setCallEnded, setCaller, setCallerSignal, setStream } from "./store/slice/call/call.slice.js";
 
 function App() {
   const dispatch = useDispatch();
@@ -26,28 +26,13 @@ function App() {
   const connectionRef = useRef();
 
   useEffect(() => {
-    const initializeMedia = async () => {
-      try {
-        const currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      .then((currentStream) => {
         dispatch(setStream(currentStream));
-        dispatch(setIsStreamReady(true));
         if (myVideo.current) {
           myVideo.current.srcObject = currentStream;
         }
-      } catch (error) {
-        console.error("Failed to get media devices:", error);
-        // Fallback to audio only if video fails
-        try {
-          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          dispatch(setStream(audioStream));
-          dispatch(setIsStreamReady(true));
-        } catch (audioError) {
-          console.error("Failed to get audio devices:", audioError);
-        }
-      }
-    };
-
-    initializeMedia();
+      });
 
     (async () => {
       if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/signup")) {

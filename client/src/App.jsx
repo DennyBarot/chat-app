@@ -117,7 +117,7 @@ function App() {
       children: [
         {
           path: "/",
-          element: <Home callUser={callUser} />,
+          element: <Home />,
         },
       ],
     },

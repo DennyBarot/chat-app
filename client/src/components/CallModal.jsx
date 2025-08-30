@@ -36,28 +36,48 @@ const CallModal = () => {
     setPendingCandidates([]);
   }, [dispatch, socket, call, incomingCall]);
 
-  const setupPeerConnection = useCallback(async (remoteUserId) => {
+  const setupPeerConnection = useCallback(async (remoteUserId, isCaller = false) => {
+    console.log(`Setting up peer connection for ${isCaller ? 'caller' : 'callee'} to ${remoteUserId}`);
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
 
     pc.onicecandidate = (event) => {
+      console.log('ICE candidate generated:', event.candidate ? 'sending' : 'end of candidates');
       if (event.candidate && socket) {
         socket.emit('ice-candidate', { to: remoteUserId, candidate: event.candidate });
       }
     };
 
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current) {
+      console.log('Remote track received:', event.streams[0]?.getTracks().map(t => t.kind));
+      if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        console.log('Remote video stream set');
       }
+    };
+
+    pc.onconnectionstatechange = () => {
+      console.log('Connection state changed:', pc.connectionState);
+    };
+
+    pc.onsignalingstatechange = () => {
+      console.log('Signaling state changed:', pc.signalingState);
     };
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      console.log('Local media stream obtained with tracks:', stream.getTracks().map(t => t.kind));
       localStreamRef.current = stream;
+      
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
+        console.log('Local video stream set');
       }
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      
+      // Add all tracks to the peer connection
+      stream.getTracks().forEach(track => {
+        pc.addTrack(track, stream);
+        console.log(`Added ${track.kind} track to peer connection`);
+      });
     } catch (error) {
       console.error("Error accessing media devices:", error);
       handleHangup();
@@ -90,7 +110,7 @@ const CallModal = () => {
     // Caller: Initiates the call
     if (outgoingCall && !call) {
       const startCall = async () => {
-        const pc = await setupPeerConnection(outgoingCall.to);
+        const pc = await setupPeerConnection(outgoingCall.to, true); // true for caller
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         socket.emit('call-user', { to: outgoingCall.to, offer });
@@ -115,15 +135,21 @@ const CallModal = () => {
   const handleAnswer = async () => {
     if (!incomingCall) return;
     const remoteUserId = incomingCall.from._id;
-    const pc = await setupPeerConnection(remoteUserId);
+    const pc = await setupPeerConnection(remoteUserId, false); // false for callee
+    
+    // Process any candidates that arrived before setting remote description
+    const candidatesToProcess = [...pendingCandidates];
+    setPendingCandidates([]);
+    
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+    
+    // Add any pending candidates after setting remote description
+    candidatesToProcess.forEach(candidate => {
+      pc.addIceCandidate(candidate).catch(e => console.error("Error adding pending ICE candidate:", e));
+    });
     
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-
-    // Process any candidates that arrived before answering
-    pendingCandidates.forEach(candidate => pc.addIceCandidate(candidate));
-    setPendingCandidates([]);
 
     socket.emit('make-answer', { to: remoteUserId, answer });
     dispatch(setCall({ from: incomingCall.from, type: 'incoming', status: 'active' }));

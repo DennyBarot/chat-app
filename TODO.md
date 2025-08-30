@@ -1,18 +1,18 @@
 # Audio/Video Call Feature Implementation TODO
 
 ## Completed
-- [ ] Analyze project structure and gather information
-- [ ] Create comprehensive plan
-- [ ] Get user approval for plan
-
-## In Progress
+- [x] Analyze project structure and gather information
+- [x] Create comprehensive plan
+- [x] Get user approval for plan
 - [x] Install simple-peer dependency in client
 - [x] Update server/socket/socket.js for call signaling events
 - [x] Create client/src/store/slice/call/call.slice.js
-- [ ] Create client/src/components/CallModal.jsx
-- [ ] Update client/src/context/SocketContext.jsx
-- [ ] Update client/src/store/store.js to include call slice
-- [ ] Update client/src/pages/home/User.jsx to add call button
+- [x] Create client/src/components/CallModal.jsx
+- [x] Update client/src/context/SocketContext.jsx
+- [x] Update client/src/store/store.js to include call slice
+- [x] Update client/src/pages/home/MessageContainer.jsx to add call button
+- [x] Fix null socket errors in CallModal.jsx
+- [x] Fix null userProfile.name error in call button
 
 ## Pending
 - [ ] Test call functionality

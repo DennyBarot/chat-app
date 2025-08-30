@@ -23,11 +23,10 @@ const CallModal = () => {
     receivingCall,
     caller,
     callerSignal,
-    remoteStream,
     me,
-    idToCall
+    idToCall,
+    name
   } = useSelector((state) => state.callReducer);
-  const { userProfile } = useSelector((state) => state.userReducer);
 
   const myVideo = useRef();
   const userVideo = useRef();
@@ -105,7 +104,7 @@ const CallModal = () => {
         userToCall: id,
         signalData: data,
         from: me,
-        name: userProfile.name,
+        name: name,
       });
     });
 

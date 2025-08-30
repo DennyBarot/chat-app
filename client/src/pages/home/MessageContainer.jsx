@@ -228,7 +228,9 @@ const MessageContainer = ({ onBack, isMobile }) => {
             <button
               onClick={() => {
                 dispatch(setIdToCall(selectedUser._id));
-                dispatch(setName(userProfile.name));
+                if (userProfile?.name) {
+                  dispatch(setName(userProfile.name));
+                }
               }}
               className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
               title="Start Call"

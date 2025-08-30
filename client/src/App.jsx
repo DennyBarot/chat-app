@@ -55,53 +55,19 @@ function App() {
         dispatch(setCaller(from));
         dispatch(setCallerSignal(signal));
         dispatch(setCall({ isReceivingCall: true, from, name: callerName, signal }));
-        
-        // Play incoming call sound
-        const audio = new Audio('/sounds/incoming-call.mp3');
-        audio.loop = true;
-        audio.play().catch(console.error);
       });
 
       socket.on("callAccepted", (signal) => {
         dispatch(setCallAccepted(true));
-        if (connectionRef.current) {
-          connectionRef.current.signal(signal);
-        }
+        connectionRef.current.signal(signal);
       });
 
-      socket.on("callEnded", ({ reason }) => {
-        console.log("Call ended:", reason);
+      socket.on("callEnded", () => {
         dispatch(setCallEnded(true));
-        if (connectionRef.current) {
-          connectionRef.current.destroy();
-        }
-        // Show call ended notification
-        if (reason) {
-          // You could show a toast notification here
-          console.log("Call ended reason:", reason);
-        }
-      });
-
-      socket.on("callFailed", ({ reason }) => {
-        console.log("Call failed:", reason);
-        // Show call failed notification
-        if (reason === "User is offline") {
-          // Show offline message
-          console.log("User is offline");
-        } else if (reason === "No answer") {
-          console.log("No answer from user");
-        }
+        connectionRef.current.destroy();
+        window.location.reload();
       });
     }
-
-    return () => {
-      if (socket) {
-        socket.off("callUser");
-        socket.off("callAccepted");
-        socket.off("callEnded");
-        socket.off("callFailed");
-      }
-    };
   }, [socket, dispatch]);
 
   const answerCall = () => {
@@ -143,20 +109,9 @@ function App() {
 
   const leaveCall = () => {
     dispatch(setCallEnded(true));
-    if (call && call.from) {
-      socket.emit("callEnded", { to: call.from });
-    }
-    if (connectionRef.current) {
-      connectionRef.current.destroy();
-    }
-    // Reset call state without reloading the page
-    setTimeout(() => {
-      dispatch(setCall(null));
-      dispatch(setCallAccepted(false));
-      dispatch(setCallEnded(false));
-      dispatch(setCaller(''));
-      dispatch(setCallerSignal(null));
-    }, 1000);
+    socket.emit("callEnded", { to: call.from });
+    connectionRef.current.destroy();
+    window.location.reload();
   };
 
   const router = createBrowserRouter([

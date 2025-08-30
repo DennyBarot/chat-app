@@ -1,6 +1,6 @@
 import "./App.css";
 import React, { useEffect, useRef, useState } from "react";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
 import { getUserProfileThunk } from "./store/slice/user/user.thunk";
 import { createBrowserRouter, RouterProvider, Outlet } from "react-router-dom";
@@ -43,7 +43,6 @@ function App() {
           dispatch(setIsStreamReady(true));
         } catch (audioError) {
           console.error("Failed to get audio devices:", audioError);
-          toast.error("Could not access camera or microphone. Please check if they are in use by another application.");
         }
       }
     };
@@ -121,151 +120,79 @@ function App() {
   }, [socket, dispatch]);
 
   const answerCall = () => {
-    console.log("Answering call from:", caller);
     dispatch(setCallAccepted(true));
 
-    try {
-      const peer = new Peer({ initiator: false, trickle: false, stream: stream });
+    const peer = new Peer({ initiator: false, trickle: false, stream: stream });
 
-      peer.on("signal", (data) => {
-        console.log("Answer call signal generated:", data);
-        if (socket && caller) {
-          socket.emit("answerCall", { signal: data, to: caller });
-          console.log("Answer call signal sent to:", caller);
-        }
-      });
-
-      peer.on("stream", (currentStream) => {
-        console.log("Remote stream received");
-        if (userVideo.current) {
-          userVideo.current.srcObject = currentStream;
-        }
-      });
-
-      peer.on("error", (error) => {
-        console.error("Peer connection error in answerCall:", error);
-        toast.error("Connection error. Please try again.");
-        leaveCall();
-      });
-
-      peer.on("close", () => {
-        console.log("Peer connection closed in answerCall");
-      });
-
-      if (callerSignal) {
-        console.log("Signaling with caller signal");
-        peer.signal(callerSignal);
+    peer.on("signal", (data) => {
+      if (socket && caller) {
+        socket.emit("answerCall", { signal: data, to: caller });
       }
+    });
 
-      connectionRef.current = peer;
-    } catch (error) {
-      console.error("Error creating peer in answerCall:", error);
-      toast.error("Failed to answer call. Please try again.");
-      leaveCall();
+    peer.on("stream", (currentStream) => {
+      if (userVideo.current) {
+        userVideo.current.srcObject = currentStream;
+      }
+    });
+
+    if (callerSignal) {
+      peer.signal(callerSignal);
     }
+
+    connectionRef.current = peer;
   };
 
   const callUser = (id) => {
-    console.log("Calling user:", id);
     if (!stream) {
-      console.error("No media stream available");
       toast.error("Microphone/camera access denied or not available.");
       return;
     }
     if (!userProfile?._id) {
-      console.error("User profile not available");
       toast.error("User profile not available. Please try again.");
       return;
     }
-    if (!socket || !socket.connected) {
-      console.error("Socket not connected");
-      toast.error("Connection not ready. Please wait and try again.");
-      return;
-    }
 
-    try {
-      const peer = new Peer({ initiator: true, trickle: false, stream: stream });
+    const peer = new Peer({ initiator: true, trickle: false, stream: stream });
 
-      peer.on("signal", (data) => {
-        console.log("Call signal generated:", data);
-        if (socket) {
-          socket.emit("callUser", { 
-            userToCall: id, 
-            signalData: data, 
-            from: userProfile._id, 
-            name: userProfile.fullName 
-          });
-          console.log("Call signal sent to user:", id);
-        }
-      });
+    peer.on("signal", (data) => {
+      if (socket) {
+        socket.emit("callUser", { userToCall: id, signalData: data, from: userProfile._id, name: userProfile.fullName });
+      }
+    });
 
-      peer.on("stream", (currentStream) => {
-        console.log("Remote stream received in call");
-        if (userVideo.current) {
-          userVideo.current.srcObject = currentStream;
-        }
-      });
+    peer.on("stream", (currentStream) => {
+      if (userVideo.current) {
+        userVideo.current.srcObject = currentStream;
+      }
+    });
 
-      peer.on("error", (error) => {
-        console.error("Peer connection error in callUser:", error);
-        toast.error("Connection error. Please try again.");
-        leaveCall();
-      });
-
-      peer.on("close", () => {
-        console.log("Peer connection closed in callUser");
-      });
-
-      // Store the cleanup function for this specific call
-      const handleCallAccepted = (signal) => {
-        console.log("Call accepted signal received:", signal);
-        dispatch(setCallAccepted(true));
-        if (peer) {
-          peer.signal(signal);
-        }
-        // Clean up the listener
+    const handleCallAccepted = (signal) => {
+      dispatch(setCallAccepted(true));
+      if (peer) {
+        peer.signal(signal);
+      }
+      // Remove the listener after it's used
+      if (socket) {
         socket.off("callAccepted", handleCallAccepted);
-      };
+      }
+    };
 
-      // Add the listener with a specific identifier
+    if (socket) {
       socket.on("callAccepted", handleCallAccepted);
-
-      // Store cleanup function
-      connectionRef.current = {
-        peer,
-        cleanup: () => socket.off("callAccepted", handleCallAccepted)
-      };
-    } catch (error) {
-      console.error("Error creating peer in callUser:", error);
-      toast.error("Failed to initiate call. Please try again.");
     }
+
+    connectionRef.current = peer;
   };
 
-  const leaveCall = (isReject = false) => {
-    console.log("Leaving call, isReject:", isReject);
-    if (isReject) {
-      socket.emit("callRejected", { to: call.from });
-      console.log("Call rejected signal sent to:", call.from);
-    } else if (call && call.from) {
-      socket.emit("callEnded", { to: call.from });
-      console.log("Call ended signal sent to:", call.from);
-    }
-
+  const leaveCall = () => {
     dispatch(setCallEnded(true));
-    if (connectionRef.current) {
-      // Handle both old and new connectionRef structures
-      if (connectionRef.current.peer) {
-        connectionRef.current.peer.destroy();
-        // Clean up socket listeners
-        if (connectionRef.current.cleanup) {
-          connectionRef.current.cleanup();
-        }
-      } else {
-        connectionRef.current.destroy();
-      }
-      connectionRef.current = null;
+    if (call && call.from) {
+      socket.emit("callEnded", { to: call.from });
     }
-
+    if (connectionRef.current) {
+      connectionRef.current.destroy();
+    }
     // Reset call state without reloading the page
     setTimeout(() => {
       dispatch(setCall(null));
@@ -273,7 +200,6 @@ function App() {
       dispatch(setCallEnded(false));
       dispatch(setCaller(''));
       dispatch(setCallerSignal(null));
-      console.log("Call state reset");
     }, 1000);
   };
 

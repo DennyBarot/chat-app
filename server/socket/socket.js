@@ -21,7 +21,6 @@ const io = new Server(server, {
 });
 
 const userSocketMap = {}; // We still use this to track WHO is online for the "online users" feature.
-const callTimeouts = {}; // Track call timeouts by caller ID
 
 io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
@@ -108,22 +107,19 @@ io.on("connection", async (socket) => {
   });
 
   // Call events with timeout handling
+  const callTimeouts = {}; // Track call timeouts by caller ID
+
   socket.on("callUser", ({ userToCall, signalData, from, name }) => {
-    console.log(`Call initiated: from ${from} to ${userToCall}`);
-    
     // Check if user is online before initiating call
     if (!userSocketMap[userToCall]) {
-      console.log(`Call failed: User ${userToCall} is offline`);
       socket.emit("callFailed", { reason: "User is offline" });
       return;
     }
 
-    console.log(`Forwarding call to user ${userToCall}`);
     io.to(userToCall).emit("callUser", { signal: signalData, from, name });
     
     // Set timeout to auto-reject call after 30 seconds
     callTimeouts[from] = setTimeout(() => {
-      console.log(`Call timeout: User ${userToCall} did not answer call from ${from}`);
       io.to(userToCall).emit("callEnded", { reason: "Call timeout" });
       socket.emit("callFailed", { reason: "No answer" });
       delete callTimeouts[from];
@@ -131,41 +127,30 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("answerCall", (data) => {
-    console.log(`Call answered: to ${data.to}`);
     // Clear timeout if call is answered
     if (callTimeouts[data.to]) {
       clearTimeout(callTimeouts[data.to]);
       delete callTimeouts[data.to];
-      console.log(`Cleared timeout for call from ${data.to}`);
     }
     io.to(data.to).emit("callAccepted", data.signal);
-    console.log(`Call accepted signal sent to ${data.to}`);
   });
 
   socket.on("callEnded", ({ to, reason }) => {
-    console.log(`Call ended: to ${to}, reason: ${reason}`);
     // Clear timeout if call is ended
     if (callTimeouts[to]) {
       clearTimeout(callTimeouts[to]);
       delete callTimeouts[to];
-      console.log(`Cleared timeout for call from ${to}`);
     }
     io.to(to).emit("callEnded", { reason: reason || "Call ended by user" });
   });
 
   socket.on("callRejected", ({ to }) => {
-    console.log(`Call rejected: to ${to}`);
     // Clear timeout if call is rejected
     if (callTimeouts[to]) {
       clearTimeout(callTimeouts[to]);
       delete callTimeouts[to];
-      console.log(`Cleared timeout for call from ${to}`);
     }
     io.to(to).emit("callEnded", { reason: "Call rejected" });
-  });
-
-  socket.on("callFailed", ({ reason }) => {
-    console.log(`Call failed: ${reason}`);
   });
 });
 

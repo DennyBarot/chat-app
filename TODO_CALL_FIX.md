@@ -38,3 +38,4 @@ User1 can see User2's audio/video, but User2 cannot see User1's audio/video.
 - [x] Fix callee media track setup
 - [x] Verify signaling flow
 - [x] Test call functionality and fix signaling state issue
+- [x] Implement remote description tracking to prevent duplicate setRemoteDescription calls

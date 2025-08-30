@@ -17,7 +17,6 @@ const CallModal = () => {
   const remoteVideoRef = useRef();
   const peerConnectionRef = useRef();
   const localStreamRef = useRef();
-  const remoteDescriptionSetRef = useRef(false);
   const [pendingCandidates, setPendingCandidates] = useState([]);
 
   const handleHangup = useCallback(() => {
@@ -35,7 +34,6 @@ const CallModal = () => {
     }
     dispatch(clearCallState());
     setPendingCandidates([]);
-    remoteDescriptionSetRef.current = false; // Reset for next call
   }, [dispatch, socket, call, incomingCall]);
 
   const setupPeerConnection = useCallback(async (remoteUserId, isCaller = false) => {
@@ -112,7 +110,6 @@ const CallModal = () => {
     // Caller: Initiates the call
     if (outgoingCall && !call) {
       const startCall = async () => {
-        remoteDescriptionSetRef.current = false; // Reset for new call
         const pc = await setupPeerConnection(outgoingCall.to, true); // true for caller
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -124,11 +121,10 @@ const CallModal = () => {
 
     // Caller: Receives the answer and sets remote description
     if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current) {
-      // Only set remote description if we're in the right signaling state and not already set
-      if (peerConnectionRef.current.signalingState === 'have-local-offer' && !remoteDescriptionSetRef.current) {
+      // Only set remote description if we're in the right signaling state
+      if (peerConnectionRef.current.signalingState === 'have-local-offer') {
         peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer))
           .then(() => {
-            remoteDescriptionSetRef.current = true;
             // Process any queued candidates for the caller
             pendingCandidates.forEach(candidate => peerConnectionRef.current.addIceCandidate(candidate));
             setPendingCandidates([]);
@@ -144,20 +140,19 @@ const CallModal = () => {
   const handleAnswer = async () => {
     if (!incomingCall) return;
     const remoteUserId = incomingCall.from._id;
-    remoteDescriptionSetRef.current = false; // Reset for new call
     const pc = await setupPeerConnection(remoteUserId, false); // false for callee
-
+    
     // Process any candidates that arrived before setting remote description
     const candidatesToProcess = [...pendingCandidates];
     setPendingCandidates([]);
-
+    
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-
+    
     // Add any pending candidates after setting remote description
     candidatesToProcess.forEach(candidate => {
       pc.addIceCandidate(candidate).catch(e => console.error("Error adding pending ICE candidate:", e));
     });
-
+    
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 

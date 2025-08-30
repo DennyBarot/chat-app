@@ -15,13 +15,10 @@ const CallModal = () => {
 
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
-  const peerConnectionRef = useRef(null);
-  const localStreamRef = useRef(null);
+  const peerConnectionRef = useRef();
+  const localStreamRef = useRef();
+  const remoteDescriptionSetRef = useRef(false);
   const [pendingCandidates, setPendingCandidates] = useState([]);
-
-  const getRemoteUserId = useCallback(() => {
-    return call?.to || call?.from?._id || incomingCall?.from?._id || outgoingCall?.to;
-  }, [call, incomingCall, outgoingCall]);
 
   const handleHangup = useCallback(() => {
     if (localStreamRef.current) {
@@ -32,29 +29,23 @@ const CallModal = () => {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
-    const remoteUserId = getRemoteUserId();
+    const remoteUserId = call?.from?._id || call?.to || incomingCall?.from?._id;
     if (remoteUserId && socket) {
       socket.emit('call-rejected', { to: remoteUserId });
     }
     dispatch(clearCallState());
     setPendingCandidates([]);
-  }, [dispatch, socket, getRemoteUserId]);
+    remoteDescriptionSetRef.current = false; // Reset for next call
+  }, [dispatch, socket, call, incomingCall]);
 
-  const setupPeerConnection = useCallback(async () => {
-    if (peerConnectionRef.current) {
-      console.log("Peer connection already exists.");
-      return peerConnectionRef.current;
-    }
-    console.log("Setting up new peer connection...");
+  const setupPeerConnection = useCallback(async (remoteUserId, isCaller = false) => {
+    console.log(`Setting up peer connection for ${isCaller ? 'caller' : 'callee'} to ${remoteUserId}`);
     const pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
 
     pc.onicecandidate = (event) => {
-      const remoteUserId = getRemoteUserId();
-      if (event.candidate && socket && remoteUserId) {
-        console.log('ICE candidate generated: sending');
+      console.log('ICE candidate generated:', event.candidate ? 'sending' : 'end of candidates');
+      if (event.candidate && socket) {
         socket.emit('ice-candidate', { to: remoteUserId, candidate: event.candidate });
-      } else {
-        console.log('ICE candidate generated: end of candidates');
       }
     };
 
@@ -66,17 +57,25 @@ const CallModal = () => {
       }
     };
 
-    pc.onconnectionstatechange = () => console.log('Connection state changed:', pc.connectionState);
-    pc.onsignalingstatechange = () => console.log('Signaling state changed:', pc.signalingState);
+    pc.onconnectionstatechange = () => {
+      console.log('Connection state changed:', pc.connectionState);
+    };
+
+    pc.onsignalingstatechange = () => {
+      console.log('Signaling state changed:', pc.signalingState);
+    };
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       console.log('Local media stream obtained with tracks:', stream.getTracks().map(t => t.kind));
       localStreamRef.current = stream;
+      
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
         console.log('Local video stream set');
       }
+      
+      // Add all tracks to the peer connection
       stream.getTracks().forEach(track => {
         pc.addTrack(track, stream);
         console.log(`Added ${track.kind} track to peer connection`);
@@ -88,30 +87,20 @@ const CallModal = () => {
 
     peerConnectionRef.current = pc;
     return pc;
-  }, [socket, handleHangup, getRemoteUserId]);
+  }, [socket, handleHangup]);
 
-  // Effect to handle incoming ICE candidates
+  // Effect to queue incoming ICE candidates
   useEffect(() => {
     if (iceCandidate?.candidate) {
       const candidate = new RTCIceCandidate(iceCandidate.candidate);
-      if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
-        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding received ICE candidate:", e));
+      if (peerConnectionRef.current?.remoteDescription) {
+        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding ICE candidate immediately:", e));
       } else {
         setPendingCandidates(prev => [...prev, candidate]);
       }
       dispatch(setIceCandidate(null));
     }
   }, [iceCandidate, dispatch]);
-
-  // Process pending ICE candidates when remote description is set
-  const processPendingCandidates = useCallback(() => {
-    if (peerConnectionRef.current) {
-      pendingCandidates.forEach(candidate => {
-        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding pending ICE candidate:", e));
-      });
-      setPendingCandidates([]);
-    }
-  }, [pendingCandidates]);
 
   // Main call lifecycle effect
   useEffect(() => {
@@ -123,7 +112,8 @@ const CallModal = () => {
     // Caller: Initiates the call
     if (outgoingCall && !call) {
       const startCall = async () => {
-        const pc = await setupPeerConnection();
+        remoteDescriptionSetRef.current = false; // Reset for new call
+        const pc = await setupPeerConnection(outgoingCall.to, true); // true for caller
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         socket.emit('call-user', { to: outgoingCall.to, offer });
@@ -132,45 +122,46 @@ const CallModal = () => {
       startCall();
     }
 
-    // Caller: Receives the answer
+    // Caller: Receives the answer and sets remote description
     if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current) {
-      if (peerConnectionRef.current.signalingState === 'have-local-offer') {
+      // Only set remote description if we're in the right signaling state and not already set
+      if (peerConnectionRef.current.signalingState === 'have-local-offer' && !remoteDescriptionSetRef.current) {
         peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer))
           .then(() => {
-            console.log("Remote description (answer) set successfully.");
-            processPendingCandidates();
-            dispatch(setCall({ ...call, status: 'active' }));
+            remoteDescriptionSetRef.current = true;
+            // Process any queued candidates for the caller
+            pendingCandidates.forEach(candidate => peerConnectionRef.current.addIceCandidate(candidate));
+            setPendingCandidates([]);
           })
           .catch(e => console.error("Failed to set remote description for answer:", e));
       } else {
-        console.warn('Skipping setRemoteDescription for answer, signaling state is:', peerConnectionRef.current.signalingState);
+        console.log('Skipping setRemoteDescription - signaling state is:', peerConnectionRef.current.signalingState);
       }
     }
 
-    // Cleanup on component unmount or when call ends
-    return () => {
-      if (call || outgoingCall || incomingCall) {
-         // handleHangup(); // This might be too aggressive, consider if cleanup is needed elsewhere
-      }
-    };
-  }, [outgoingCall, call, callRejected, dispatch, socket, setupPeerConnection, handleHangup, processPendingCandidates]);
+  }, [outgoingCall, call, callRejected, dispatch, socket, setupPeerConnection, handleHangup, pendingCandidates]);
 
   const handleAnswer = async () => {
     if (!incomingCall) return;
-    
-    dispatch(setCall({ from: incomingCall.from, type: 'incoming' }));
+    const remoteUserId = incomingCall.from._id;
+    remoteDescriptionSetRef.current = false; // Reset for new call
+    const pc = await setupPeerConnection(remoteUserId, false); // false for callee
 
-    const pc = await setupPeerConnection();
+    // Process any candidates that arrived before setting remote description
+    const candidatesToProcess = [...pendingCandidates];
+    setPendingCandidates([]);
 
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-    console.log("Remote description (offer) set successfully.");
-    
-    processPendingCandidates();
+
+    // Add any pending candidates after setting remote description
+    candidatesToProcess.forEach(candidate => {
+      pc.addIceCandidate(candidate).catch(e => console.error("Error adding pending ICE candidate:", e));
+    });
 
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    socket.emit('make-answer', { to: incomingCall.from._id, answer });
+    socket.emit('make-answer', { to: remoteUserId, answer });
     dispatch(setCall({ from: incomingCall.from, type: 'incoming', status: 'active' }));
     dispatch(setIncomingCall(null));
   };

@@ -4,12 +4,10 @@ import MessageContainer from "./MessageContainer";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getConversationsThunk, getOtherUsersThunk } from "../../store/slice/message/message.thunk";
-import { useOutletContext } from "react-router-dom";
 
 const Home = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, userProfile, selectedUser } = useSelector((state) => state.userReducer);
-  const { callUser } = useOutletContext();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);
@@ -55,7 +53,7 @@ const Home = () => {
       )}
       {(!isMobile || showMessageContainer) && (
         <div className={`flex-1 transition-all duration-300 ${isMobile ? 'w-full' : ''}`}>
-          <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} callUser={callUser} />
+          <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />
         </div>
       )}
     </div>

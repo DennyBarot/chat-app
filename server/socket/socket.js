@@ -106,18 +106,6 @@ io.on("connection", async (socket) => {
     });
   });
 
-  // Call events
-  socket.on("callUser", ({ userToCall, signalData, from, name }) => {
-    io.to(userToCall).emit("callUser", { signal: signalData, from, name });
-  });
-
-  socket.on("answerCall", (data) => {
-    io.to(data.to).emit("callAccepted", data.signal);
-  });
-
-  socket.on("callEnded", ({ to }) => {
-    io.to(to).emit("callEnded");
-  });
 });
 
 // We no longer need getSocketId for messaging, so it's removed from export.

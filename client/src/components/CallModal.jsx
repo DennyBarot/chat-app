@@ -74,6 +74,7 @@ const CallModal = ({ call, callAccepted, myVideo, userVideo, stream, answerCall,
             className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors"
             title="End Call"
           >
+          </button>
         </div>
 
         {/* Video Streams */}

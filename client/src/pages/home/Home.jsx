@@ -60,5 +60,3 @@ const Home = ({ callUser }) => {
     </div>
   );
 };
-
-export default Home;

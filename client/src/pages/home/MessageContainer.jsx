@@ -16,7 +16,6 @@ const MessageContainer = ({ onBack, isMobile, callUser, userProfile, stream, isS
   const { selectedUser } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null });
   const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
-  const { isStreamReady } = useSelector((state) => state.callReducer);
   const socket = useSocket();
 
   const selectedConversationId = useMemo(() => {

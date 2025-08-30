@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef } from "r
 import { io } from "socket.io-client";
 import { useSelector, useDispatch } from "react-redux";
 import { updateUserStatus } from "../store/slice/user/user.slice";
+import { setIncomingCall, setCall, setIceCandidate, setCallRejected, setOutgoingCall } from "../store/slice/call/call.slice";
 
 // 1. Create the context with a default value of null.
 const SocketContext = createContext(null);
@@ -67,6 +68,23 @@ export const SocketProvider = ({ children }) => {
         isRecording: data.status === "recording",
         lastSeen: new Date()
       }));
+    });
+
+    // WebRTC Signaling events
+    newSocket.on("incoming-call", ({ from, offer }) => {
+      dispatch(setIncomingCall({ from, offer }));
+    });
+
+    newSocket.on("answer-made", ({ from, answer }) => {
+      dispatch(setCall({ from, answer }));
+    });
+
+    newSocket.on("ice-candidate", ({ from, candidate }) => {
+      dispatch(setIceCandidate({ from, candidate }));
+    });
+
+    newSocket.on("call-rejected", ({ from }) => {
+      dispatch(setCallRejected({ from }));
     });
 
 

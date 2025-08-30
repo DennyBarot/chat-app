@@ -10,6 +10,7 @@ import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { setTyping } from "../../store/slice/typing/typing.slice";
+import { setOutgoingCall } from "../../store/slice/call/call.slice";
 
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
@@ -209,7 +210,11 @@ const MessageContainer = ({ onBack, isMobile }) => {
   );
 
   const handleReply = useCallback((message) => setReplyMessage(message), []);
-   const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
+  const isSelectedUserTyping = selectedUser && typingUsers[selectedUser._id];
+
+  const handleCall = () => {
+    dispatch(setOutgoingCall({ to: selectedUser._id }));
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-background text-text-primary relative">
@@ -222,8 +227,16 @@ const MessageContainer = ({ onBack, isMobile }) => {
       )}
       {selectedUser ? (
         <>
-          <div className="p-4 border-b border-foreground shadow-sm">
+          <div className="p-4 border-b border-foreground shadow-sm flex justify-between items-center">
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
+            <button
+              onClick={handleCall}
+              className="p-2 rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+            </button>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-background to-foreground relative">
             {isLoadingMessages && messages.length === 0 ? (

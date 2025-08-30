@@ -11,6 +11,7 @@ import ForgotPassword from './pages/authentication/ForgotPassword.jsx';
 import ResetPassword from './pages/authentication/ResetPassword.jsx';
 import ProtectedRoute from './components/ProtectedRoutes.jsx';
 import { SocketProvider } from './context/SocketContext.jsx';
+import CallModal from './components/CallModal.jsx';
 
 const router = createBrowserRouter([
   {
@@ -49,6 +50,7 @@ function App() {
   return (
     <SocketProvider>
       <Toaster position="top-right" reverseOrder={false} />
+      <CallModal />
       <RouterProvider router={router} />
     </SocketProvider>
   );

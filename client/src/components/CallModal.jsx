@@ -9,7 +9,6 @@ import {
   setCallerSignal,
   setStream,
   setRemoteStream,
-  resetCallState,
   setIdToCall
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
@@ -44,36 +43,38 @@ const CallModal = () => {
       console.error('Error accessing media devices:', error);
     });
 
-    socket.on('call-user', (data) => {
-      dispatch(setReceivingCall(true));
-      dispatch(setCaller(data.from));
-      dispatch(setCallerSignal(data.signal));
-    });
-
-    socket.on('call-accepted', (signal) => {
-      dispatch(setCallAccepted(true));
-      const peer = new Peer({
-        initiator: false,
-        trickle: false,
-        stream: stream,
+    if (socket) {
+      socket.on('call-user', (data) => {
+        dispatch(setReceivingCall(true));
+        dispatch(setCaller(data.from));
+        dispatch(setCallerSignal(data.signal));
       });
-      peer.signal(signal);
-      connectionRef.current = peer;
-    });
 
-    socket.on('end-call', () => {
-      dispatch(setCallEnded(true));
-      if (connectionRef.current) {
-        connectionRef.current.destroy();
-      }
-      window.location.reload();
-    });
+      socket.on('call-accepted', (signal) => {
+        dispatch(setCallAccepted(true));
+        const peer = new Peer({
+          initiator: false,
+          trickle: false,
+          stream: stream,
+        });
+        peer.signal(signal);
+        connectionRef.current = peer;
+      });
 
-    return () => {
-      socket.off('call-user');
-      socket.off('call-accepted');
-      socket.off('end-call');
-    };
+      socket.on('end-call', () => {
+        dispatch(setCallEnded(true));
+        if (connectionRef.current) {
+          connectionRef.current.destroy();
+        }
+        window.location.reload();
+      });
+
+      return () => {
+        socket.off('call-user');
+        socket.off('call-accepted');
+        socket.off('end-call');
+      };
+    }
   }, [socket, stream, dispatch]);
 
   useEffect(() => {
@@ -84,6 +85,8 @@ const CallModal = () => {
   }, [idToCall, stream, dispatch]);
 
   const callUser = (id) => {
+    if (!socket) return;
+
     const peer = new Peer({
       initiator: true,
       trickle: false,
@@ -122,6 +125,8 @@ const CallModal = () => {
   };
 
   const answerCall = () => {
+    if (!socket) return;
+
     dispatch(setCallAccepted(true));
     const peer = new Peer({
       initiator: false,
@@ -156,7 +161,9 @@ const CallModal = () => {
     if (connectionRef.current) {
       connectionRef.current.destroy();
     }
-    socket.emit('end-call', { to: caller || me });
+    if (socket) {
+      socket.emit('end-call', { to: caller || me });
+    }
     window.location.reload();
   };
 

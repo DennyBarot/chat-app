@@ -105,34 +105,6 @@ io.on("connection", async (socket) => {
       status: "stopped" 
     });
   });
-  
-  // WebRTC Signaling events
-  socket.on("call-user", (data) => {
-    io.to(data.to).emit("incoming-call", {
-      from: userId,
-      offer: data.offer,
-    });
-  });
-
-  socket.on("make-answer", (data) => {
-    io.to(data.to).emit("answer-made", {
-      from: userId,
-      answer: data.answer,
-    });
-  });
-
-  socket.on("ice-candidate", (data) => {
-    io.to(data.to).emit("ice-candidate", {
-      from: userId,
-      candidate: data.candidate,
-    });
-  });
-
-  socket.on("call-rejected", (data) => {
-    io.to(data.to).emit("call-rejected", {
-      from: userId,
-    });
-  });
 
 });
 

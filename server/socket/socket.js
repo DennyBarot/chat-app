@@ -106,6 +106,23 @@ io.on("connection", async (socket) => {
     });
   });
 
+  // WebRTC call signaling events
+  socket.on("call-user", ({ receiverId, offer }) => {
+    io.to(receiverId).emit("incoming-call", { callerId: userId, offer });
+  });
+
+  socket.on("call-accepted", ({ callerId, answer }) => {
+    io.to(callerId).emit("call-accepted", { answer });
+  });
+
+  socket.on("ice-candidate", ({ receiverId, candidate }) => {
+    io.to(receiverId).emit("ice-candidate", { candidate });
+  });
+
+  socket.on("end-call", ({ receiverId }) => {
+    io.to(receiverId).emit("call-ended");
+  });
+
 });
 
 // We no longer need getSocketId for messaging, so it's removed from export.

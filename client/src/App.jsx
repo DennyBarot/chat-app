@@ -2,9 +2,11 @@ import "./App.css";
 import React, { useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import { useDispatch } from "react-redux";
+import { Provider } from "react-redux";
+import { store } from "./store/store.js";
 import { getUserProfileThunk } from "./store/slice/user/user.thunk";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Home from "./pages/home/Home.jsx"; 
+import Home from "./pages/home/Home.jsx";
 import Login from "./pages/authentication/Login.jsx";
 import Signup from "./pages/authentication/Signup.jsx";
 import ForgotPassword from './pages/authentication/ForgotPassword.jsx';
@@ -47,10 +49,12 @@ function App() {
   }, [dispatch]);
 
   return (
-    <SocketProvider>
-      <Toaster position="top-right" reverseOrder={false} />
-      <RouterProvider router={router} />
-    </SocketProvider>
+    <Provider store={store}>
+      <SocketProvider>
+        <Toaster position="top-right" reverseOrder={false} />
+        <RouterProvider router={router} />
+      </SocketProvider>
+    </Provider>
   );
 }
 

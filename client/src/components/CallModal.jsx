@@ -84,7 +84,7 @@ const CallModal = () => {
   }, [idToCall, stream, dispatch]);
 
   const callUser = (id) => {
-    if (!socket) return;
+    if (!socket || !stream) return;
 
     const peer = new Peer({
       initiator: true,
@@ -104,7 +104,7 @@ const CallModal = () => {
         userToCall: id,
         signalData: data,
         from: me,
-        name: name,
+        name: name || 'Unknown',
       });
     });
 
@@ -124,7 +124,7 @@ const CallModal = () => {
   };
 
   const answerCall = () => {
-    if (!socket) return;
+    if (!socket || !caller || !callerSignal) return;
 
     dispatch(setCallAccepted(true));
     const peer = new Peer({
@@ -168,7 +168,7 @@ const CallModal = () => {
 
   return (
     <>
-      {receivingCall && !callAccepted && (
+      {receivingCall && !callAccepted && caller && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-lg font-semibold mb-4">{caller} is calling...</h3>

@@ -13,6 +13,7 @@
 - [x] Update client/src/pages/home/MessageContainer.jsx to add call button
 - [x] Fix null socket errors in CallModal.jsx
 - [x] Fix null userProfile.name error in call button
+- [x] Add Redux Provider to App.jsx to connect store
 
 ## Pending
 - [ ] Test call functionality

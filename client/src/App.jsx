@@ -28,27 +28,64 @@ function App() {
   useEffect(() => {
     const initializeMedia = async () => {
       try {
-        const currentStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        // First check if media devices are available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.error("Media devices API not available");
+          toast.error("Your browser doesn't support media devices. Please use a modern browser.");
+          return;
+        }
+
+        // Try to get both audio and video
+        const currentStream = await navigator.mediaDevices.getUserMedia({ 
+          video: true, 
+          audio: true 
+        });
+        
         dispatch(setStream(currentStream));
         dispatch(setIsStreamReady(true));
+        
         if (myVideo.current) {
           myVideo.current.srcObject = currentStream;
         }
+        
+        console.log("Media stream successfully obtained");
+        
       } catch (error) {
         console.error("Failed to get media devices:", error);
-        // Fallback to audio only if video fails
-        try {
-          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          dispatch(setStream(audioStream));
-          dispatch(setIsStreamReady(true));
-        } catch (audioError) {
-          console.error("Failed to get audio devices:", audioError);
-          toast.error("Could not access camera or microphone. Please check if they are in use by another application.");
+        
+        // Handle specific error types
+        if (error.name === 'NotAllowedError') {
+          toast.error("Microphone/camera access denied. Please allow permissions in your browser settings.");
+        } else if (error.name === 'NotFoundError') {
+          toast.error("No microphone or camera found on this device.");
+        } else if (error.name === 'NotReadableError') {
+          toast.error("Microphone/camera is in use by another application. Please close other applications using your camera/microphone.");
+        } else if (error.name === 'OverconstrainedError') {
+          // Try fallback to audio only
+          try {
+            console.log("Trying audio-only fallback...");
+            const audioStream = await navigator.mediaDevices.getUserMedia({ 
+              audio: true,
+              video: false 
+            });
+            dispatch(setStream(audioStream));
+            dispatch(setIsStreamReady(true));
+            toast.success("Audio-only call enabled (camera not available)");
+          } catch (audioError) {
+            console.error("Failed to get audio devices:", audioError);
+            toast.error("Could not access microphone. Please check browser permissions.");
+          }
+        } else {
+          toast.error("Could not access camera or microphone. Please check browser permissions.");
         }
       }
     };
 
-    initializeMedia();
+    // Only initialize media if we're not on auth pages
+    if (!window.location.pathname.startsWith("/login") && 
+        !window.location.pathname.startsWith("/signup")) {
+      initializeMedia();
+    }
 
     (async () => {
       if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/signup")) {
@@ -167,11 +204,31 @@ function App() {
 
   const callUser = (id) => {
     console.log("Calling user:", id);
+    
+    // Check if we have media permissions
     if (!stream) {
-      console.error("No media stream available");
-      toast.error("Microphone/camera access denied or not available.");
+      console.error("No media stream available - requesting permissions again");
+      
+      // Try to reinitialize media
+      const initializeMedia = async () => {
+        try {
+          const audioStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: true,
+            video: false 
+          });
+          dispatch(setStream(audioStream));
+          dispatch(setIsStreamReady(true));
+          toast.success("Microphone access granted. You can now make calls.");
+        } catch (error) {
+          console.error("Failed to get audio devices on retry:", error);
+          toast.error("Please allow microphone access to make calls.");
+        }
+      };
+      
+      initializeMedia();
       return;
     }
+    
     if (!userProfile?._id) {
       console.error("User profile not available");
       toast.error("User profile not available. Please try again.");

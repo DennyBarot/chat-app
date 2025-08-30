@@ -93,17 +93,38 @@ io.on("connection", async (socket) => {
 
   // Voice recording/call status events
   socket.on("voiceRecordingStart", ({ receiverId }) => {
-    io.to(receiverId).emit("voiceRecordingStatus", { 
-      senderId: userId, 
-      status: "recording" 
+    io.to(receiverId).emit("voiceRecordingStatus", {
+      senderId: userId,
+      status: "recording"
     });
   });
 
   socket.on("voiceRecordingStop", ({ receiverId }) => {
-    io.to(receiverId).emit("voiceRecordingStatus", { 
-      senderId: userId, 
-      status: "stopped" 
+    io.to(receiverId).emit("voiceRecordingStatus", {
+      senderId: userId,
+      status: "stopped"
     });
+  });
+
+  // Call signaling events
+  socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+    io.to(userToCall).emit("call-user", { signal: signalData, from, name });
+  });
+
+  socket.on("answer-call", (data) => {
+    io.to(data.to).emit("call-accepted", data.signal);
+  });
+
+  socket.on("ice-candidate", ({ to, candidate }) => {
+    io.to(to).emit("ice-candidate", candidate);
+  });
+
+  socket.on("end-call", ({ to }) => {
+    io.to(to).emit("end-call");
+  });
+
+  socket.on("reject-call", ({ to }) => {
+    io.to(to).emit("call-rejected");
   });
 
 });

@@ -1,0 +1,83 @@
+import { createSlice } from "@reduxjs/toolkit";
+
+const initialState = {
+  callAccepted: false,
+  callEnded: false,
+  stream: null,
+  name: "",
+  call: {},
+  me: "",
+  remoteStream: null,
+  receivingCall: false,
+  caller: "",
+  callerSignal: null,
+  idToCall: "",
+};
+
+const callSlice = createSlice({
+  name: "call",
+  initialState,
+  reducers: {
+    setStream: (state, action) => {
+      state.stream = action.payload;
+    },
+    setMe: (state, action) => {
+      state.me = action.payload;
+    },
+    setCall: (state, action) => {
+      state.call = action.payload;
+    },
+    setCallAccepted: (state, action) => {
+      state.callAccepted = action.payload;
+    },
+    setCallEnded: (state, action) => {
+      state.callEnded = action.payload;
+    },
+    setReceivingCall: (state, action) => {
+      state.receivingCall = action.payload;
+    },
+    setCaller: (state, action) => {
+      state.caller = action.payload;
+    },
+    setCallerSignal: (state, action) => {
+      state.callerSignal = action.payload;
+    },
+    setName: (state, action) => {
+      state.name = action.payload;
+    },
+    setIdToCall: (state, action) => {
+      state.idToCall = action.payload;
+    },
+    setRemoteStream: (state, action) => {
+      state.remoteStream = action.payload;
+    },
+    resetCallState: (state) => {
+      state.callAccepted = false;
+      state.callEnded = false;
+      state.stream = null;
+      state.call = {};
+      state.remoteStream = null;
+      state.receivingCall = false;
+      state.caller = "";
+      state.callerSignal = null;
+      state.idToCall = "";
+    },
+  },
+});
+
+export const {
+  setStream,
+  setMe,
+  setCall,
+  setCallAccepted,
+  setCallEnded,
+  setReceivingCall,
+  setCaller,
+  setCallerSignal,
+  setName,
+  setIdToCall,
+  setRemoteStream,
+  resetCallState,
+} = callSlice.actions;
+
+export default callSlice.reducer;

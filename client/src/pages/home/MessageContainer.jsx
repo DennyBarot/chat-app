@@ -10,6 +10,7 @@ import SendMessage from "./SendMessage";
 import { useLocation } from "react-router-dom";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { setTyping } from "../../store/slice/typing/typing.slice";
+import { setIdToCall, setName } from "../../store/slice/call/call.slice";
 
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
@@ -222,8 +223,20 @@ const MessageContainer = ({ onBack, isMobile }) => {
       )}
       {selectedUser ? (
         <>
-          <div className="p-4 border-b border-foreground shadow-sm">
+          <div className="p-4 border-b border-foreground shadow-sm flex justify-between items-center">
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
+            <button
+              onClick={() => {
+                dispatch(setIdToCall(selectedUser._id));
+                dispatch(setName(userProfile.name));
+              }}
+              className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors"
+              title="Start Call"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+              </svg>
+            </button>
           </div>
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 bg-gradient-to-b from-background to-foreground relative">
             {isLoadingMessages && messages.length === 0 ? (

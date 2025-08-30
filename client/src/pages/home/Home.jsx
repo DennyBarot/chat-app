@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import UserSidebar from "./UserSidebar";
 import MessageContainer from "./MessageContainer";
-import CallModal from "../../components/CallModal";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getConversationsThunk, getOtherUsersThunk } from "../../store/slice/message/message.thunk";
@@ -57,7 +56,6 @@ const Home = () => {
           <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />
         </div>
       )}
-      <CallModal />
     </div>
   );
 };

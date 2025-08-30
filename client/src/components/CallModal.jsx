@@ -19,20 +19,11 @@ const CallModal = () => {
   const [localStream, setLocalStream] = useState(null);
   const [pendingIceCandidates, setPendingIceCandidates] = useState([]);
 
-  // Effect to handle queued ICE candidates
-  useEffect(() => {
-    if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription && pendingIceCandidates.length > 0) {
-      pendingIceCandidates.forEach(candidate => {
-        peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding received ICE candidate", e));
-      });
-      setPendingIceCandidates([]);
-    }
-  }, [peerConnectionRef.current?.remoteDescription, pendingIceCandidates]);
-
-  // Effect to process incoming ICE candidates from Redux
+  // Process incoming ICE candidates from Redux
   useEffect(() => {
     if (iceCandidate && iceCandidate.candidate) {
       const candidate = new RTCIceCandidate(iceCandidate.candidate);
+
       if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
         peerConnectionRef.current.addIceCandidate(candidate).catch(e => console.error("Error adding received ICE candidate", e));
       } else {
@@ -43,7 +34,6 @@ const CallModal = () => {
   }, [iceCandidate, dispatch]);
 
   const createPeerConnection = async (remoteUserId) => {
-    // Close any existing connection
     if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
     }
@@ -70,13 +60,10 @@ const CallModal = () => {
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
       }
-      stream.getTracks().forEach((track) => {
-        pc.addTrack(track, stream);
-      });
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
     } catch (error) {
       console.error("Error accessing media devices.", error);
-      // Handle media access error (e.g., show a message to the user)
-      handleHangup(); // End the call attempt if media is not available
+      handleHangup();
     }
     
     peerConnectionRef.current = pc;
@@ -99,10 +86,18 @@ const CallModal = () => {
 
   // Effect to set the answer for the outgoing call
   useEffect(() => {
-    if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current?.signalingState === 'have-local-offer') {
-      peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer));
+    const setAnswer = async () => {
+      if (call?.type === 'outgoing' && call.answer && peerConnectionRef.current?.signalingState === 'have-local-offer') {
+        await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(call.answer));
+        // Process any candidates that arrived before the answer was set
+        if (pendingIceCandidates.length > 0) {
+          await Promise.all(pendingIceCandidates.map(candidate => peerConnectionRef.current.addIceCandidate(candidate)));
+          setPendingIceCandidates([]);
+        }
+      }
     }
-  }, [call]);
+    setAnswer();
+  }, [call?.answer]);
 
   // Effect for call rejection
   useEffect(() => {
@@ -115,6 +110,13 @@ const CallModal = () => {
     if (!incomingCall) return;
     const pc = await createPeerConnection(incomingCall.from._id);
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+    
+    // Process any candidates that arrived before the offer was set
+    if (pendingIceCandidates.length > 0) {
+        await Promise.all(pendingIceCandidates.map(candidate => pc.addIceCandidate(candidate)));
+        setPendingIceCandidates([]);
+    }
+
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
     socket.emit('make-answer', { to: incomingCall.from._id, answer });
@@ -137,7 +139,7 @@ const CallModal = () => {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
-    const remoteUserId = call?.from?._id || call?.to;
+    const remoteUserId = call?.from?._id || call?.to || incomingCall?.from?._id;
     if (remoteUserId) {
       socket.emit('call-rejected', { to: remoteUserId });
     }
@@ -171,7 +173,6 @@ const CallModal = () => {
         {call && call.type === 'outgoing' && !isCallActive && (
             <div className="text-center">
                 <p className="text-2xl font-bold mb-4">Calling...</p>
-                {/* You can add the recipient's info here if you pass it */}
                 <div className="flex justify-center">
                     <button onClick={handleHangup} className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-full font-bold text-lg transition-colors">Cancel</button>
                 </div>

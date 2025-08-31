@@ -199,6 +199,7 @@ const CallModal = () => {
 
   return (
     <>
+      {/* Incoming call modal */}
       {receivingCall && !callAccepted && caller && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
@@ -220,6 +221,30 @@ const CallModal = () => {
           </div>
         </div>
       )}
+
+      {/* Outgoing call modal - when initiating a call */}
+      {idToCall && !receivingCall && !callAccepted && !callEnded && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold mb-4">Calling...</h3>
+            <p className="text-gray-600 mb-4">Waiting for response...</p>
+            <button
+              onClick={() => {
+                dispatch(setIdToCall(""));
+                if (stream) {
+                  stream.getTracks().forEach(track => track.stop());
+                  dispatch(setStream(null));
+                }
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Active call modal */}
       {callAccepted && !callEnded && (
         <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
           <div className="relative w-full h-full">

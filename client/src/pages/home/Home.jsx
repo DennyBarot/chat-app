@@ -11,7 +11,7 @@ const Home = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, userProfile, selectedUser } = useSelector((state) => state.userReducer);
   const callState = useSelector((state) => state.callReducer) || {};
-  const { receivingCall, callAccepted, callEnded } = callState;
+  const { receivingCall, callAccepted, callEnded, idToCall } = callState;
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);
@@ -60,8 +60,8 @@ const Home = () => {
           <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />
         </div>
       )}
-      {/* Only render CallModal when there's an active call or receiving a call */}
-      {(receivingCall || callAccepted) && !callEnded && <CallModal />}
+      {/* Render CallModal when initiating, receiving, or in active call */}
+      {(idToCall || receivingCall || callAccepted) && !callEnded && <CallModal />}
     </div>
   );
 };

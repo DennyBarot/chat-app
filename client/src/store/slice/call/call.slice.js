@@ -11,6 +11,8 @@ const initialState = {
   caller: "",
   callerSignal: null,
   idToCall: "",
+  answerSignal: null,
+  iceCandidates: [],
 };
 
 const callSlice = createSlice({
@@ -48,6 +50,15 @@ const callSlice = createSlice({
     setRemoteStream: (state, action) => {
       state.remoteStream = action.payload;
     },
+    setAnswerSignal: (state, action) => {
+      state.answerSignal = action.payload;
+    },
+    addIceCandidate: (state, action) => {
+      state.iceCandidates.push(action.payload);
+    },
+    clearIceCandidates: (state) => {
+      state.iceCandidates = [];
+    },
     resetCallState: (state) => {
       state.callAccepted = false;
       state.callEnded = false;
@@ -57,6 +68,8 @@ const callSlice = createSlice({
       state.caller = "";
       state.callerSignal = null;
       state.idToCall = "";
+      state.answerSignal = null;
+      state.iceCandidates = [];
     },
   },
 });
@@ -72,6 +85,9 @@ export const {
   setName,
   setIdToCall,
   setRemoteStream,
+  setAnswerSignal,
+  addIceCandidate,
+  clearIceCandidates,
   resetCallState,
 } = callSlice.actions;
 

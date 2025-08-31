@@ -10,6 +10,8 @@ import {
   setCallerSignal,
   resetCallState,
   setMe,
+  setAnswerSignal,
+  addIceCandidate,
 } from "../store/slice/call/call.slice";
 
 // 1. Create the context with a default value of null.
@@ -102,8 +104,7 @@ export const SocketProvider = ({ children }) => {
       dispatch(setCallAccepted(true));
       // Handle the answer signal from the callee
       if (data.signal) {
-        // This will be handled by the CallModal component
-        console.log('Call accepted with signal:', data.signal);
+        dispatch(setAnswerSignal(data.signal));
       }
     });
 
@@ -114,8 +115,7 @@ export const SocketProvider = ({ children }) => {
 
     // Handle ICE candidates for WebRTC
     newSocket.on("ice-candidate", (data) => {
-      // This will be handled by the CallModal component
-      console.log('Received ICE candidate:', data);
+      dispatch(addIceCandidate(data));
     });
 
     setSocket(newSocket);

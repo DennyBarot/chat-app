@@ -9,6 +9,7 @@ import {
   setStream,
   setRemoteStream,
   setIdToCall,
+  clearIceCandidates,
   resetCallState
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
@@ -64,6 +65,30 @@ const CallModal = () => {
       dispatch(setIdToCall(""));
     }
   }, [idToCall, stream, socket, dispatch]);
+
+  // Listen for answer signal from Redux state and set remote description on caller's RTCPeerConnection
+  useEffect(() => {
+    if (connectionRef.current && callState.answerSignal) {
+      console.log('Setting remote description from answer signal');
+      connectionRef.current.setRemoteDescription(new RTCSessionDescription(callState.answerSignal))
+        .catch(error => {
+          console.error('Error setting remote description from answer signal:', error);
+        });
+    }
+  }, [callState.answerSignal]);
+
+  // Listen for ICE candidates from Redux state and add them to RTCPeerConnection
+  useEffect(() => {
+    if (connectionRef.current && callState.iceCandidates.length > 0) {
+      callState.iceCandidates.forEach(candidate => {
+        connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(error => {
+            console.error('Error adding ICE candidate:', error);
+          });
+      });
+      dispatch(clearIceCandidates());
+    }
+  }, [callState.iceCandidates, dispatch]);
 
   const callUser = (id) => {
     if (!socket || !stream) {
@@ -304,9 +329,18 @@ const CallModal = () => {
     // Clean up peer connection
     if (connectionRef.current) {
       try {
-        connectionRef.current.destroy();
+        const pc = connectionRef.current;
+        if (pc.getSenders) {
+          pc.getSenders().forEach((sender) => {
+            try { sender.track && sender.track.stop(); } catch {}
+          });
+        }
+        pc.onicecandidate = null;
+        pc.ontrack = null;
+        pc.onconnectionstatechange = null;
+        if (pc.signalingState !== 'closed') pc.close();
       } catch (error) {
-        console.error('Error destroying peer connection:', error);
+        console.error('Error closing peer connection:', error);
       }
       connectionRef.current = null;
     }

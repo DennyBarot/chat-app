@@ -16,6 +16,7 @@
 - [x] Add Redux Provider to App.jsx to connect store
 - [x] Add null checks to call button in MessageContainer.jsx
 - [x] Add debugging logs to call button and CallModal
+- [x] Disable call button while userProfile is loading
 
 ## Pending
 - [ ] Test call functionality

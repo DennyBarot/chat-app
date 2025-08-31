@@ -92,78 +92,12 @@ const CallModal = () => {
     }
   }, [callState.iceCandidates, dispatch]);
 
-  // Unified useEffect for WebRTC logic
+  // Handle remote stream updates
   useEffect(() => {
-    if (callAccepted && !callEnded) {
-      const peerConnection = new RTCPeerConnection({
-        iceServers: [
-          {
-            urls: 'stun:stun.l.google.com:19302',
-          },
-        ],
-      });
-
-      // Add local stream tracks
-      if (stream) {
-        stream.getTracks().forEach((track) => {
-          peerConnection.addTrack(track, stream);
-        });
-      }
-
-      // Handle remote stream
-      peerConnection.ontrack = (event) => {
-        if (userVideo.current) {
-          userVideo.current.srcObject = event.streams[0];
-        }
-      };
-
-      // Handle ICE candidates
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('ice-candidate', {
-            to: caller || idToCall,
-            candidate: event.candidate,
-          });
-        }
-      };
-
-      // Caller logic
-      if (!receivingCall) {
-        peerConnection.createOffer()
-          .then((offer) => peerConnection.setLocalDescription(offer))
-          .then(() => {
-            socket.emit('call-user', {
-              userToCall: idToCall,
-              signalData: peerConnection.localDescription,
-              from: me,
-              name,
-            });
-          });
-      }
-
-      // Receiver logic
-      if (receivingCall && callerSignal) {
-        peerConnection.setRemoteDescription(new RTCSessionDescription(callerSignal))
-          .then(() => peerConnection.createAnswer())
-          .then((answer) => peerConnection.setLocalDescription(answer))
-          .then(() => {
-            socket.emit('answer-call', {
-              signal: peerConnection.localDescription,
-              to: caller,
-            });
-          });
-      }
-
-      connectionRef.current = peerConnection;
+    if (userVideo.current && callState.remoteStream) {
+      userVideo.current.srcObject = callState.remoteStream;
     }
-
-    // Cleanup
-    return () => {
-      if (connectionRef.current) {
-        connectionRef.current.close();
-      }
-    };
-  }, [callAccepted, callEnded, stream]);
+  }, [callState.remoteStream]);
 
   // Handle local stream attachment when call is accepted and video elements are rendered
   useEffect(() => {
@@ -248,7 +182,7 @@ const CallModal = () => {
            if (socket && socket.connected) {
              socket.emit('call-user', {
                userToCall: id,
-               signalData: peerConnection.localDescription,
+               signal: peerConnection.localDescription,
                from: me,
                name: name || 'Unknown',
              });

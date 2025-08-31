@@ -97,9 +97,19 @@ const CallModal = () => {
 
   // Handle remote stream updates
   useEffect(() => {
+    console.log('Remote stream useEffect triggered:', {
+      hasRemoteStream: !!callState.remoteStream,
+      hasUserVideo: !!userVideo.current,
+      remoteStreamTracks: callState.remoteStream?.getTracks()?.length || 0
+    });
+
     if (callState.remoteStream && userVideo.current) {
       console.log('Setting remote stream to userVideo element');
+      console.log('Remote stream tracks:', callState.remoteStream.getTracks());
       userVideo.current.srcObject = callState.remoteStream;
+      console.log('Remote stream attached to userVideo element successfully');
+    } else if (callState.remoteStream && !userVideo.current) {
+      console.warn('Remote stream available but userVideo element not found');
     }
   }, [callState.remoteStream]);
 
@@ -164,18 +174,26 @@ const CallModal = () => {
        };
 
        peerConnection.ontrack = (event) => {
-         console.log('Received remote track:', event.track.kind);
-         console.log('Remote track streams:', event.streams);
+         console.log('ONTRACK EVENT FIRED - Received remote track:', event.track.kind);
+         console.log('ONTRACK EVENT - Remote track streams:', event.streams);
+         console.log('ONTRACK EVENT - Track enabled:', event.track.enabled);
+         console.log('ONTRACK EVENT - Track readyState:', event.track.readyState);
+
          if (event.streams && event.streams[0]) {
            const remoteStream = event.streams[0];
-           console.log('Remote stream tracks:', remoteStream.getTracks());
+           console.log('ONTRACK EVENT - Remote stream tracks:', remoteStream.getTracks());
+           console.log('ONTRACK EVENT - Remote stream active:', remoteStream.active);
            dispatch(setRemoteStream(remoteStream));
+           console.log('ONTRACK EVENT - Remote stream dispatched to Redux');
+
            if (userVideo.current) {
              userVideo.current.srcObject = remoteStream;
-             console.log('Remote stream attached to userVideo element');
+             console.log('ONTRACK EVENT - Remote stream attached to userVideo element');
+           } else {
+             console.warn('ONTRACK EVENT - userVideo element not found when attaching remote stream');
            }
          } else {
-           console.warn('No streams in ontrack event');
+           console.warn('ONTRACK EVENT - No streams in ontrack event');
          }
        };
 
@@ -298,18 +316,26 @@ const CallModal = () => {
       };
 
       peerConnection.ontrack = (event) => {
-        console.log('Received remote track in answer peer:', event.track.kind);
-        console.log('Answer remote track streams:', event.streams);
+        console.log('ANSWER ONTRACK EVENT FIRED - Received remote track:', event.track.kind);
+        console.log('ANSWER ONTRACK EVENT - Remote track streams:', event.streams);
+        console.log('ANSWER ONTRACK EVENT - Track enabled:', event.track.enabled);
+        console.log('ANSWER ONTRACK EVENT - Track readyState:', event.track.readyState);
+
         if (event.streams && event.streams[0]) {
           const remoteStream = event.streams[0];
-          console.log('Answer remote stream tracks:', remoteStream.getTracks());
+          console.log('ANSWER ONTRACK EVENT - Remote stream tracks:', remoteStream.getTracks());
+          console.log('ANSWER ONTRACK EVENT - Remote stream active:', remoteStream.active);
           dispatch(setRemoteStream(remoteStream));
+          console.log('ANSWER ONTRACK EVENT - Remote stream dispatched to Redux');
+
           if (userVideo.current) {
             userVideo.current.srcObject = remoteStream;
-            console.log('Answer remote stream attached to userVideo element');
+            console.log('ANSWER ONTRACK EVENT - Remote stream attached to userVideo element');
+          } else {
+            console.warn('ANSWER ONTRACK EVENT - userVideo element not found when attaching remote stream');
           }
         } else {
-          console.warn('No streams in answer ontrack event');
+          console.warn('ANSWER ONTRACK EVENT - No streams in ontrack event');
         }
       };
 

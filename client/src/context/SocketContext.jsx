@@ -100,10 +100,14 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on("call-accepted", (data) => {
+      console.log('SOCKET EVENT - Call accepted received:', data);
       dispatch(setCallAccepted(true));
       // Handle the answer signal from the callee
       if (data.signal) {
+        console.log('SOCKET EVENT - Answer signal received and dispatched');
         dispatch(setAnswerSignal(data.signal));
+      } else {
+        console.warn('SOCKET EVENT - Call accepted but no answer signal provided');
       }
     });
 
@@ -115,7 +119,9 @@ export const SocketProvider = ({ children }) => {
 
     // Handle ICE candidates for WebRTC
     newSocket.on("ice-candidate", (data) => {
+      console.log('SOCKET EVENT - ICE candidate received:', data);
       dispatch(addIceCandidate(data));
+      console.log('SOCKET EVENT - ICE candidate dispatched to Redux');
     });
 
     setSocket(newSocket);

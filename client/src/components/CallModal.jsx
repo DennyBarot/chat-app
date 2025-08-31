@@ -1,6 +1,5 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import Peer from 'simple-peer';
 import {
   setCallAccepted,
   setCallEnded,
@@ -10,7 +9,8 @@ import {
   setStream,
   setRemoteStream,
   setIdToCall,
-  resetCallState,
+  clearIceCandidates,
+  resetCallState
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
 
@@ -18,105 +18,190 @@ const CallModal = () => {
   const dispatch = useDispatch();
   const socket = useSocket();
   const callState = useSelector((state) => state.callReducer) || {};
-  const { userProfile } = useSelector((state) => state.userReducer);
-
   const {
-    callAccepted,
-    callEnded,
-    stream,
-    receivingCall,
-    caller,
-    callerSignal,
-    me,
-    idToCall,
+    callAccepted = false,
+    callEnded = false,
+    stream = null,
+    receivingCall = false,
+    caller = "",
+    callerSignal = null,
+    me = "",
+    idToCall = "",
+    name = ""
   } = callState;
 
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
+  // FIX: Ref to store the ID of the user we are calling
   const idToCallRef = useRef();
 
-  const setupPeer = useCallback((initiator, mediaStream) => {
-    const peer = new Peer({
-      initiator,
-      trickle: false,
-      stream: mediaStream,
-    });
-
-    peer.on('signal', (data) => {
-      if (initiator) {
-        socket.emit('call-user', {
-          userToCall: idToCallRef.current,
-          signalData: data,
-          from: me,
-          name: userProfile.fullName,
-        });
-      } else {
-        socket.emit('answer-call', { signal: data, to: caller });
-      }
-    });
-
-    peer.on('stream', (remoteStream) => {
-      dispatch(setRemoteStream(remoteStream));
-      if (userVideo.current) {
-        userVideo.current.srcObject = remoteStream;
-      }
-    });
-
-    peer.on('error', (err) => {
-      console.error('Peer connection error:', err);
-      // Consider a more graceful way to handle this, e.g., dispatching an error state
-    });
-
-    connectionRef.current = peer;
-  }, [socket, me, caller, userProfile, dispatch]);
+  // Note: Socket event listeners are now handled in SocketContext to avoid conflicts
+  // The CallModal focuses only on UI and peer connection management
 
   useEffect(() => {
-    if (idToCall && !callAccepted) {
-      idToCallRef.current = idToCall;
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        .then((mediaStream) => {
+    const handleCall = async () => {
+      if (idToCall && !stream) {
+        try {
+          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
           dispatch(setStream(mediaStream));
           if (myVideo.current) {
             myVideo.current.srcObject = mediaStream;
           }
-          setupPeer(true, mediaStream);
-        })
-        .catch((err) => {
-          console.error('Failed to get media stream:', err);
-          // Handle error, e.g., show a message to the user
-        });
-    }
-  }, [idToCall, callAccepted, dispatch, setupPeer]);
+        } catch (error) {
+          console.error('Error accessing media devices:', error);
+          alert('Unable to access camera and microphone. Please check permissions.');
+          dispatch(setIdToCall(""));
+        }
+      } else if (idToCall && stream && socket?.connected) {
+        idToCallRef.current = idToCall;
+        callUser(idToCall);
+        dispatch(setIdToCall(""));
+      }
+    };
+    handleCall();
+  }, [idToCall, stream, socket, dispatch]);
 
-  const answerCall = () => {
-    dispatch(setCallAccepted(true));
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((mediaStream) => {
-        dispatch(setStream(mediaStream));
-        if (myVideo.current) {
-          myVideo.current.srcObject = mediaStream;
-        }
-        setupPeer(false, mediaStream);
-        if (callerSignal) {
-          connectionRef.current.signal(callerSignal);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to get media stream for answering call:', err);
+  useEffect(() => {
+    if (connectionRef.current && callState.answerSignal) {
+      connectionRef.current.setRemoteDescription(new RTCSessionDescription(callState.answerSignal))
+        .catch(error => console.error('Error setting remote description:', error));
+    }
+  }, [callState.answerSignal]);
+
+  useEffect(() => {
+    if (connectionRef.current && callState.iceCandidates.length > 0) {
+      callState.iceCandidates.forEach(candidate => {
+        connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(error => console.error('Error adding ICE candidate:', error));
       });
+      dispatch(clearIceCandidates());
+    }
+  }, [callState.iceCandidates, dispatch]);
+
+  useEffect(() => {
+    if (stream && myVideo.current) {
+      myVideo.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  useEffect(() => {
+    if (callState.remoteStream && userVideo.current) {
+      userVideo.current.srcObject = callState.remoteStream;
+    }
+  }, [callState.remoteStream]);
+
+  const callUser = (id) => {
+    if (!socket || !stream) return;
+
+    try {
+      const peerConnection = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+        ],
+      });
+
+      stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', { to: id, candidate: event.candidate });
+        }
+      };
+
+      peerConnection.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          dispatch(setRemoteStream(event.streams[0]));
+        } else {
+          const remoteStream = new MediaStream([event.track]);
+          dispatch(setRemoteStream(remoteStream));
+        }
+      };
+
+      peerConnection.createOffer()
+        .then(offer => peerConnection.setLocalDescription(offer))
+        .then(() => {
+          socket.emit('call-user', {
+            userToCall: id,
+            signalData: peerConnection.localDescription,
+            from: me,
+            name: name || 'Unknown',
+          });
+        })
+        .catch(error => console.error('Error creating offer:', error));
+
+      connectionRef.current = peerConnection;
+    } catch (error) {
+      console.error('Error creating RTCPeerConnection:', error);
+      dispatch(setIdToCall(""));
+    }
   };
 
-  const leaveCall = useCallback(() => {
+  const answerCall = async () => {
+    if (!socket || !caller || !callerSignal) return;
+
+    try {
+      let mediaStream = stream;
+      if (!mediaStream) {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        dispatch(setStream(mediaStream));
+      }
+
+      dispatch(setCallAccepted(true));
+
+      const peerConnection = new RTCPeerConnection({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+        ],
+      });
+
+      mediaStream.getTracks().forEach(track => peerConnection.addTrack(track, mediaStream));
+
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('ice-candidate', { to: caller, candidate: event.candidate });
+        }
+      };
+
+      peerConnection.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          dispatch(setRemoteStream(event.streams[0]));
+        } else {
+          const remoteStream = new MediaStream([event.track]);
+          dispatch(setRemoteStream(remoteStream));
+        }
+      };
+
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(callerSignal));
+
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+
+      socket.emit('answer-call', { signal: peerConnection.localDescription, to: caller });
+
+      connectionRef.current = peerConnection;
+    } catch (error) {
+      console.error('Error answering call:', error);
+      dispatch(resetCallState());
+    }
+  };
+
+  
+  const leaveCall = () => {
     dispatch(setCallEnded(true));
 
     if (connectionRef.current) {
-      connectionRef.current.destroy();
+      connectionRef.current.getSenders().forEach(sender => {
+        if (sender.track) {
+          sender.track.stop();
+        }
+      });
+      connectionRef.current.close();
       connectionRef.current = null;
     }
 
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach(track => track.stop());
       dispatch(setStream(null));
     }
 
@@ -127,25 +212,33 @@ const CallModal = () => {
 
     dispatch(resetCallState());
     idToCallRef.current = null;
-  }, [dispatch, stream, socket, caller]);
 
-  useEffect(() => {
-    if (callEnded) {
-      leaveCall();
-    }
-  }, [callEnded, leaveCall]);
+    // Fallback to ensure UI is cleaned up
+    setTimeout(() => {
+      if (window.location.pathname.includes('/call')) {
+        window.location.href = '/';
+      }
+    }, 500);
+  };
 
   return (
     <>
-      {receivingCall && !callAccepted && (
+      {/* Incoming call modal */}
+      {receivingCall && !callAccepted && caller && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-lg font-semibold mb-4">{caller} is calling...</h3>
             <div className="flex space-x-4">
-              <button onClick={answerCall} className="bg-green-500 text-white px-4 py-2 rounded">
+              <button
+                onClick={answerCall}
+                className="bg-green-500 text-white px-4 py-2 rounded"
+              >
                 Answer
               </button>
-              <button onClick={() => dispatch(setReceivingCall(false))} className="bg-red-500 text-white px-4 py-2 rounded">
+              <button
+                onClick={() => dispatch(setReceivingCall(false))}
+                className="bg-red-500 text-white px-4 py-2 rounded"
+              >
                 Decline
               </button>
             </div>
@@ -153,25 +246,50 @@ const CallModal = () => {
         </div>
       )}
 
-      {idToCall && !callAccepted && !callEnded && (
+      {/* Outgoing call modal - when initiating a call */}
+      {idToCall && !receivingCall && !callAccepted && !callEnded && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-lg font-semibold mb-4">Calling...</h3>
             <p className="text-gray-600 mb-4">Waiting for response...</p>
-            <button onClick={() => { dispatch(setIdToCall('')); leaveCall(); }} className="bg-red-500 text-white px-4 py-2 rounded">
+            <button
+              onClick={() => {
+                dispatch(setIdToCall(""));
+                if (stream) {
+                  stream.getTracks().forEach(track => track.stop());
+                  dispatch(setStream(null));
+                }
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded"
+            >
               Cancel
             </button>
           </div>
         </div>
       )}
 
+      {/* Active call modal */}
       {callAccepted && !callEnded && (
         <div className="fixed inset-0 bg-black flex items-center justify-center z-50">
           <div className="relative w-full h-full">
-            <video playsInline muted ref={myVideo} autoPlay controls className="absolute top-4 right-4 w-1/4 h-1/4 border-2 border-white" />
-            <video playsInline ref={userVideo} autoPlay controls className="w-full h-full object-cover" />
+            <video
+              playsInline
+              muted
+              ref={myVideo}
+              autoPlay
+              className="absolute top-4 right-4 w-1/4 h-1/4 border-2 border-white"
+            />
+            <video
+              playsInline
+              ref={userVideo}
+              autoPlay
+              className="w-full h-full object-cover"
+            />
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
-              <button onClick={leaveCall} className="bg-red-500 text-white px-6 py-3 rounded-full">
+              <button
+                onClick={leaveCall}
+                className="bg-red-500 text-white px-6 py-3 rounded-full"
+              >
                 Hang Up
               </button>
             </div>

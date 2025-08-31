@@ -32,6 +32,8 @@ const CallModal = () => {
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
+  // FIX: Ref to store the ID of the user we are calling
+  const idToCallRef = useRef();
 
   // Set up socket listeners - only when socket is available
   useEffect(() => {
@@ -43,17 +45,13 @@ const CallModal = () => {
       dispatch(setCallerSignal(data.signal));
     };
 
+    // FIX: Correctly handle call acceptance on the caller's side
     const handleCallAccepted = (signal) => {
       dispatch(setCallAccepted(true));
-      // Only create peer if we have a stream
-      if (stream) {
-        const peer = new Peer({
-          initiator: false,
-          trickle: false,
-          stream: stream,
-        });
-        peer.signal(signal);
-        connectionRef.current = peer;
+      // The caller's peer connection is already in connectionRef.
+      // We just need to signal it with the answer from the callee.
+      if (connectionRef.current) {
+        connectionRef.current.signal(signal);
       }
     };
 
@@ -62,6 +60,8 @@ const CallModal = () => {
       if (connectionRef.current) {
         connectionRef.current.destroy();
       }
+      // Note: Reloading the page is a simple way to reset state,
+      // but a more graceful state reset might be better in the long run.
       window.location.reload();
     };
 
@@ -74,7 +74,7 @@ const CallModal = () => {
       socket.off('call-accepted', handleCallAccepted);
       socket.off('end-call', handleEndCall);
     };
-  }, [socket, dispatch]); // Removed stream from dependencies to avoid re-creating listeners
+  }, [socket, dispatch]);
 
   // Handle initiating a call
   useEffect(() => {
@@ -89,8 +89,10 @@ const CallModal = () => {
         console.error('Error accessing media devices:', error);
       });
     } else if (idToCall && stream) {
+      // FIX: Store the ID of the user we are calling before resetting it in the store
+      idToCallRef.current = idToCall;
       callUser(idToCall);
-      dispatch(setIdToCall(null)); // Reset after calling
+      dispatch(setIdToCall(null)); // Reset after calling to prevent re-triggering
     }
   }, [idToCall, stream, dispatch]);
 
@@ -125,8 +127,6 @@ const CallModal = () => {
         userVideo.current.srcObject = stream;
       }
     });
-
-    
 
     connectionRef.current = peer;
   };
@@ -188,7 +188,11 @@ const CallModal = () => {
       connectionRef.current.destroy();
     }
     if (socket) {
-      socket.emit('end-call', { to: caller || me });
+      // FIX: Ensure we notify the correct user when ending the call
+      const remoteUser = caller || idToCallRef.current;
+      if (remoteUser) {
+        socket.emit('end-call', { to: remoteUser });
+      }
     }
     window.location.reload();
   };

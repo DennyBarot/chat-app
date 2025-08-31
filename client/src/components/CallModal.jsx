@@ -34,12 +34,12 @@ const CallModal = () => {
 
   const myVideo = useRef();
   const userVideo = useRef();
-  const connectionRef = useRef();
+  const connectionRef = useRef(null);
 
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
 
-  // Effect to get user media
+  // Get user media as soon as a call is initiated or received
   useEffect(() => {
     if ((idToCall || receivingCall) && !stream) {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true })
@@ -48,144 +48,156 @@ const CallModal = () => {
         })
         .catch((error) => {
           console.error('Error accessing media devices:', error);
-          alert('Could not access camera and microphone.');
+          alert('Could not access camera and microphone. Please check permissions.');
         });
     }
   }, [idToCall, receivingCall, stream, dispatch]);
 
-  // Effect to handle the entire WebRTC connection lifecycle
-  useEffect(() => {
-    if (!socket || !stream || callEnded) return;
-
-    // Only proceed if we are initiating or have received a call
-    if (idToCall || (receivingCall && callerSignal)) {
-      // 1. Create Peer Connection
-      const peerConnection = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
-      });
-      connectionRef.current = peerConnection;
-
-      // 2. Add local stream to the connection
-      stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-
-      // 3. Handle remote stream
-      peerConnection.ontrack = (event) => {
-        if (userVideo.current) {
-          userVideo.current.srcObject = event.streams[0];
-        }
-      };
-
-      // 4. Handle ICE candidates
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('ice-candidate', { to: idToCall || caller, candidate: event.candidate });
-        }
-      };
-
-      // 5. Handle connection state changes
-      peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === 'connected') {
-          console.log('Peers connected!');
-        }
-      };
-
-      // Logic for the CALLER
-      if (idToCall) {
-        peerConnection.createOffer()
-          .then(offer => peerConnection.setLocalDescription(offer))
-          .then(() => {
-            socket.emit('call-user', {
-              userToCall: idToCall,
-              signal: peerConnection.localDescription,
-              from: me,
-              name: name || 'Unknown',
-            });
-          })
-          .catch(err => console.error("Error creating offer:", err));
-      }
-
-      // Logic for the RECEIVER
-      if (receivingCall && callerSignal) {
-        peerConnection.setRemoteDescription(new RTCSessionDescription(callerSignal))
-          .then(() => peerConnection.createAnswer())
-          .then(answer => peerConnection.setLocalDescription(answer))
-          .then(() => {
-            socket.emit('answer-call', { signal: peerConnection.localDescription, to: caller });
-            dispatch(setCallAccepted(true));
-          })
-          .catch(err => console.error("Error creating answer:", err));
-      }
-    }
-
-    // Cleanup
-    return () => {
-      if (connectionRef.current) {
-        connectionRef.current.close();
-        connectionRef.current = null;
-      }
-    };
-  }, [idToCall, receivingCall, callerSignal, stream, socket, dispatch]);
-
-
-  // Effect for Caller: Listen for the answer from the receiver
-  useEffect(() => {
-    if (connectionRef.current && answerSignal && !connectionRef.current.currentRemoteDescription) {
-        connectionRef.current.setRemoteDescription(new RTCSessionDescription(answerSignal))
-          .catch(err => console.error("Error setting remote description from answer:", err));
-    }
-  }, [answerSignal]);
-
-
-  // Effect to add queued ICE candidates
-  useEffect(() => {
-    if (connectionRef.current && iceCandidates.length > 0) {
-      iceCandidates.forEach(candidate => {
-        connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(err => console.error("Error adding ICE candidate:", err));
-      });
-      dispatch(clearIceCandidates());
-    }
-  }, [iceCandidates, dispatch]);
-
-
-  // Attach local stream to the video element
+  // Attach local stream to the video element once it's available
   useEffect(() => {
     if (stream && myVideo.current) {
       myVideo.current.srcObject = stream;
     }
   }, [stream]);
 
+  // Attach remote stream to the video element when the call is accepted
+  useEffect(() => {
+    if (callAccepted && stream && userVideo.current) {
+        // The remote stream is attached via the ontrack event handler
+    }
+  }, [callAccepted, stream]);
 
-  const answerCall = () => {
-    // This now primarily just sets the state to trigger the main useEffect
-    dispatch(setCallAccepted(true));
+  // ===== CALLER'S LOGIC =====
+  const callUser = () => {
+    if (!stream || !socket) return;
+
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
+    connectionRef.current = peerConnection;
+
+    stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { to: idToCall, candidate: event.candidate });
+      }
+    };
+
+    peerConnection.ontrack = (event) => {
+      if (userVideo.current) {
+        userVideo.current.srcObject = event.streams[0];
+      }
+    };
+
+    peerConnection.createOffer()
+      .then(offer => peerConnection.setLocalDescription(offer))
+      .then(() => {
+        socket.emit('call-user', {
+          userToCall: idToCall,
+          signal: peerConnection.localDescription,
+          from: me,
+          name: name || 'Unknown',
+        });
+      });
   };
 
+  // Effect to initiate the call for the caller
+  useEffect(() => {
+    if (idToCall && stream && socket) {
+      callUser();
+    }
+  }, [idToCall, stream, socket]);
+
+  // Effect for the caller to handle the answer from the receiver
+  useEffect(() => {
+    if (connectionRef.current && answerSignal && !connectionRef.current.currentRemoteDescription) {
+      connectionRef.current.setRemoteDescription(new RTCSessionDescription(answerSignal))
+        .catch(err => console.error('Caller: Failed to set remote description', err));
+    }
+  }, [answerSignal]);
+
+
+  // ===== RECEIVER'S LOGIC =====
+  const answerCall = () => {
+    if (!stream || !socket || !callerSignal) return;
+
+    dispatch(setCallAccepted(true));
+
+    const peerConnection = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
+    connectionRef.current = peerConnection;
+
+    stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        socket.emit('ice-candidate', { to: caller, candidate: event.candidate });
+      }
+    };
+
+    peerConnection.ontrack = (event) => {
+      if (userVideo.current) {
+        userVideo.current.srcObject = event.streams[0];
+      }
+    };
+
+    peerConnection.setRemoteDescription(new RTCSessionDescription(callerSignal))
+      .then(() => peerConnection.createAnswer())
+      .then(answer => peerConnection.setLocalDescription(answer))
+      .then(() => {
+        socket.emit('answer-call', { signal: peerConnection.localDescription, to: caller });
+      })
+      .catch(err => console.error('Receiver: Failed to create answer', err));
+  };
+
+
+  // ===== SHARED LOGIC =====
+
+  // Effect to add queued ICE candidates for both caller and receiver
+  useEffect(() => {
+    if (connectionRef.current && iceCandidates.length > 0) {
+      iceCandidates.forEach(candidate => {
+        connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
+          .catch(err => console.error('Error adding ICE candidate:', err));
+      });
+      dispatch(clearIceCandidates());
+    }
+  }, [iceCandidates, dispatch]);
+
+  // Cleanup effect for when the call ends
+  useEffect(() => {
+    if (callEnded) {
+      if (connectionRef.current) {
+        connectionRef.current.close();
+        connectionRef.current = null;
+      }
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+      dispatch(resetCallState());
+    }
+  }, [callEnded, stream, dispatch]);
+
+
   const leaveCall = () => {
-    dispatch(setCallEnded(true));
     const remoteUser = caller || idToCall;
     if (remoteUser) {
       socket.emit('end-call', { to: remoteUser });
     }
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    dispatch(resetCallState());
+    dispatch(setCallEnded(true));
   };
 
   const declineCall = () => {
-    const remoteUser = caller;
-    if (remoteUser) {
-        socket.emit('end-call', { to: remoteUser });
+    if (caller) {
+        socket.emit('end-call', { to: caller });
     }
     dispatch(resetCallState());
   }
 
   const cancelCall = () => {
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    dispatch(resetCallState());
+    dispatch(setCallEnded(true));
   }
 
   const toggleAudio = () => {
@@ -218,10 +230,10 @@ const CallModal = () => {
       )}
 
       {/* Outgoing call modal */}
-      {idToCall && !callAccepted && (
+      {idToCall && !callAccepted && !callEnded && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-4">Calling {name || '...'}</h3>
+            <h3 className="text-lg font-semibold mb-4">Calling...</h3>
             <p className="text-gray-600 mb-4">Waiting for response...</p>
             <button onClick={cancelCall} className="bg-red-500 text-white px-4 py-2 rounded">Cancel</button>
           </div>
@@ -236,7 +248,7 @@ const CallModal = () => {
             <video playsInline ref={userVideo} autoPlay className="w-full h-full object-cover" />
             
             {/* Local Video */}
-            <video playsInline muted ref={myVideo} autoPlay className="absolute top-4 right-4 w-1/4 h-1/4 border-2 border-white" />
+            <video playsInline muted ref={myVideo} autoPlay className="absolute top-4 right-4 w-1/f-1/4 h-1/4 border-2 border-white" />
 
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
               <button onClick={toggleAudio} className={`px-6 py-3 rounded-full ${isAudioMuted ? 'bg-gray-500' : 'bg-blue-500'} text-white`}>

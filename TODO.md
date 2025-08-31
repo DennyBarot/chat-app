@@ -17,6 +17,7 @@
 - [x] Add null checks to call button in MessageContainer.jsx
 - [x] Add debugging logs to call button and CallModal
 - [x] Disable call button while userProfile is loading
+- [x] Remove console spam from debugging logs
 
 ## Pending
 - [ ] Test call functionality

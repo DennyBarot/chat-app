@@ -17,7 +17,6 @@ const CallModal = () => {
   const dispatch = useDispatch();
   const socket = useSocket();
   const callState = useSelector((state) => state.callReducer) || {};
-  console.log('CallModal callState:', callState);
   const {
     callAccepted = false,
     callEnded = false,

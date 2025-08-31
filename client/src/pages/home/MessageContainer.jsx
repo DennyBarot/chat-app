@@ -13,7 +13,6 @@ import { setIdToCall, setName } from "../../store/slice/call/call.slice";
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser, screenLoading } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null, screenLoading: true });
-  console.log('MessageContainer user state:', { userProfile, selectedUser, screenLoading });
   const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
   const socket = useSocket();

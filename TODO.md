@@ -11,7 +11,8 @@
 4. [x] Improve leaveCall function for proper cleanup
 5. [x] Add error handling and debug logs
 6. [x] Fix video element timing issue (myVideo element not found)
-7. [ ] Test the complete call flow
+7. [x] Fix answer signal data structure mismatch (signal vs sdp)
+8. [ ] Test the complete call flow
 
 ## Files to Modify
 - [x] client/src/components/CallModal.jsx

@@ -103,6 +103,14 @@ const CallModal = () => {
     }
   }, [callState.remoteStream]);
 
+  // Handle local stream attachment when call is accepted and video elements are rendered
+  useEffect(() => {
+    if (callAccepted && !callEnded && stream && myVideo.current) {
+      console.log('Attaching local stream to myVideo element after call acceptance');
+      myVideo.current.srcObject = stream;
+    }
+  }, [callAccepted, callEnded, stream]);
+
   const callUser = (id) => {
     if (!socket || !stream) {
       console.error('Cannot create peer connection: socket or stream is missing', { socket: !!socket, stream: !!stream });
@@ -218,12 +226,8 @@ const CallModal = () => {
         console.log('Answer media stream obtained:', mediaStream);
         console.log('Answer stream tracks:', mediaStream.getTracks());
         dispatch(setStream(mediaStream));
-        if (myVideo.current) {
-          myVideo.current.srcObject = mediaStream;
-          console.log('Answer local video stream attached to myVideo element');
-        } else {
-          console.error('Answer myVideo element not found');
-        }
+        // Don't try to attach to video element here - it will be handled when callAccepted becomes true
+        console.log('Answer media stream ready, will attach to video element when call is accepted');
         // Now create the peer connection with the stream
         createPeerConnection(mediaStream);
       }).catch((error) => {

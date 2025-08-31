@@ -1,10 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import Peer from 'simple-peer';
-  setCallAccepted,
-  setCallEnded,
-  setReceivingCall,
-import{
+import {
   setCallAccepted,
   setCallEnded,
   setReceivingCall,
@@ -16,7 +12,6 @@ import{
   resetCallState
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
-import { useSelector, useDispatch } from 'react-redux';
 
 const CallModal = () => {
   const dispatch = useDispatch();

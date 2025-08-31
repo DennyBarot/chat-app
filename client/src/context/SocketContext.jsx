@@ -112,6 +112,12 @@ export const SocketProvider = ({ children }) => {
       dispatch(resetCallState());
     });
 
+    // Handle ICE candidates for WebRTC
+    newSocket.on("ice-candidate", (data) => {
+      // This will be handled by the CallModal component
+      console.log('Received ICE candidate:', data);
+    });
+
     setSocket(newSocket);
     socketRef.current = newSocket;
 

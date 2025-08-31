@@ -268,7 +268,6 @@ const CallModal = () => {
   useEffect(() => {
     if (callEnded) {
       handleCallEnd();
-      callEndedRef.current = false;
     }
   }, [callEnded]); // Remove handleCallEnd from dependency
 

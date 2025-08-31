@@ -39,41 +39,57 @@ const CallModal = () => {
   // Note: Socket event listeners are now handled in SocketContext to avoid conflicts
   // The CallModal focuses only on UI and peer connection management
 
+  // Handle initiating a call
   useEffect(() => {
-    const handleCall = async () => {
-      if (idToCall && !stream) {
-        try {
-          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-          dispatch(setStream(mediaStream));
-          if (myVideo.current) {
-            myVideo.current.srcObject = mediaStream;
-          }
-        } catch (error) {
-          console.error('Error accessing media devices:', error);
-          alert('Unable to access camera and microphone. Please check permissions.');
-          dispatch(setIdToCall(""));
+    if (idToCall && !stream) {
+      // Request media permissions when initiating a call
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+        console.log('Media stream obtained:', mediaStream);
+        console.log('Stream tracks:', mediaStream.getTracks());
+        dispatch(setStream(mediaStream));
+        if (myVideo.current) {
+          myVideo.current.srcObject = mediaStream;
+          console.log('Local video stream attached to myVideo element');
+        } else {
+          console.error('myVideo element not found');
         }
-      } else if (idToCall && stream && socket?.connected) {
-        idToCallRef.current = idToCall;
-        callUser(idToCall);
+      }).catch((error) => {
+        console.error('Error accessing media devices:', error);
+        alert('Unable to access camera and microphone. Please check permissions.');
+        // Reset call state if media access fails
         dispatch(setIdToCall(""));
-      }
-    };
-    handleCall();
+      });
+    } else if (idToCall && stream && socket && socket.connected) {
+      // FIX: Store the ID of the user we are calling before resetting it in the store
+      idToCallRef.current = idToCall;
+      console.log('Initiating call to user:', idToCall);
+      callUser(idToCall);
+      dispatch(setIdToCall("")); // Reset after calling to prevent re-triggering
+    } else if (idToCall && stream && (!socket || !socket.connected)) {
+      console.error('Cannot initiate call: socket not connected');
+      dispatch(setIdToCall(""));
+    }
   }, [idToCall, stream, socket, dispatch]);
 
+  // Listen for answer signal from Redux state and set remote description on caller's RTCPeerConnection
   useEffect(() => {
     if (connectionRef.current && callState.answerSignal) {
+      console.log('Setting remote description from answer signal');
       connectionRef.current.setRemoteDescription(new RTCSessionDescription(callState.answerSignal))
-        .catch(error => console.error('Error setting remote description:', error));
+        .catch(error => {
+          console.error('Error setting remote description from answer signal:', error);
+        });
     }
   }, [callState.answerSignal]);
 
+  // Listen for ICE candidates from Redux state and add them to RTCPeerConnection
   useEffect(() => {
     if (connectionRef.current && callState.iceCandidates.length > 0) {
       callState.iceCandidates.forEach(candidate => {
         connectionRef.current.addIceCandidate(new RTCIceCandidate(candidate))
-          .catch(error => console.error('Error adding ICE candidate:', error));
+          .catch(error => {
+            console.error('Error adding ICE candidate:', error);
+          });
       });
       dispatch(clearIceCandidates());
     }
@@ -106,116 +122,339 @@ const CallModal = () => {
   }, [callAccepted, callEnded, stream]);
 
   const callUser = (id) => {
-    if (!socket || !stream) return;
+    if (!socket || !stream) {
+      console.error('Cannot create peer connection: socket or stream is missing', { socket: !!socket, stream: !!stream });
+      return;
+    }
 
     try {
+      console.log('Creating RTCPeerConnection with stream:', stream);
+      console.log('Stream tracks:', stream.getTracks());
+
+      // Validate stream before creating peer
+      if (!stream || !stream.active) {
+        throw new Error('Invalid stream provided to RTCPeerConnection');
+      }
+
+      if (stream.getTracks().length === 0) {
+        throw new Error('Stream has no tracks');
+      }
+
+      console.log('Creating RTCPeerConnection instance...');
       const peerConnection = new RTCPeerConnection({
         iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: 'stun:stun.l.google.com:19302',
+          },
         ],
       });
 
-      stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+      console.log('RTCPeerConnection instance created, adding tracks...');
+      // Add stream tracks to peer connection
+      stream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, stream);
+      });
+      console.log('Tracks added to RTCPeerConnection successfully');
+ 
+       peerConnection.onicecandidate = (event) => {
+         if (event.candidate) {
+           console.log('ICE candidate generated:', event.candidate.type, event.candidate.candidate);
+           if (socket && socket.connected) {
+             socket.emit('ice-candidate', {
+               to: id,
+               candidate: event.candidate,
+             });
+             console.log('ICE candidate sent to:', id);
+           } else {
+             console.error('Socket not connected when trying to send ICE candidate');
+           }
+         } else {
+           console.log('ICE candidate gathering completed');
+         }
+       };
 
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('ice-candidate', { to: id, candidate: event.candidate });
-        }
-      };
+       peerConnection.ontrack = (event) => {
+         console.log('ONTRACK EVENT FIRED - Received remote track:', event.track.kind);
+         console.log('ONTRACK EVENT - Remote track streams:', event.streams);
+         console.log('ONTRACK EVENT - Track enabled:', event.track.enabled);
+         console.log('ONTRACK EVENT - Track readyState:', event.track.readyState);
 
-      peerConnection.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          dispatch(setRemoteStream(event.streams[0]));
-        }
-      };
+         if (event.streams && event.streams[0]) {
+           const remoteStream = event.streams[0];
+           console.log('ONTRACK EVENT - Remote stream tracks:', remoteStream.getTracks());
+           console.log('ONTRACK EVENT - Remote stream active:', remoteStream.active);
+           dispatch(setRemoteStream(remoteStream));
+           console.log('ONTRACK EVENT - Remote stream dispatched to Redux');
 
-      peerConnection.createOffer()
-        .then(offer => peerConnection.setLocalDescription(offer))
-        .then(() => {
-          socket.emit('call-user', {
-            userToCall: id,
-            signalData: peerConnection.localDescription,
-            from: me,
-            name: name || 'Unknown',
-          });
-        })
-        .catch(error => console.error('Error creating offer:', error));
+           if (userVideo.current) {
+             userVideo.current.srcObject = remoteStream;
+             console.log('ONTRACK EVENT - Remote stream attached to userVideo element');
+           } else {
+             console.warn('ONTRACK EVENT - userVideo element not found when attaching remote stream');
+           }
+         } else {
+           console.warn('ONTRACK EVENT - No streams in ontrack event');
+         }
+       };
+
+       peerConnection.onconnectionstatechange = () => {
+         console.log('Connection state:', peerConnection.connectionState);
+         if (peerConnection.connectionState === 'connected') {
+           console.log('Peer connection established');
+         }
+       };
+
+       // Create offer
+       peerConnection.createOffer()
+         .then(offer => {
+           return peerConnection.setLocalDescription(offer);
+         })
+         .then(() => {
+           if (socket && socket.connected) {
+             socket.emit('call-user', {
+               userToCall: id,
+               signalData: peerConnection.localDescription,
+               from: me,
+               name: name || 'Unknown',
+             });
+           } else {
+             console.error('Socket not connected when trying to emit call-user');
+           }
+         })
+         .catch(error => {
+           console.error('Error creating offer:', error);
+           dispatch(setIdToCall(""));
+         });
 
       connectionRef.current = peerConnection;
+      console.log('RTCPeerConnection created successfully');
     } catch (error) {
       console.error('Error creating RTCPeerConnection:', error);
+      // Reset call state on error
       dispatch(setIdToCall(""));
     }
   };
 
-  const answerCall = async () => {
+  const answerCall = () => {
     if (!socket || !caller || !callerSignal) return;
 
-    try {
-      let mediaStream = stream;
-      if (!mediaStream) {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    // Request media permissions if we don't have a stream yet
+    if (!stream) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+        console.log('Answer media stream obtained:', mediaStream);
+        console.log('Answer stream tracks:', mediaStream.getTracks());
         dispatch(setStream(mediaStream));
+        // Don't try to attach to video element here - it will be handled when callAccepted becomes true
+        console.log('Answer media stream ready, will attach to video element when call is accepted');
+        // Now create the peer connection with the stream
+        createPeerConnection(mediaStream);
+      }).catch((error) => {
+        console.error('Error accessing media devices for answer:', error);
+        alert('Unable to access camera and microphone. Please check permissions.');
+        // Reset call state if media access fails
+        dispatch(setReceivingCall(false));
+        dispatch(setCaller(""));
+        dispatch(setCallerSignal(null));
+      });
+    } else {
+      // We already have a stream, create peer connection directly
+      createPeerConnection(stream);
+    }
+  };
+
+  const createPeerConnection = (mediaStream) => {
+    if (!mediaStream) {
+      console.error('Cannot create peer connection: mediaStream is null/undefined');
+      return;
+    }
+
+    dispatch(setCallAccepted(true));
+    try {
+      console.log('Creating answer RTCPeerConnection with stream:', mediaStream);
+      console.log('Answer stream tracks:', mediaStream.getTracks());
+
+      // Validate stream before creating peer
+      if (!mediaStream || !mediaStream.active) {
+        throw new Error('Invalid mediaStream provided to RTCPeerConnection');
       }
 
-      dispatch(setCallAccepted(true));
+      if (mediaStream.getTracks().length === 0) {
+        throw new Error('Answer stream has no tracks');
+      }
 
+      console.log('Creating answer RTCPeerConnection instance...');
       const peerConnection = new RTCPeerConnection({
         iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: 'stun:stun.l.google.com:19302',
+          },
         ],
       });
 
-      mediaStream.getTracks().forEach(track => peerConnection.addTrack(track, mediaStream));
+      console.log('Answer RTCPeerConnection instance created, adding tracks...');
+      // Add stream tracks to peer connection
+      mediaStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, mediaStream);
+      });
+      console.log('Answer tracks added to RTCPeerConnection successfully');
 
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          socket.emit('ice-candidate', { to: caller, candidate: event.candidate });
+          console.log('Answer ICE candidate generated:', event.candidate.type, event.candidate.candidate);
+          if (socket && socket.connected) {
+            socket.emit('ice-candidate', {
+              to: caller,
+              candidate: event.candidate,
+            });
+            console.log('Answer ICE candidate sent to:', caller);
+          } else {
+            console.error('Socket not connected when trying to send answer ICE candidate');
+          }
+        } else {
+          console.log('Answer ICE candidate gathering completed');
         }
       };
 
       peerConnection.ontrack = (event) => {
+        console.log('ANSWER ONTRACK EVENT FIRED - Received remote track:', event.track.kind);
+        console.log('ANSWER ONTRACK EVENT - Remote track streams:', event.streams);
+        console.log('ANSWER ONTRACK EVENT - Track enabled:', event.track.enabled);
+        console.log('ANSWER ONTRACK EVENT - Track readyState:', event.track.readyState);
+
         if (event.streams && event.streams[0]) {
-          dispatch(setRemoteStream(event.streams[0]));
+          const remoteStream = event.streams[0];
+          console.log('ANSWER ONTRACK EVENT - Remote stream tracks:', remoteStream.getTracks());
+          console.log('ANSWER ONTRACK EVENT - Remote stream active:', remoteStream.active);
+          dispatch(setRemoteStream(remoteStream));
+          console.log('ANSWER ONTRACK EVENT - Remote stream dispatched to Redux');
+
+          if (userVideo.current) {
+            userVideo.current.srcObject = remoteStream;
+            console.log('ANSWER ONTRACK EVENT - Remote stream attached to userVideo element');
+          } else {
+            console.warn('ANSWER ONTRACK EVENT - userVideo element not found when attaching remote stream');
+          }
+        } else {
+          console.warn('ANSWER ONTRACK EVENT - No streams in ontrack event');
         }
       };
 
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(callerSignal));
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Answer connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'connected') {
+          console.log('Answer peer connection established');
+        }
+      };
 
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-
-      socket.emit('answer-call', { signal: peerConnection.localDescription, to: caller });
+      if (callerSignal) {
+        console.log('Setting remote description from caller signal');
+        peerConnection.setRemoteDescription(new RTCSessionDescription(callerSignal))
+          .then(() => {
+            return peerConnection.createAnswer();
+          })
+          .then(answer => {
+            return peerConnection.setLocalDescription(answer);
+          })
+          .then(() => {
+            if (socket && socket.connected) {
+              socket.emit('answer-call', {
+                signal: peerConnection.localDescription,
+                to: caller
+              });
+            } else {
+              console.error('Socket not connected when trying to emit answer-call');
+              dispatch(setCallAccepted(false));
+              dispatch(setReceivingCall(false));
+              dispatch(setCaller(""));
+              dispatch(setCallerSignal(null));
+            }
+          })
+          .catch(error => {
+            console.error('Error creating answer:', error);
+            dispatch(setCallAccepted(false));
+            dispatch(setReceivingCall(false));
+            dispatch(setCaller(""));
+            dispatch(setCallerSignal(null));
+          });
+      } else {
+        console.error('No caller signal to process');
+        dispatch(setCallAccepted(false));
+        dispatch(setReceivingCall(false));
+        dispatch(setCaller(""));
+        dispatch(setCallerSignal(null));
+      }
 
       connectionRef.current = peerConnection;
+      console.log('Answer RTCPeerConnection created successfully');
     } catch (error) {
-      console.error('Error answering call:', error);
-      dispatch(resetCallState());
+      console.error('Error creating answer RTCPeerConnection:', error);
+      // Reset call state on error
+      dispatch(setCallAccepted(false));
+      dispatch(setReceivingCall(false));
+      dispatch(setCaller(""));
+      dispatch(setCallerSignal(null));
     }
   };
 
-  
   const leaveCall = () => {
     dispatch(setCallEnded(true));
 
+    // Clean up peer connection
     if (connectionRef.current) {
-      connectionRef.current.getSenders().forEach(sender => sender.track?.stop());
-      connectionRef.current.close();
+      try {
+        const pc = connectionRef.current;
+        if (pc.getSenders) {
+          pc.getSenders().forEach((sender) => {
+            try {
+              if (sender.track) {
+                sender.track.stop();
+              }
+            } catch (error) {
+              console.error('Error stopping sender track:', error);
+            }
+          });
+        }
+        pc.onicecandidate = null;
+        pc.ontrack = null;
+        pc.onconnectionstatechange = null;
+        if (pc.signalingState !== 'closed') pc.close();
+      } catch (error) {
+        console.error('Error closing peer connection:', error);
+      }
       connectionRef.current = null;
     }
 
+    // Clean up media streams
     if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach(track => {
+        try {
+          track.stop();
+        } catch (error) {
+          console.error('Error stopping track:', error);
+        }
+      });
       dispatch(setStream(null));
     }
 
-    const remoteUser = caller || idToCallRef.current;
-    if (socket?.connected && remoteUser) {
-      socket.emit('end-call', { to: remoteUser });
+    if (socket && socket.connected) {
+      // FIX: Ensure we notify the correct user when ending the call
+      const remoteUser = caller || idToCallRef.current;
+      if (remoteUser) {
+        console.log('Sending end-call event to:', remoteUser);
+        socket.emit('end-call', { to: remoteUser });
+      } else {
+        console.warn('No remote user found to send end-call event');
+      }
+    } else {
+      console.warn('Socket not connected, cannot send end-call event');
     }
 
+    // Reset all call-related state
     dispatch(resetCallState());
     idToCallRef.current = null;
+
+    // Note: Consider removing window.location.reload() and handle state reset more gracefully
+    // window.location.reload();
   };
 
   return (

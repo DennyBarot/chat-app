@@ -37,6 +37,13 @@ const CallModal = () => {
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef(null);
+  const currentStreamRef = useRef(null);
+  const callEndedRef = useRef(false);
+
+  // Update currentStreamRef when stream changes
+  useEffect(() => {
+    currentStreamRef.current = stream;
+  }, [stream]);
 
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
@@ -216,19 +223,30 @@ const CallModal = () => {
     }
   }, [idToCall, stream, socket, callAccepted, receivingCall, callUser]);
 
+  // Reset callEndedRef when a new call starts
+  useEffect(() => {
+    if (idToCall || receivingCall) {
+      callEndedRef.current = false;
+    }
+  }, [idToCall, receivingCall]);
+
   // Handle call end cleanup
   const handleCallEnd = () => {
+    if (callEndedRef.current) return;
+    callEndedRef.current = true;
+
     // Close peer connection
     if (connectionRef.current) {
       connectionRef.current.close();
       connectionRef.current = null;
     }
 
-    // Stop media streams
-    if (stream) {
-      stream.getTracks().forEach(track => {
+    // Stop media streams using the ref to ensure we have the current stream
+    if (currentStreamRef.current) {
+      currentStreamRef.current.getTracks().forEach(track => {
         track.stop();
       });
+      currentStreamRef.current = null;
     }
 
     // Reset video elements
@@ -250,6 +268,7 @@ const CallModal = () => {
   useEffect(() => {
     if (callEnded) {
       handleCallEnd();
+      callEndedRef.current = false;
     }
   }, [callEnded]); // Remove handleCallEnd from dependency
 

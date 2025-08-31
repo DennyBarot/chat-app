@@ -61,6 +61,9 @@ export const SocketProvider = ({ children }) => {
       dispatch(setMe(newSocket.id));
     });
     newSocket.on("disconnect", () => console.log("Socket disconnected."));
+    newSocket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+    });
 
     // Listen for user status updates
     newSocket.on("userStatusUpdate", (statusData) => {
@@ -84,7 +87,7 @@ export const SocketProvider = ({ children }) => {
       }));
     });
 
-    // Call signaling events
+    // Call signaling events - simplified to avoid conflicts with CallModal
     newSocket.on("call-user", (data) => {
       dispatch(setReceivingCall(true));
       dispatch(setCaller(data.from));
@@ -95,17 +98,8 @@ export const SocketProvider = ({ children }) => {
       dispatch(setCallAccepted(true));
     });
 
-    newSocket.on("ice-candidate", (candidate) => {
-      // This event can be handled in the component using the peer connection
-      // Optionally, you can dispatch an action if you want to store ICE candidates
-    });
-
     newSocket.on("end-call", () => {
       dispatch(setCallEnded(true));
-      dispatch(resetCallState());
-    });
-
-    newSocket.on("call-rejected", () => {
       dispatch(resetCallState());
     });
 

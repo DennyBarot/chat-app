@@ -50,8 +50,12 @@ const CallModal = () => {
       dispatch(setCallAccepted(true));
       // The caller's peer connection is already in connectionRef.
       // We just need to signal it with the answer from the callee.
-      if (connectionRef.current) {
-        connectionRef.current.signal(signal);
+      if (connectionRef.current && signal) {
+        try {
+          connectionRef.current.signal(signal);
+        } catch (error) {
+          console.error('Error signaling peer connection:', error);
+        }
       }
     };
 
@@ -80,13 +84,15 @@ const CallModal = () => {
   useEffect(() => {
     if (idToCall && !stream) {
       // Request media permissions when initiating a call
-      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-        dispatch(setStream(stream));
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+        dispatch(setStream(mediaStream));
         if (myVideo.current) {
-          myVideo.current.srcObject = stream;
+          myVideo.current.srcObject = mediaStream;
         }
       }).catch((error) => {
         console.error('Error accessing media devices:', error);
+        // Reset call state if media access fails
+        dispatch(setIdToCall(""));
       });
     } else if (idToCall && stream) {
       // FIX: Store the ID of the user we are calling before resetting it in the store
@@ -99,36 +105,46 @@ const CallModal = () => {
   const callUser = (id) => {
     if (!socket || !stream) return;
 
-    const peer = new Peer({
-      initiator: true,
-      trickle: false,
-      stream: stream,
-      config: {
-        iceServers: [
-          {
-            urls: 'stun:stun.l.google.com:19302',
-          },
-        ],
-      },
-    });
-
-    peer.on('signal', (data) => {
-      socket.emit('call-user', {
-        userToCall: id,
-        signalData: data,
-        from: me,
-        name: name || 'Unknown',
+    try {
+      const peer = new Peer({
+        initiator: true,
+        trickle: false,
+        stream: stream,
+        config: {
+          iceServers: [
+            {
+              urls: 'stun:stun.l.google.com:19302',
+            },
+          ],
+        },
       });
-    });
 
-    peer.on('stream', (stream) => {
-      dispatch(setRemoteStream(stream));
-      if (userVideo.current) {
-        userVideo.current.srcObject = stream;
-      }
-    });
+      peer.on('signal', (data) => {
+        if (socket && socket.connected) {
+          socket.emit('call-user', {
+            userToCall: id,
+            signalData: data,
+            from: me,
+            name: name || 'Unknown',
+          });
+        }
+      });
 
-    connectionRef.current = peer;
+      peer.on('stream', (remoteStream) => {
+        dispatch(setRemoteStream(remoteStream));
+        if (userVideo.current) {
+          userVideo.current.srcObject = remoteStream;
+        }
+      });
+
+      peer.on('error', (error) => {
+        console.error('Peer connection error:', error);
+      });
+
+      connectionRef.current = peer;
+    } catch (error) {
+      console.error('Error creating peer connection:', error);
+    }
   };
 
   const answerCall = () => {
@@ -145,6 +161,10 @@ const CallModal = () => {
         createPeerConnection(mediaStream);
       }).catch((error) => {
         console.error('Error accessing media devices:', error);
+        // Reset call state if media access fails
+        dispatch(setReceivingCall(false));
+        dispatch(setCaller(""));
+        dispatch(setCallerSignal(null));
       });
     } else {
       // We already have a stream, create peer connection directly
@@ -154,32 +174,44 @@ const CallModal = () => {
 
   const createPeerConnection = (mediaStream) => {
     dispatch(setCallAccepted(true));
-    const peer = new Peer({
-      initiator: false,
-      trickle: false,
-      stream: mediaStream,
-      config: {
-        iceServers: [
-          {
-            urls: 'stun:stun.l.google.com:19302',
-          },
-        ],
-      },
-    });
+    try {
+      const peer = new Peer({
+        initiator: false,
+        trickle: false,
+        stream: mediaStream,
+        config: {
+          iceServers: [
+            {
+              urls: 'stun:stun.l.google.com:19302',
+            },
+          ],
+        },
+      });
 
-    peer.on('signal', (data) => {
-      socket.emit('answer-call', { signal: data, to: caller });
-    });
+      peer.on('signal', (data) => {
+        if (socket && socket.connected) {
+          socket.emit('answer-call', { signal: data, to: caller });
+        }
+      });
 
-    peer.on('stream', (remoteStream) => {
-      dispatch(setRemoteStream(remoteStream));
-      if (userVideo.current) {
-        userVideo.current.srcObject = remoteStream;
+      peer.on('stream', (remoteStream) => {
+        dispatch(setRemoteStream(remoteStream));
+        if (userVideo.current) {
+          userVideo.current.srcObject = remoteStream;
+        }
+      });
+
+      peer.on('error', (error) => {
+        console.error('Peer connection error:', error);
+      });
+
+      if (callerSignal) {
+        peer.signal(callerSignal);
       }
-    });
-
-    peer.signal(callerSignal);
-    connectionRef.current = peer;
+      connectionRef.current = peer;
+    } catch (error) {
+      console.error('Error creating peer connection:', error);
+    }
   };
 
   const leaveCall = () => {
@@ -187,7 +219,7 @@ const CallModal = () => {
     if (connectionRef.current) {
       connectionRef.current.destroy();
     }
-    if (socket) {
+    if (socket && socket.connected) {
       // FIX: Ensure we notify the correct user when ending the call
       const remoteUser = caller || idToCallRef.current;
       if (remoteUser) {

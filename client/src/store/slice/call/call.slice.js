@@ -5,7 +5,6 @@ const initialState = {
   callEnded: false,
   stream: null,
   name: "",
-  call: {},
   me: "",
   remoteStream: null,
   receivingCall: false,
@@ -55,7 +54,6 @@ const callSlice = createSlice({
       state.callAccepted = false;
       state.callEnded = false;
       state.stream = null;
-      state.call = {};
       state.remoteStream = null;
       state.receivingCall = false;
       state.caller = "";

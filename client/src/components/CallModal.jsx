@@ -33,8 +33,11 @@ const CallModal = () => {
   const myVideo = useRef();
   const userVideo = useRef();
   const connectionRef = useRef();
-  // FIX: Ref to store the ID of the user we are calling
   const idToCallRef = useRef();
+
+  // State for audio and video mute
+  const [isAudioMuted, setIsAudioMuted] = React.useState(false);
+  const [isVideoMuted, setIsVideoMuted] = React.useState(false);
 
   // Note: Socket event listeners are now handled in SocketContext to avoid conflicts
   // The CallModal focuses only on UI and peer connection management
@@ -91,8 +94,7 @@ const CallModal = () => {
 
   // Handle remote stream updates
   useEffect(() => {
-    if (callState.remoteStream && userVideo.current) {
-      console.log('Setting remote stream to userVideo element');
+    if (userVideo.current && callState.remoteStream) {
       userVideo.current.srcObject = callState.remoteStream;
     }
   }, [callState.remoteStream]);
@@ -159,17 +161,8 @@ const CallModal = () => {
 
        peerConnection.ontrack = (event) => {
          console.log('Received remote track:', event.track.kind);
-         console.log('Remote track streams:', event.streams);
          if (event.streams && event.streams[0]) {
-           const remoteStream = event.streams[0];
-           console.log('Remote stream tracks:', remoteStream.getTracks());
-           dispatch(setRemoteStream(remoteStream));
-           if (userVideo.current) {
-             userVideo.current.srcObject = remoteStream;
-             console.log('Remote stream attached to userVideo element');
-           }
-         } else {
-           console.warn('No streams in ontrack event');
+           dispatch(setRemoteStream(event.streams[0]));
          }
        };
 
@@ -293,17 +286,8 @@ const CallModal = () => {
 
       peerConnection.ontrack = (event) => {
         console.log('Received remote track in answer peer:', event.track.kind);
-        console.log('Answer remote track streams:', event.streams);
         if (event.streams && event.streams[0]) {
-          const remoteStream = event.streams[0];
-          console.log('Answer remote stream tracks:', remoteStream.getTracks());
-          dispatch(setRemoteStream(remoteStream));
-          if (userVideo.current) {
-            userVideo.current.srcObject = remoteStream;
-            console.log('Answer remote stream attached to userVideo element');
-          }
-        } else {
-          console.warn('No streams in answer ontrack event');
+          dispatch(setRemoteStream(event.streams[0]));
         }
       };
 
@@ -411,10 +395,7 @@ const CallModal = () => {
   }, [callEnded, dispatch, stream]);
 
   const leaveCall = () => {
-    dispatch(setCallEnded(true));
-
     if (socket && socket.connected) {
-      // FIX: Ensure we notify the correct user when ending the call
       const remoteUser = caller || idToCallRef.current;
       if (remoteUser) {
         console.log('Sending end-call event to:', remoteUser);
@@ -424,6 +405,26 @@ const CallModal = () => {
       }
     } else {
       console.warn('Socket not connected, cannot send end-call event');
+    }
+
+    dispatch(setCallEnded(true));
+  };
+
+  const toggleAudio = () => {
+    if (stream) {
+      stream.getAudioTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
+      setIsAudioMuted(!isAudioMuted);
+    }
+  };
+
+  const toggleVideo = () => {
+    if (stream) {
+      stream.getVideoTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
+      setIsVideoMuted(!isVideoMuted);
     }
   };
 
@@ -492,6 +493,18 @@ const CallModal = () => {
               className="w-full h-full object-cover"
             />
             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
+              <button
+                onClick={toggleAudio}
+                className={`px-6 py-3 rounded-full ${isAudioMuted ? 'bg-gray-500' : 'bg-blue-500'} text-white`}
+              >
+                {isAudioMuted ? 'Unmute Audio' : 'Mute Audio'}
+              </button>
+              <button
+                onClick={toggleVideo}
+                className={`px-6 py-3 rounded-full ${isVideoMuted ? 'bg-gray-500' : 'bg-blue-500'} text-white`}
+              >
+                {isVideoMuted ? 'Unmute Video' : 'Mute Video'}
+              </button>
               <button
                 onClick={leaveCall}
                 className="bg-red-500 text-white px-6 py-3 rounded-full"

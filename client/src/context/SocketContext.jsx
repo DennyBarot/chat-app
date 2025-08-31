@@ -8,8 +8,6 @@ import {
   setReceivingCall,
   setCaller,
   setCallerSignal,
-  setStream,
-  setRemoteStream,
   resetCallState,
   setMe,
 } from "../store/slice/call/call.slice";
@@ -60,9 +58,15 @@ export const SocketProvider = ({ children }) => {
       console.log("Socket connected:", newSocket.id);
       dispatch(setMe(newSocket.id));
     });
-    newSocket.on("disconnect", () => console.log("Socket disconnected."));
+    newSocket.on("disconnect", () => {
+      console.log("Socket disconnected.");
+      dispatch(setMe(""));
+    });
     newSocket.on("connect_error", (error) => {
       console.error("Socket connection error:", error);
+    });
+    newSocket.on("reconnect", () => {
+      console.log("Socket reconnected");
     });
 
     // Listen for user status updates

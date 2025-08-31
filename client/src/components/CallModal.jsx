@@ -9,7 +9,8 @@ import {
   setCallerSignal,
   setStream,
   setRemoteStream,
-  setIdToCall
+  setIdToCall,
+  setName
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
 
@@ -85,6 +86,7 @@ const CallModal = () => {
     if (idToCall && !stream) {
       // Request media permissions when initiating a call
       navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+        console.log('Media stream obtained:', mediaStream);
         dispatch(setStream(mediaStream));
         if (myVideo.current) {
           myVideo.current.srcObject = mediaStream;
@@ -94,22 +96,29 @@ const CallModal = () => {
         // Reset call state if media access fails
         dispatch(setIdToCall(""));
       });
-    } else if (idToCall && stream) {
+    } else if (idToCall && stream && socket && socket.connected) {
       // FIX: Store the ID of the user we are calling before resetting it in the store
       idToCallRef.current = idToCall;
+      console.log('Initiating call to user:', idToCall);
       callUser(idToCall);
-      dispatch(setIdToCall(null)); // Reset after calling to prevent re-triggering
+      dispatch(setIdToCall("")); // Reset after calling to prevent re-triggering
+    } else if (idToCall && stream && (!socket || !socket.connected)) {
+      console.error('Cannot initiate call: socket not connected');
+      dispatch(setIdToCall(""));
     }
-  }, [idToCall, stream, dispatch]);
+  }, [idToCall, stream, socket, dispatch]);
 
   const callUser = (id) => {
-    if (!socket || !stream) return;
+    if (!socket || !stream) {
+      console.error('Cannot create peer connection: socket or stream is missing', { socket: !!socket, stream: !!stream });
+      return;
+    }
 
     try {
+      console.log('Creating peer connection with stream:', stream);
       const peer = new Peer({
         initiator: true,
         trickle: false,
-        stream: stream,
         config: {
           iceServers: [
             {
@@ -119,7 +128,13 @@ const CallModal = () => {
         },
       });
 
+      // Add stream after peer creation to avoid potential issues
+      if (stream) {
+        peer.addStream(stream);
+      }
+
       peer.on('signal', (data) => {
+        console.log('Peer signal generated:', data);
         if (socket && socket.connected) {
           socket.emit('call-user', {
             userToCall: id,
@@ -127,10 +142,13 @@ const CallModal = () => {
             from: me,
             name: name || 'Unknown',
           });
+        } else {
+          console.error('Socket not connected when trying to emit call-user');
         }
       });
 
       peer.on('stream', (remoteStream) => {
+        console.log('Received remote stream');
         dispatch(setRemoteStream(remoteStream));
         if (userVideo.current) {
           userVideo.current.srcObject = remoteStream;
@@ -141,9 +159,16 @@ const CallModal = () => {
         console.error('Peer connection error:', error);
       });
 
+      peer.on('connect', () => {
+        console.log('Peer connection established');
+      });
+
       connectionRef.current = peer;
+      console.log('Peer connection created successfully');
     } catch (error) {
       console.error('Error creating peer connection:', error);
+      // Reset call state on error
+      dispatch(setIdToCall(""));
     }
   };
 
@@ -173,12 +198,17 @@ const CallModal = () => {
   };
 
   const createPeerConnection = (mediaStream) => {
+    if (!mediaStream) {
+      console.error('Cannot create peer connection: mediaStream is null/undefined');
+      return;
+    }
+
     dispatch(setCallAccepted(true));
     try {
+      console.log('Creating answer peer connection with stream:', mediaStream);
       const peer = new Peer({
         initiator: false,
         trickle: false,
-        stream: mediaStream,
         config: {
           iceServers: [
             {
@@ -188,13 +218,22 @@ const CallModal = () => {
         },
       });
 
+      // Add stream after peer creation to avoid potential issues
+      if (mediaStream) {
+        peer.addStream(mediaStream);
+      }
+
       peer.on('signal', (data) => {
+        console.log('Answer peer signal generated:', data);
         if (socket && socket.connected) {
           socket.emit('answer-call', { signal: data, to: caller });
+        } else {
+          console.error('Socket not connected when trying to emit answer-call');
         }
       });
 
       peer.on('stream', (remoteStream) => {
+        console.log('Received remote stream in answer peer');
         dispatch(setRemoteStream(remoteStream));
         if (userVideo.current) {
           userVideo.current.srcObject = remoteStream;
@@ -202,15 +241,29 @@ const CallModal = () => {
       });
 
       peer.on('error', (error) => {
-        console.error('Peer connection error:', error);
+        console.error('Answer peer connection error:', error);
+      });
+
+      peer.on('connect', () => {
+        console.log('Answer peer connection established');
       });
 
       if (callerSignal) {
+        console.log('Signaling caller signal to peer');
         peer.signal(callerSignal);
+      } else {
+        console.error('No caller signal to signal');
       }
+
       connectionRef.current = peer;
+      console.log('Answer peer connection created successfully');
     } catch (error) {
-      console.error('Error creating peer connection:', error);
+      console.error('Error creating answer peer connection:', error);
+      // Reset call state on error
+      dispatch(setCallAccepted(false));
+      dispatch(setReceivingCall(false));
+      dispatch(setCaller(""));
+      dispatch(setCallerSignal(null));
     }
   };
 

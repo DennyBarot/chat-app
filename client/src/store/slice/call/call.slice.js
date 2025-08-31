@@ -23,9 +23,7 @@ const callSlice = createSlice({
     setMe: (state, action) => {
       state.me = action.payload;
     },
-    setCall: (state, action) => {
-      state.call = action.payload;
-    },
+
     setCallAccepted: (state, action) => {
       state.callAccepted = action.payload;
     },
@@ -66,7 +64,6 @@ const callSlice = createSlice({
 export const {
   setStream,
   setMe,
-  setCall,
   setCallAccepted,
   setCallEnded,
   setReceivingCall,

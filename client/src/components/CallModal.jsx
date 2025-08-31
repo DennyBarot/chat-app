@@ -217,7 +217,7 @@ const CallModal = () => {
   }, [idToCall, stream, socket, callAccepted, receivingCall, callUser]);
 
   // Handle call end cleanup
-  const handleCallEnd = useCallback(() => {
+  const handleCallEnd = () => {
     // Close peer connection
     if (connectionRef.current) {
       connectionRef.current.close();
@@ -244,14 +244,14 @@ const CallModal = () => {
     setIsAudioMuted(false);
     setIsVideoMuted(false);
     dispatch(resetCallState());
-  }, [dispatch]); // Remove stream from dependency to prevent recreation issues
+  };
 
   // Effect for call end cleanup
   useEffect(() => {
     if (callEnded) {
       handleCallEnd();
     }
-  }, [callEnded, handleCallEnd]);
+  }, [callEnded]); // Remove handleCallEnd from dependency
 
   // Call control functions
   const leaveCall = useCallback(() => {

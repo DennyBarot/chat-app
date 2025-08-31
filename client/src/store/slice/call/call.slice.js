@@ -70,6 +70,8 @@ const callSlice = createSlice({
       state.idToCall = "";
       state.answerSignal = null;
       state.iceCandidates = [];
+      state.name = "";
+      state.me = "";
     },
   },
 });

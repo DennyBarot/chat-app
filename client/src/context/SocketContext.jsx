@@ -117,15 +117,19 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("call-rejected", () => {
       console.log('Call was rejected');
       dispatch(setCallEnded(true));
+      // Add a delay to ensure proper cleanup
       setTimeout(() => {
         dispatch(resetCallState());
-      }, 1000);
+      }, 2000);
     });
 
     newSocket.on("end-call", () => {
       console.log('Received end-call event, cleaning up call state');
       dispatch(setCallEnded(true));
-      // Let CallModal's handleCallEnd handle the resetCallState
+      // Add a delay to ensure proper cleanup before resetting state
+      setTimeout(() => {
+        dispatch(resetCallState());
+      }, 2000);
     });
 
     // Handle ICE candidates for WebRTC

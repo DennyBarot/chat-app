@@ -3,14 +3,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setCallAccepted,
   setCallEnded,
-//  setReceivingCall,
-//   setCaller,
-//   setCallerSignal,
   setStream,
-  // setIdToCall,
   resetCallState,
-  // setAnswerSignal,
-  // addIceCandidate,
   clearIceCandidates,
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
@@ -26,7 +20,6 @@ const CallModal = () => {
     caller,
     callerSignal,
     idToCall,
-    // me,
     name,
     answerSignal,
     iceCandidates,
@@ -56,6 +49,60 @@ const CallModal = () => {
       { urls: 'stun:stun1.l.google.com:19302' },
     ],
   };
+
+  // Handle call end cleanup
+  const handleCallEnd = useCallback(() => {
+    if (callEndedRef.current) return;
+    callEndedRef.current = true;
+
+    console.log('Starting call cleanup...');
+
+    // Close peer connection
+    if (connectionRef.current) {
+      connectionRef.current.onicecandidate = null;
+      connectionRef.current.ontrack = null;
+      connectionRef.current.onconnectionstatechange = null;
+      connectionRef.current.close();
+      connectionRef.current = null;
+    }
+
+    // Stop media streams using the ref to ensure we have the current stream
+    if (currentStreamRef.current) {
+      currentStreamRef.current.getTracks().forEach(track => {
+        console.log('Stopping track:', track.kind, track.label);
+        track.stop();
+      });
+      currentStreamRef.current = null;
+    }
+
+    // Also stop the stream from Redux state
+    if (stream) {
+      stream.getTracks().forEach(track => {
+        console.log('Stopping Redux stream track:', track.kind, track.label);
+        track.stop();
+      });
+    }
+
+    // Reset video elements
+    if (myVideo.current) {
+      myVideo.current.srcObject = null;
+      myVideo.current.load(); // Force video element to release resources
+    }
+    if (userVideo.current) {
+      userVideo.current.srcObject = null;
+      userVideo.current.load(); // Force video element to release resources
+    }
+
+    // Reset local state
+    setCallStatus('');
+    setIsAudioMuted(false);
+    setIsVideoMuted(false);
+
+    // Reset Redux state
+    dispatch(resetCallState());
+
+    console.log('Call cleanup completed');
+  }, [stream, dispatch]);
 
   // Get user media when call is initiated or received
   useEffect(() => {
@@ -128,7 +175,7 @@ const CallModal = () => {
     };
 
     return peerConnection;
-  }, [stream, socket, idToCall, caller]);
+  }, [stream, socket, idToCall, caller, handleCallEnd]);
 
   // Initiate call (caller side)
   const callUser = useCallback(async () => {
@@ -230,46 +277,46 @@ const CallModal = () => {
     }
   }, [idToCall, receivingCall]);
 
-  // Handle call end cleanup
-  const handleCallEnd = () => {
-    if (callEndedRef.current) return;
-    callEndedRef.current = true;
-
-    // Close peer connection
-    if (connectionRef.current) {
-      connectionRef.current.close();
-      connectionRef.current = null;
-    }
-
-    // Stop media streams using the ref to ensure we have the current stream
-    if (currentStreamRef.current) {
-      currentStreamRef.current.getTracks().forEach(track => {
-        track.stop();
-      });
-      currentStreamRef.current = null;
-    }
-
-    // Reset video elements
-    if (myVideo.current) {
-      myVideo.current.srcObject = null;
-    }
-    if (userVideo.current) {
-      userVideo.current.srcObject = null;
-    }
-
-    // Reset state
-    setCallStatus('');
-    setIsAudioMuted(false);
-    setIsVideoMuted(false);
-    dispatch(resetCallState());
-  };
-
   // Effect for call end cleanup
   useEffect(() => {
     if (callEnded) {
       handleCallEnd();
     }
-  }, [callEnded]); // Remove handleCallEnd from dependency
+  }, [callEnded, handleCallEnd]);
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('CallModal unmounting, cleaning up...');
+      
+      // Close peer connection
+      if (connectionRef.current) {
+        connectionRef.current.onicecandidate = null;
+        connectionRef.current.ontrack = null;
+        connectionRef.current.onconnectionstatechange = null;
+        connectionRef.current.close();
+        connectionRef.current = null;
+      }
+
+      // Stop all media streams
+      if (currentStreamRef.current) {
+        currentStreamRef.current.getTracks().forEach(track => {
+          track.stop();
+        });
+        currentStreamRef.current = null;
+      }
+
+      // Reset video elements
+      if (myVideo.current) {
+        myVideo.current.srcObject = null;
+        myVideo.current.load();
+      }
+      if (userVideo.current) {
+        userVideo.current.srcObject = null;
+        userVideo.current.load();
+      }
+    };
+  }, []);
 
   // Call control functions
   const leaveCall = useCallback(() => {

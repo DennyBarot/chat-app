@@ -126,10 +126,7 @@ const CallModal = () => {
       }
     });
 
-    socket.on('call-accepted', (signal) => {
-      dispatch(setCallAccepted(true));
-      peer.signal(signal);
-    });
+    
 
     connectionRef.current = peer;
   };

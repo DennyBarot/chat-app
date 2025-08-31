@@ -99,19 +99,12 @@ export const SocketProvider = ({ children }) => {
       dispatch(setCallerSignal(data.signal));
     });
 
-    newSocket.on("call-accepted", (data) => {
-      console.log('SOCKET EVENT - Call accepted received:', data);
+    newSocket.on("call-accepted", (signal) => {
+      console.log('SOCKET EVENT - Call accepted received:', signal);
       dispatch(setCallAccepted(true));
-      // Handle the answer signal from the callee
-      if (data.signal) {
-        console.log('SOCKET EVENT - Answer signal received and dispatched');
-        dispatch(setAnswerSignal(data.signal));
-      } else if (data.sdp) {
-        console.log('SOCKET EVENT - Answer SDP received and dispatched');
-        dispatch(setAnswerSignal(data));
-      } else {
-        console.warn('SOCKET EVENT - Call accepted but no answer signal or SDP provided');
-      }
+      // The server sends the signal object directly
+      dispatch(setAnswerSignal(signal));
+      console.log('SOCKET EVENT - Answer signal dispatched');
     });
 
     newSocket.on("end-call", () => {

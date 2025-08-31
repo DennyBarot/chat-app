@@ -140,10 +140,7 @@ const CallModal = () => {
               <button onClick={answerCall} className="bg-green-500 text-white px-4 py-2 rounded">
                 Answer
               </button>
-              <button onClick={() => {
-                dispatch(setReceivingCall(false));
-                leaveCall();
-              }} className="bg-red-500 text-white px-4 py-2 rounded">
+              <button onClick={leaveCall} className="bg-red-500 text-white px-4 py-2 rounded">
                 Decline
               </button>
             </div>

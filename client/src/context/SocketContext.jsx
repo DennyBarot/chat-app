@@ -108,9 +108,8 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on("end-call", () => {
-      console.log('Received end-call event, cleaning up call state');
+      console.log('Received end-call event, dispatching setCallEnded');
       dispatch(setCallEnded(true));
-      dispatch(resetCallState());
     });
 
     // Handle ICE candidates for WebRTC

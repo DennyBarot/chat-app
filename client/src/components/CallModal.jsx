@@ -79,17 +79,31 @@ const CallModal = () => {
     }
   }, [callState.iceCandidates, dispatch]);
 
+  // Handle remote stream updates
   useEffect(() => {
-    if (stream && myVideo.current) {
-      myVideo.current.srcObject = stream;
-    }
-  }, [stream]);
+    console.log('Remote stream useEffect triggered:', {
+      hasRemoteStream: !!callState.remoteStream,
+      hasUserVideo: !!userVideo.current,
+      remoteStreamTracks: callState.remoteStream?.getTracks()?.length || 0
+    });
 
-  useEffect(() => {
     if (callState.remoteStream && userVideo.current) {
+      console.log('Setting remote stream to userVideo element');
+      console.log('Remote stream tracks:', callState.remoteStream.getTracks());
       userVideo.current.srcObject = callState.remoteStream;
+      console.log('Remote stream attached to userVideo element successfully');
+    } else if (callState.remoteStream && !userVideo.current) {
+      console.warn('Remote stream available but userVideo element not found');
     }
   }, [callState.remoteStream]);
+
+  // Handle local stream attachment when call is accepted and video elements are rendered
+  useEffect(() => {
+    if (callAccepted && !callEnded && stream && myVideo.current) {
+      console.log('Attaching local stream to myVideo element after call acceptance');
+      myVideo.current.srcObject = stream;
+    }
+  }, [callAccepted, callEnded, stream]);
 
   const callUser = (id) => {
     if (!socket || !stream) return;
@@ -112,9 +126,6 @@ const CallModal = () => {
       peerConnection.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
           dispatch(setRemoteStream(event.streams[0]));
-        } else {
-          const remoteStream = new MediaStream([event.track]);
-          dispatch(setRemoteStream(remoteStream));
         }
       };
 
@@ -166,9 +177,6 @@ const CallModal = () => {
       peerConnection.ontrack = (event) => {
         if (event.streams && event.streams[0]) {
           dispatch(setRemoteStream(event.streams[0]));
-        } else {
-          const remoteStream = new MediaStream([event.track]);
-          dispatch(setRemoteStream(remoteStream));
         }
       };
 
@@ -191,11 +199,7 @@ const CallModal = () => {
     dispatch(setCallEnded(true));
 
     if (connectionRef.current) {
-      connectionRef.current.getSenders().forEach(sender => {
-        if (sender.track) {
-          sender.track.stop();
-        }
-      });
+      connectionRef.current.getSenders().forEach(sender => sender.track?.stop());
       connectionRef.current.close();
       connectionRef.current = null;
     }
@@ -212,13 +216,6 @@ const CallModal = () => {
 
     dispatch(resetCallState());
     idToCallRef.current = null;
-
-    // Fallback to ensure UI is cleaned up
-    setTimeout(() => {
-      if (window.location.pathname.includes('/call')) {
-        window.location.href = '/';
-      }
-    }, 500);
   };
 
   return (

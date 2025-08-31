@@ -12,6 +12,7 @@ import {
   setMe,
   setAnswerSignal,
   addIceCandidate,
+  setName,
 } from "../store/slice/call/call.slice";
 
 // 1. Create the context with a default value of null.
@@ -94,12 +95,18 @@ export const SocketProvider = ({ children }) => {
 
     // Call signaling events - handle both incoming calls and call acceptance
     newSocket.on("call-user", (data) => {
+      console.log('Received incoming call:', data);
       dispatch(setReceivingCall(true));
       dispatch(setCaller(data.from));
       dispatch(setCallerSignal(data.signal));
+      // Also set the caller's name for display
+      if (data.name) {
+        dispatch(setName(data.name));
+      }
     });
 
     newSocket.on("call-accepted", (data) => {
+      console.log('Call was accepted:', data);
       dispatch(setCallAccepted(true));
       // Handle the answer signal from the callee
       if (data.signal) {
@@ -107,15 +114,25 @@ export const SocketProvider = ({ children }) => {
       }
     });
 
+    newSocket.on("call-rejected", () => {
+      console.log('Call was rejected');
+      dispatch(setCallEnded(true));
+      setTimeout(() => {
+        dispatch(resetCallState());
+      }, 1000);
+    });
+
     newSocket.on("end-call", () => {
       console.log('Received end-call event, cleaning up call state');
       dispatch(setCallEnded(true));
-      dispatch(resetCallState());
+      setTimeout(() => {
+        dispatch(resetCallState());
+      }, 1000);
     });
 
     // Handle ICE candidates for WebRTC
-    // Handle ICE candidates for WebRTC
     newSocket.on("ice-candidate", (data) => {
+      console.log('Received ICE candidate:', data);
       dispatch(addIceCandidate(data.candidate));
     });
 

@@ -107,9 +107,9 @@ io.on("connection", async (socket) => {
   });
 
   // Call signaling events
-  socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+  socket.on("call-user", ({ userToCall, signal, from, name }) => {
     console.log(`Call initiated from ${from} to ${userToCall}`);
-    io.to(userToCall).emit("call-user", { signal: signalData, from, name });
+    io.to(userToCall).emit("call-user", { signal, from, name });
   });
 
   socket.on("answer-call", (data) => {
@@ -119,7 +119,7 @@ io.on("connection", async (socket) => {
 
   socket.on("ice-candidate", ({ to, candidate }) => {
     console.log(`ICE candidate sent from ${userId} to ${to}`);
-    io.to(to).emit("ice-candidate", { candidate: candidate });
+    io.to(to).emit("ice-candidate", { candidate });
   });
 
   socket.on("end-call", ({ to }) => {
@@ -128,6 +128,7 @@ io.on("connection", async (socket) => {
   });
 
   socket.on("reject-call", ({ to }) => {
+    console.log(`Call rejected by ${userId} to ${to}`);
     io.to(to).emit("call-rejected");
   });
 

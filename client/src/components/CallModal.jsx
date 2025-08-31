@@ -49,7 +49,7 @@ const CallModal = () => {
           userToCall: idToCallRef.current,
           signalData: data,
           from: me,
-          name: userProfile.fullName,
+          name: userProfile?.fullName || 'Unknown',
         });
       } else {
         socket.emit('answer-call', { signal: data, to: caller });
@@ -65,7 +65,6 @@ const CallModal = () => {
 
     peer.on('error', (err) => {
       console.error('Peer connection error:', err);
-      // Consider a more graceful way to handle this, e.g., dispatching an error state
     });
 
     connectionRef.current = peer;
@@ -84,7 +83,6 @@ const CallModal = () => {
         })
         .catch((err) => {
           console.error('Failed to get media stream:', err);
-          // Handle error, e.g., show a message to the user
         });
     }
   }, [idToCall, callAccepted, dispatch, setupPeer]);
@@ -107,45 +105,42 @@ const CallModal = () => {
       });
   };
 
-  const leaveCall = useCallback(() => {
-    dispatch(setCallEnded(true));
-
+  const cleanup = useCallback(() => {
     if (connectionRef.current) {
       connectionRef.current.destroy();
       connectionRef.current = null;
     }
-
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
-      dispatch(setStream(null));
     }
+    dispatch(resetCallState());
+  }, [dispatch, stream]);
 
+  const leaveCall = () => {
     const remoteUser = caller || idToCallRef.current;
     if (socket?.connected && remoteUser) {
       socket.emit('end-call', { to: remoteUser });
     }
-
-    dispatch(resetCallState());
-    idToCallRef.current = null;
-  }, [dispatch, stream, socket, caller]);
+    dispatch(setCallEnded(true));
+  };
 
   useEffect(() => {
     if (callEnded) {
-      leaveCall();
+      cleanup();
     }
-  }, [callEnded, leaveCall]);
+  }, [callEnded, cleanup]);
 
   return (
     <>
       {receivingCall && !callAccepted && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-4">{caller} is calling...</h3>
+            <h3 className="text-lg font-semibold mb-4">{callState.name || caller} is calling...</h3>
             <div className="flex space-x-4">
               <button onClick={answerCall} className="bg-green-500 text-white px-4 py-2 rounded">
                 Answer
               </button>
-              <button onClick={() => dispatch(setReceivingCall(false))} className="bg-red-500 text-white px-4 py-2 rounded">
+              <button onClick={leaveCall} className="bg-red-500 text-white px-4 py-2 rounded">
                 Decline
               </button>
             </div>
@@ -156,9 +151,9 @@ const CallModal = () => {
       {idToCall && !callAccepted && !callEnded && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold mb-4">Calling...</h3>
+            <h3 className="text-lg font-semibold mb-4">Calling {callState.name}...</h3>
             <p className="text-gray-600 mb-4">Waiting for response...</p>
-            <button onClick={() => { dispatch(setIdToCall('')); leaveCall(); }} className="bg-red-500 text-white px-4 py-2 rounded">
+            <button onClick={leaveCall} className="bg-red-500 text-white px-4 py-2 rounded">
               Cancel
             </button>
           </div>

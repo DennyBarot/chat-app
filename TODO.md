@@ -1,24 +1,10 @@
-# Call Flow Fix TODO
+# TODO for Fixing Call Re-initiation Issue After Hang Up
 
-## Issues to Fix
-- [x] Blank video and no audio after call acceptance (Fixed: Video element timing issue)
-- [x] Call not ending properly on both sides when one hangs up
-- [x] Media streams not stopping after hang up (camera/microphone still active)
-- [x] Cannot initiate new call after hang up (state not properly reset)
-
-## Implementation Steps
-1. [x] Fix media stream attachment to video elements
-2. [x] Ensure proper ICE candidate exchange
-3. [x] Verify signaling events handling
-4. [x] Improve leaveCall function for proper cleanup
-5. [x] Add error handling and debug logs
-6. [x] Fix video element timing issue (myVideo element not found)
-7. [x] Uncomment resetCallState import in CallModal.jsx
-8. [x] Remove stream dependency from handleCallEnd to prevent callback recreation issues
-9. [x] Remove setTimeout from SocketContext end-call handler to prevent double resetCallState calls
-10. [x] Test the complete call flow
-
-## Files to Modify
-- [x] client/src/components/CallModal.jsx
-- [x] client/src/context/SocketContext.jsx
-- [x] server/socket/socket.js
+- [x] Verify and fix resetting of callEnded flag in Redux state after hang up.
+- [x] Verify and fix resetting of callEndedRef in CallModal component after hang up.
+- [x] Ensure peer connection is properly closed and recreated on new call.
+- [x] Ensure media streams are properly stopped and reacquired on new call.
+- [x] Confirm signaling events allow new calls after hang up.
+- [x] Add debug logs in CallModal lifecycle methods to trace call state transitions.
+- [ ] Test call flow: start call, hang up, start call again.
+- [ ] Fix any discovered issues preventing new call after hang up.

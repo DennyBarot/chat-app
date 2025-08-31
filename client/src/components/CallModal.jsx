@@ -52,10 +52,13 @@ const CallModal = () => {
 
   // Handle call end cleanup
   const handleCallEnd = useCallback(() => {
-    if (callEndedRef.current) return;
+    if (callEndedRef.current) {
+      console.log('Call cleanup already in progress, skipping...');
+      return;
+    }
     callEndedRef.current = true;
 
-    console.log('Starting call cleanup...');
+    console.log('Starting call cleanup...', { callEnded, callAccepted, idToCall });
 
     // Close peer connection
     if (connectionRef.current) {
@@ -68,10 +71,16 @@ const CallModal = () => {
 
     // Stop media streams using the ref to ensure we have the current stream
     if (currentStreamRef.current) {
-      currentStreamRef.current.getTracks().forEach(track => {
-        console.log('Stopping track:', track.kind, track.label);
-        track.stop();
-      });
+      try {
+        currentStreamRef.current.getTracks().forEach(track => {
+          if (track.readyState !== 'ended') {
+            console.log('Stopping track:', track.kind, track.label);
+            track.stop();
+          }
+        });
+      } catch (error) {
+        console.error('Error stopping current stream tracks:', error);
+      }
       currentStreamRef.current = null;
     }
 
@@ -106,13 +115,16 @@ const CallModal = () => {
 
   // Get user media when call is initiated or received
   useEffect(() => {
+    console.log('Media acquisition effect:', { idToCall, receivingCall, stream: !!stream, callEnded });
     if ((idToCall || receivingCall) && !stream) {
+      console.log('Acquiring media devices...');
       setCallStatus('requesting-media');
-      navigator.mediaDevices.getUserMedia({ 
-        video: { width: 1280, height: 720 }, 
-        audio: { echoCancellation: true, noiseSuppression: true } 
+      navigator.mediaDevices.getUserMedia({
+        video: { width: 1280, height: 720 },
+        audio: { echoCancellation: true, noiseSuppression: true }
       })
         .then((mediaStream) => {
+          console.log('Media acquired successfully');
           dispatch(setStream(mediaStream));
           setCallStatus('media-ready');
         })
@@ -121,6 +133,8 @@ const CallModal = () => {
           alert('Could not access camera and microphone. Please check permissions.');
           dispatch(resetCallState());
         });
+    } else {
+      console.log('Media acquisition skipped - conditions not met');
     }
   }, [idToCall, receivingCall, stream, dispatch]);
 
@@ -179,8 +193,12 @@ const CallModal = () => {
 
   // Initiate call (caller side)
   const callUser = useCallback(async () => {
-    if (!stream || !socket || !idToCall) return;
+    if (!stream || !socket || !idToCall) {
+      console.log('Cannot initiate call, missing requirements:', { stream: !!stream, socket: !!socket, idToCall });
+      return;
+    }
 
+    console.log('Initiating call to user:', idToCall);
     try {
       setCallStatus('calling');
       const peerConnection = createPeerConnection();
@@ -265,14 +283,19 @@ const CallModal = () => {
 
   // Auto-initiate call when idToCall is set and stream is ready
   useEffect(() => {
+    console.log('Auto-initiate call effect:', { idToCall, stream: !!stream, socket: !!socket, callAccepted, receivingCall, callEndedRef: callEndedRef.current });
     if (idToCall && stream && socket && !callAccepted && !receivingCall) {
+      console.log('Conditions met, calling callUser()');
       callUser();
+    } else {
+      console.log('Conditions not met for auto-initiate call');
     }
   }, [idToCall, stream, socket, callAccepted, receivingCall, callUser]);
 
   // Reset callEndedRef when a new call starts
   useEffect(() => {
     if (idToCall || receivingCall) {
+      console.log('Resetting callEndedRef for new call:', { idToCall, receivingCall });
       callEndedRef.current = false;
     }
   }, [idToCall, receivingCall]);

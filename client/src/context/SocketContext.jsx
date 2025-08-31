@@ -114,8 +114,9 @@ export const SocketProvider = ({ children }) => {
     });
 
     // Handle ICE candidates for WebRTC
+    // Handle ICE candidates for WebRTC
     newSocket.on("ice-candidate", (data) => {
-      dispatch(addIceCandidate(data));
+      dispatch(addIceCandidate(data.candidate));
     });
 
     setSocket(newSocket);

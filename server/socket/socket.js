@@ -114,12 +114,12 @@ io.on("connection", async (socket) => {
 
   socket.on("answer-call", (data) => {
     console.log(`Call answered by ${userId} to ${data.to}`);
-    io.to(data.to).emit("call-accepted", data.signal);
+    io.to(data.to).emit("call-accepted", { signal: data.signal });
   });
 
   socket.on("ice-candidate", ({ to, candidate }) => {
     console.log(`ICE candidate sent from ${userId} to ${to}`);
-    io.to(to).emit("ice-candidate", candidate);
+    io.to(to).emit("ice-candidate", { candidate: candidate });
   });
 
   socket.on("end-call", ({ to }) => {

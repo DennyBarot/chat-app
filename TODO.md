@@ -18,6 +18,7 @@
 - [x] Add debugging logs to call button and CallModal
 - [x] Disable call button while userProfile is loading
 - [x] Remove console spam from debugging logs
+- [x] Fix Redux Provider context issue for userProfile loading
 
 ## Pending
 - [ ] Test call functionality

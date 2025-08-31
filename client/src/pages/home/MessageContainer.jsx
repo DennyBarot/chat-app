@@ -13,6 +13,8 @@ import { setIdToCall, setName } from "../../store/slice/call/call.slice";
 const MessageContainer = ({ onBack, isMobile }) => {
   const dispatch = useDispatch();
   const { userProfile, selectedUser, screenLoading } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null, screenLoading: true });
+  // Fix: userProfile might be null or undefined, so fallback to empty object to avoid undefined.name
+  const safeUserProfile = userProfile || {};
   const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
   const socket = useSocket();
@@ -225,18 +227,18 @@ const MessageContainer = ({ onBack, isMobile }) => {
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
             <button
               onClick={() => {
-                console.log('Call button clicked', { selectedUser: selectedUser?._id, userProfile: userProfile?.name });
-                if (selectedUser?._id && userProfile?.name) {
+                console.log('Call button clicked', { selectedUser: selectedUser?._id, userProfile: safeUserProfile.name });
+                if (selectedUser?._id && safeUserProfile.name) {
                   console.log('Dispatching call actions');
                   dispatch(setIdToCall(selectedUser._id));
-                  dispatch(setName(userProfile.name));
+                  dispatch(setName(safeUserProfile.name));
                 } else {
                   console.log('Missing required data for call');
                 }
               }}
-              disabled={screenLoading || !userProfile}
+              disabled={screenLoading || !safeUserProfile.name}
               className={`p-2 rounded-full transition-colors ${
-                screenLoading || !userProfile
+                screenLoading || !safeUserProfile.name
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-500 text-white hover:bg-green-600'
               }`}

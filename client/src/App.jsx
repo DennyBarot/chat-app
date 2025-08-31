@@ -30,6 +30,14 @@ const router = createBrowserRouter([
 ]);
 
 function App() {
+  return (
+    <Provider store={store}>
+      <AppContent />
+    </Provider>
+  );
+}
+
+function AppContent() {
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -49,12 +57,10 @@ function App() {
   }, [dispatch]);
 
   return (
-    <Provider store={store}>
-      <SocketProvider>
-        <Toaster position="top-right" reverseOrder={false} />
-        <RouterProvider router={router} />
-      </SocketProvider>
-    </Provider>
+    <SocketProvider>
+      <Toaster position="top-right" reverseOrder={false} />
+      <RouterProvider router={router} />
+    </SocketProvider>
   );
 }
 

@@ -60,16 +60,10 @@ const callSlice = createSlice({
       state.iceCandidates = [];
     },
     resetCallState: (state) => {
-      state.callAccepted = false;
-      state.callEnded = false;
-      state.stream = null;
-      state.remoteStream = null;
-      state.receivingCall = false;
-      state.caller = "";
-      state.callerSignal = null;
-      state.idToCall = "";
-      state.answerSignal = null;
-      state.iceCandidates = [];
+      console.log('Resetting call state in Redux...');
+      // Reset to initial state completely
+      Object.assign(state, initialState);
+      console.log('Call state reset completed');
     },
   },
 });

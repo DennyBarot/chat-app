@@ -3,14 +3,14 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setCallAccepted,
   setCallEnded,
-//  setReceivingCall,
-//   setCaller,
-//   setCallerSignal, 
+  setReceivingCall,
+  setCaller,
+  setCallerSignal,
   setStream,
-  // setIdToCall,
-  // resetCallState,
-  // setAnswerSignal,
-  // addIceCandidate,
+  setIdToCall,
+  resetCallState,
+  setAnswerSignal,
+  addIceCandidate,
   clearIceCandidates,
 } from '../store/slice/call/call.slice';
 import { useSocket } from '../context/SocketContext';
@@ -26,7 +26,7 @@ const CallModal = () => {
     caller,
     callerSignal,
     idToCall,
-    // me,
+    me,
     name,
     answerSignal,
     iceCandidates,
@@ -77,6 +77,64 @@ const CallModal = () => {
     }
   }, [stream]);
 
+  // Handle call end cleanup - COMPREHENSIVE CLEANUP
+  const handleCallEnd = useCallback(() => {
+    console.log('Starting comprehensive call cleanup...');
+    
+    // 1. Close peer connection first
+    if (connectionRef.current) {
+      console.log('Closing peer connection...');
+      connectionRef.current.close();
+      connectionRef.current = null;
+    }
+
+    // 2. Stop ALL media streams and tracks from Redux state
+    if (stream) {
+      console.log('Stopping stream tracks from Redux state...');
+      stream.getTracks().forEach(track => {
+        console.log(`Stopping ${track.kind} track:`, track.readyState);
+        track.stop();
+      });
+    }
+
+    // 3. Stop any streams attached to video elements
+    if (myVideo.current && myVideo.current.srcObject) {
+      console.log('Cleaning up local video element...');
+      const localStream = myVideo.current.srcObject;
+      if (localStream && localStream.getTracks) {
+        localStream.getTracks().forEach(track => {
+          console.log(`Stopping local video ${track.kind} track`);
+          track.stop();
+        });
+      }
+      myVideo.current.srcObject = null;
+    }
+
+    if (userVideo.current && userVideo.current.srcObject) {
+      console.log('Cleaning up remote video element...');
+      const remoteStream = userVideo.current.srcObject;
+      if (remoteStream && remoteStream.getTracks) {
+        remoteStream.getTracks().forEach(track => {
+          console.log(`Stopping remote video ${track.kind} track`);
+          track.stop();
+        });
+      }
+      userVideo.current.srcObject = null;
+    }
+
+    // 4. Reset all local state
+    setCallStatus('');
+    setIsAudioMuted(false);
+    setIsVideoMuted(false);
+    
+    // 5. Reset Redux state with a slight delay to ensure cleanup
+    setTimeout(() => {
+      dispatch(resetCallState());
+      console.log('Call cleanup completed - Redux state reset');
+    }, 100);
+    
+  }, [stream, dispatch]);
+
   // Create peer connection
   const createPeerConnection = useCallback(() => {
     const peerConnection = new RTCPeerConnection(iceServers);
@@ -116,12 +174,13 @@ const CallModal = () => {
         setCallStatus('connected');
       } else if (peerConnection.connectionState === 'disconnected' || 
                  peerConnection.connectionState === 'failed') {
-        handleCallEnd();
+        console.log('Connection failed/disconnected, ending call...');
+        dispatch(setCallEnded(true));
       }
     };
 
     return peerConnection;
-  }, [stream, socket, idToCall, caller]);
+  }, [stream, socket, idToCall, caller, dispatch]);
 
   // Initiate call (caller side)
   const callUser = useCallback(async () => {
@@ -216,36 +275,6 @@ const CallModal = () => {
     }
   }, [idToCall, stream, socket, callAccepted, receivingCall, callUser]);
 
-  // Handle call end cleanup
-  const handleCallEnd = useCallback(() => {
-    // Close peer connection
-    if (connectionRef.current) {
-      connectionRef.current.close();
-      connectionRef.current = null;
-    }
-
-    // Stop media streams
-    if (stream) {
-      stream.getTracks().forEach(track => {
-        track.stop();
-      });
-    }
-
-    // Reset video elements
-    if (myVideo.current) {
-      myVideo.current.srcObject = null;
-    }
-    if (userVideo.current) {
-      userVideo.current.srcObject = null;
-    }
-
-    // Reset state
-    setCallStatus('');
-    setIsAudioMuted(false);
-    setIsVideoMuted(false);
-    dispatch(resetCallState());
-  }, [stream, dispatch]);
-
   // Effect for call end cleanup
   useEffect(() => {
     if (callEnded) {
@@ -253,8 +282,17 @@ const CallModal = () => {
     }
   }, [callEnded, handleCallEnd]);
 
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => {
+      console.log('CallModal unmounting, cleaning up...');
+      handleCallEnd();
+    };
+  }, [handleCallEnd]);
+
   // Call control functions
   const leaveCall = useCallback(() => {
+    console.log('User initiated hang up...');
     const remoteUser = caller || idToCall;
     if (remoteUser && socket) {
       socket.emit('end-call', { to: remoteUser });
@@ -263,13 +301,16 @@ const CallModal = () => {
   }, [caller, idToCall, socket, dispatch]);
 
   const declineCall = useCallback(() => {
+    console.log('User declined call...');
     if (caller && socket) {
       socket.emit('reject-call', { to: caller });
     }
-    dispatch(resetCallState());
-  }, [caller, socket, dispatch]);
+    // Immediate cleanup for decline
+    handleCallEnd();
+  }, [caller, socket, handleCallEnd]);
 
   const cancelCall = useCallback(() => {
+    console.log('User cancelled call...');
     if (idToCall && socket) {
       socket.emit('end-call', { to: idToCall });
     }

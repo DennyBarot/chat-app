@@ -47,12 +47,6 @@ const CallModal = () => {
         console.log('Media stream obtained:', mediaStream);
         console.log('Stream tracks:', mediaStream.getTracks());
         dispatch(setStream(mediaStream));
-        if (myVideo.current) {
-          myVideo.current.srcObject = mediaStream;
-          console.log('Local video stream attached to myVideo element');
-        } else {
-          console.error('myVideo element not found');
-        }
       }).catch((error) => {
         console.error('Error accessing media devices:', error);
         alert('Unable to access camera and microphone. Please check permissions.');
@@ -370,45 +364,54 @@ const CallModal = () => {
     }
   };
 
+  // Handle call cleanup
+  useEffect(() => {
+    if (callEnded) {
+      // Clean up peer connection
+      if (connectionRef.current) {
+        try {
+          const pc = connectionRef.current;
+          if (pc.getSenders) {
+            pc.getSenders().forEach((sender) => {
+              try {
+                if (sender.track) {
+                  sender.track.stop();
+                }
+              } catch (error) {
+                console.error('Error stopping sender track:', error);
+              }
+            });
+          }
+          pc.onicecandidate = null;
+          pc.ontrack = null;
+          pc.onconnectionstatechange = null;
+          if (pc.signalingState !== 'closed') pc.close();
+        } catch (error) {
+          console.error('Error closing peer connection:', error);
+        }
+        connectionRef.current = null;
+      }
+
+      // Clean up media streams
+      if (stream) {
+        stream.getTracks().forEach(track => {
+          try {
+            track.stop();
+          } catch (error) {
+            console.error('Error stopping track:', error);
+          }
+        });
+        dispatch(setStream(null));
+      }
+
+      // Reset all call-related state
+      dispatch(resetCallState());
+      idToCallRef.current = null;
+    }
+  }, [callEnded, dispatch, stream]);
+
   const leaveCall = () => {
     dispatch(setCallEnded(true));
-
-    // Clean up peer connection
-    if (connectionRef.current) {
-      try {
-        const pc = connectionRef.current;
-        if (pc.getSenders) {
-          pc.getSenders().forEach((sender) => {
-            try {
-              if (sender.track) {
-                sender.track.stop();
-              }
-            } catch (error) {
-              console.error('Error stopping sender track:', error);
-            }
-          });
-        }
-        pc.onicecandidate = null;
-        pc.ontrack = null;
-        pc.onconnectionstatechange = null;
-        if (pc.signalingState !== 'closed') pc.close();
-      } catch (error) {
-        console.error('Error closing peer connection:', error);
-      }
-      connectionRef.current = null;
-    }
-
-    // Clean up media streams
-    if (stream) {
-      stream.getTracks().forEach(track => {
-        try {
-          track.stop();
-        } catch (error) {
-          console.error('Error stopping track:', error);
-        }
-      });
-      dispatch(setStream(null));
-    }
 
     if (socket && socket.connected) {
       // FIX: Ensure we notify the correct user when ending the call
@@ -422,13 +425,6 @@ const CallModal = () => {
     } else {
       console.warn('Socket not connected, cannot send end-call event');
     }
-
-    // Reset all call-related state
-    dispatch(resetCallState());
-    idToCallRef.current = null;
-
-    // Note: Consider removing window.location.reload() and handle state reset more gracefully
-    // window.location.reload();
   };
 
   return (

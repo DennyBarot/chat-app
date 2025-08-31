@@ -108,18 +108,22 @@ io.on("connection", async (socket) => {
 
   // Call signaling events
   socket.on("call-user", ({ userToCall, signalData, from, name }) => {
+    console.log(`Call initiated from ${from} to ${userToCall}`);
     io.to(userToCall).emit("call-user", { signal: signalData, from, name });
   });
 
   socket.on("answer-call", (data) => {
+    console.log(`Call answered by ${userId} to ${data.to}`);
     io.to(data.to).emit("call-accepted", data.signal);
   });
 
   socket.on("ice-candidate", ({ to, candidate }) => {
+    console.log(`ICE candidate sent from ${userId} to ${to}`);
     io.to(to).emit("ice-candidate", candidate);
   });
 
   socket.on("end-call", ({ to }) => {
+    console.log(`Call ended by ${userId} to ${to}`);
     io.to(to).emit("end-call");
   });
 

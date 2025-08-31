@@ -27,7 +27,6 @@ const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
 // 3. The provider's ONLY job is to create and manage the socket connection.
 export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer);
-  const callState = useSelector((state) => state.callReducer);
   const [socket, setSocket] = useState(null);
   const socketRef = useRef(null);
 
@@ -109,6 +108,7 @@ export const SocketProvider = ({ children }) => {
     });
 
     newSocket.on("end-call", () => {
+      console.log('Received end-call event, cleaning up call state');
       dispatch(setCallEnded(true));
       dispatch(resetCallState());
     });

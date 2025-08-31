@@ -45,12 +45,17 @@ const CallModal = () => {
       // Request media permissions when initiating a call
       navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
         console.log('Media stream obtained:', mediaStream);
+        console.log('Stream tracks:', mediaStream.getTracks());
         dispatch(setStream(mediaStream));
         if (myVideo.current) {
           myVideo.current.srcObject = mediaStream;
+          console.log('Local video stream attached to myVideo element');
+        } else {
+          console.error('myVideo element not found');
         }
       }).catch((error) => {
         console.error('Error accessing media devices:', error);
+        alert('Unable to access camera and microphone. Please check permissions.');
         // Reset call state if media access fails
         dispatch(setIdToCall(""));
       });
@@ -90,6 +95,14 @@ const CallModal = () => {
     }
   }, [callState.iceCandidates, dispatch]);
 
+  // Handle remote stream updates
+  useEffect(() => {
+    if (callState.remoteStream && userVideo.current) {
+      console.log('Setting remote stream to userVideo element');
+      userVideo.current.srcObject = callState.remoteStream;
+    }
+  }, [callState.remoteStream]);
+
   const callUser = (id) => {
     if (!socket || !stream) {
       console.error('Cannot create peer connection: socket or stream is missing', { socket: !!socket, stream: !!stream });
@@ -127,22 +140,34 @@ const CallModal = () => {
  
        peerConnection.onicecandidate = (event) => {
          if (event.candidate) {
-           console.log('ICE candidate generated');
+           console.log('ICE candidate generated:', event.candidate.type, event.candidate.candidate);
            if (socket && socket.connected) {
              socket.emit('ice-candidate', {
                to: id,
                candidate: event.candidate,
              });
+             console.log('ICE candidate sent to:', id);
+           } else {
+             console.error('Socket not connected when trying to send ICE candidate');
            }
+         } else {
+           console.log('ICE candidate gathering completed');
          }
        };
 
        peerConnection.ontrack = (event) => {
-         console.log('Received remote track');
-         const remoteStream = event.streams[0];
-         dispatch(setRemoteStream(remoteStream));
-         if (userVideo.current) {
-           userVideo.current.srcObject = remoteStream;
+         console.log('Received remote track:', event.track.kind);
+         console.log('Remote track streams:', event.streams);
+         if (event.streams && event.streams[0]) {
+           const remoteStream = event.streams[0];
+           console.log('Remote stream tracks:', remoteStream.getTracks());
+           dispatch(setRemoteStream(remoteStream));
+           if (userVideo.current) {
+             userVideo.current.srcObject = remoteStream;
+             console.log('Remote stream attached to userVideo element');
+           }
+         } else {
+           console.warn('No streams in ontrack event');
          }
        };
 
@@ -190,14 +215,20 @@ const CallModal = () => {
     // Request media permissions if we don't have a stream yet
     if (!stream) {
       navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+        console.log('Answer media stream obtained:', mediaStream);
+        console.log('Answer stream tracks:', mediaStream.getTracks());
         dispatch(setStream(mediaStream));
         if (myVideo.current) {
           myVideo.current.srcObject = mediaStream;
+          console.log('Answer local video stream attached to myVideo element');
+        } else {
+          console.error('Answer myVideo element not found');
         }
         // Now create the peer connection with the stream
         createPeerConnection(mediaStream);
       }).catch((error) => {
-        console.error('Error accessing media devices:', error);
+        console.error('Error accessing media devices for answer:', error);
+        alert('Unable to access camera and microphone. Please check permissions.');
         // Reset call state if media access fails
         dispatch(setReceivingCall(false));
         dispatch(setCaller(""));
@@ -247,22 +278,34 @@ const CallModal = () => {
 
       peerConnection.onicecandidate = (event) => {
         if (event.candidate) {
-          console.log('Answer ICE candidate generated');
+          console.log('Answer ICE candidate generated:', event.candidate.type, event.candidate.candidate);
           if (socket && socket.connected) {
             socket.emit('ice-candidate', {
               to: caller,
               candidate: event.candidate,
             });
+            console.log('Answer ICE candidate sent to:', caller);
+          } else {
+            console.error('Socket not connected when trying to send answer ICE candidate');
           }
+        } else {
+          console.log('Answer ICE candidate gathering completed');
         }
       };
 
       peerConnection.ontrack = (event) => {
-        console.log('Received remote track in answer peer');
-        const remoteStream = event.streams[0];
-        dispatch(setRemoteStream(remoteStream));
-        if (userVideo.current) {
-          userVideo.current.srcObject = remoteStream;
+        console.log('Received remote track in answer peer:', event.track.kind);
+        console.log('Answer remote track streams:', event.streams);
+        if (event.streams && event.streams[0]) {
+          const remoteStream = event.streams[0];
+          console.log('Answer remote stream tracks:', remoteStream.getTracks());
+          dispatch(setRemoteStream(remoteStream));
+          if (userVideo.current) {
+            userVideo.current.srcObject = remoteStream;
+            console.log('Answer remote stream attached to userVideo element');
+          }
+        } else {
+          console.warn('No streams in answer ontrack event');
         }
       };
 
@@ -332,7 +375,13 @@ const CallModal = () => {
         const pc = connectionRef.current;
         if (pc.getSenders) {
           pc.getSenders().forEach((sender) => {
-            try { sender.track && sender.track.stop(); } catch {}
+            try {
+              if (sender.track) {
+                sender.track.stop();
+              }
+            } catch (error) {
+              console.error('Error stopping sender track:', error);
+            }
           });
         }
         pc.onicecandidate = null;
@@ -361,8 +410,13 @@ const CallModal = () => {
       // FIX: Ensure we notify the correct user when ending the call
       const remoteUser = caller || idToCallRef.current;
       if (remoteUser) {
+        console.log('Sending end-call event to:', remoteUser);
         socket.emit('end-call', { to: remoteUser });
+      } else {
+        console.warn('No remote user found to send end-call event');
       }
+    } else {
+      console.warn('Socket not connected, cannot send end-call event');
     }
 
     // Reset all call-related state

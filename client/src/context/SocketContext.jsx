@@ -91,15 +91,20 @@ export const SocketProvider = ({ children }) => {
       }));
     });
 
-    // Call signaling events - simplified to avoid conflicts with CallModal
+    // Call signaling events - handle both incoming calls and call acceptance
     newSocket.on("call-user", (data) => {
       dispatch(setReceivingCall(true));
       dispatch(setCaller(data.from));
       dispatch(setCallerSignal(data.signal));
     });
 
-    newSocket.on("call-accepted", (signal) => {
+    newSocket.on("call-accepted", (data) => {
       dispatch(setCallAccepted(true));
+      // Handle the answer signal from the callee
+      if (data.signal) {
+        // This will be handled by the CallModal component
+        console.log('Call accepted with signal:', data.signal);
+      }
     });
 
     newSocket.on("end-call", () => {

@@ -19,6 +19,7 @@
 - [x] Disable call button while userProfile is loading
 - [x] Remove console spam from debugging logs
 - [x] Fix Redux Provider context issue for userProfile loading
+- [x] Fix userProfile.name undefined issue with fallback logic
 
 ## Pending
 - [ ] Test call functionality

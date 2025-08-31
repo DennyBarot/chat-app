@@ -16,13 +16,17 @@ const MessageContainer = ({ onBack, isMobile }) => {
   // Fix: userProfile might be null or undefined, so fallback to empty object to avoid undefined.name
   const safeUserProfile = userProfile || {};
 
+  // Fix: userProfile.name might be undefined, try to get name from userProfile.fullName or userProfile.username as fallback
+  const userName = safeUserProfile.name || safeUserProfile.fullName || safeUserProfile.username || "";
+
   // Debug: Check why button is disabled
   console.log('Call button debug:', {
     screenLoading,
     userProfile,
     safeUserProfile,
-    userProfileName: safeUserProfile.name,
-    isDisabled: screenLoading || !safeUserProfile.name
+    userName,
+    userProfileKeys: Object.keys(safeUserProfile),
+    isDisabled: screenLoading || !userName
   });
   const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
@@ -236,18 +240,18 @@ const MessageContainer = ({ onBack, isMobile }) => {
             <User userDetails={selectedUser} showUnreadCount={false} isTyping={isSelectedUserTyping} displayType="header" />
             <button
               onClick={() => {
-                console.log('Call button clicked', { selectedUser: selectedUser?._id, userProfile: safeUserProfile.name });
-                if (selectedUser?._id && safeUserProfile.name) {
+                console.log('Call button clicked', { selectedUser: selectedUser?._id, userProfile: userName });
+                if (selectedUser?._id && userName) {
                   console.log('Dispatching call actions');
                   dispatch(setIdToCall(selectedUser._id));
-                  dispatch(setName(safeUserProfile.name));
+                  dispatch(setName(userName));
                 } else {
                   console.log('Missing required data for call');
                 }
               }}
-              disabled={screenLoading || !safeUserProfile.name}
+              disabled={screenLoading || !userName}
               className={`p-2 rounded-full transition-colors ${
-                screenLoading || !safeUserProfile.name
+                screenLoading || !userName
                   ? 'bg-gray-400 cursor-not-allowed'
                   : 'bg-green-500 text-white hover:bg-green-600'
               }`}

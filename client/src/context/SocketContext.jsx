@@ -125,9 +125,7 @@ export const SocketProvider = ({ children }) => {
     newSocket.on("end-call", () => {
       console.log('Received end-call event, cleaning up call state');
       dispatch(setCallEnded(true));
-      setTimeout(() => {
-        dispatch(resetCallState());
-      }, 1000);
+      // Let CallModal's handleCallEnd handle the resetCallState
     });
 
     // Handle ICE candidates for WebRTC

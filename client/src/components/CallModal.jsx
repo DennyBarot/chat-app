@@ -244,7 +244,7 @@ const CallModal = () => {
     setIsAudioMuted(false);
     setIsVideoMuted(false);
     dispatch(resetCallState());
-  }, [stream, dispatch]);
+  }, [dispatch]); // Remove stream from dependency to prevent recreation issues
 
   // Effect for call end cleanup
   useEffect(() => {

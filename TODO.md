@@ -14,8 +14,9 @@
 5. [x] Add error handling and debug logs
 6. [x] Fix video element timing issue (myVideo element not found)
 7. [x] Uncomment resetCallState import in CallModal.jsx
-8. [x] Ensure proper state reset after call end
-9. [x] Test the complete call flow
+8. [x] Remove stream dependency from handleCallEnd to prevent callback recreation issues
+9. [x] Remove setTimeout from SocketContext end-call handler to prevent double resetCallState calls
+10. [x] Test the complete call flow
 
 ## Files to Modify
 - [x] client/src/components/CallModal.jsx

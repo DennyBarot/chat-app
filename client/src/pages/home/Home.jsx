@@ -5,10 +5,13 @@ import CallModal from "../../components/CallModal";
 import { useDispatch, useSelector } from "react-redux";
 import { setSelectedUser } from "../../store/slice/user/user.slice";
 import { getConversationsThunk, getOtherUsersThunk } from "../../store/slice/message/message.thunk";
+import { setCallEnded } from "../../store/slice/call/call.slice";
 
 const Home = () => {
   const dispatch = useDispatch();
   const { isAuthenticated, userProfile, selectedUser } = useSelector((state) => state.userReducer);
+  const callState = useSelector((state) => state.callReducer) || {};
+  const { receivingCall, callAccepted, callEnded } = callState;
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [showMessageContainer, setShowMessageContainer] = useState(false);
@@ -57,7 +60,8 @@ const Home = () => {
           <MessageContainer onBack={handleBackToSidebar} isMobile={isMobile} />
         </div>
       )}
-      <CallModal />
+      {/* Only render CallModal when there's an active call or receiving a call */}
+      {(receivingCall || callAccepted) && !callEnded && <CallModal />}
     </div>
   );
 };

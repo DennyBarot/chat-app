@@ -33,25 +33,20 @@ const CallModal = () => {
   const userVideo = useRef();
   const connectionRef = useRef();
 
+  // Set up socket listeners - only when socket is available
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-      dispatch(setStream(stream));
-      if (myVideo.current) {
-        myVideo.current.srcObject = stream;
-      }
-    }).catch((error) => {
-      console.error('Error accessing media devices:', error);
-    });
+    if (!socket) return;
 
-    if (socket) {
-      socket.on('call-user', (data) => {
-        dispatch(setReceivingCall(true));
-        dispatch(setCaller(data.from));
-        dispatch(setCallerSignal(data.signal));
-      });
+    const handleCallUser = (data) => {
+      dispatch(setReceivingCall(true));
+      dispatch(setCaller(data.from));
+      dispatch(setCallerSignal(data.signal));
+    };
 
-      socket.on('call-accepted', (signal) => {
-        dispatch(setCallAccepted(true));
+    const handleCallAccepted = (signal) => {
+      dispatch(setCallAccepted(true));
+      // Only create peer if we have a stream
+      if (stream) {
         const peer = new Peer({
           initiator: false,
           trickle: false,
@@ -59,26 +54,41 @@ const CallModal = () => {
         });
         peer.signal(signal);
         connectionRef.current = peer;
-      });
+      }
+    };
 
-      socket.on('end-call', () => {
-        dispatch(setCallEnded(true));
-        if (connectionRef.current) {
-          connectionRef.current.destroy();
-        }
-        window.location.reload();
-      });
+    const handleEndCall = () => {
+      dispatch(setCallEnded(true));
+      if (connectionRef.current) {
+        connectionRef.current.destroy();
+      }
+      window.location.reload();
+    };
 
-      return () => {
-        socket.off('call-user');
-        socket.off('call-accepted');
-        socket.off('end-call');
-      };
-    }
-  }, [socket, stream, dispatch]);
+    socket.on('call-user', handleCallUser);
+    socket.on('call-accepted', handleCallAccepted);
+    socket.on('end-call', handleEndCall);
 
+    return () => {
+      socket.off('call-user', handleCallUser);
+      socket.off('call-accepted', handleCallAccepted);
+      socket.off('end-call', handleEndCall);
+    };
+  }, [socket, dispatch]); // Removed stream from dependencies to avoid re-creating listeners
+
+  // Handle initiating a call
   useEffect(() => {
-    if (idToCall && stream) {
+    if (idToCall && !stream) {
+      // Request media permissions when initiating a call
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
+        dispatch(setStream(stream));
+        if (myVideo.current) {
+          myVideo.current.srcObject = stream;
+        }
+      }).catch((error) => {
+        console.error('Error accessing media devices:', error);
+      });
+    } else if (idToCall && stream) {
       callUser(idToCall);
       dispatch(setIdToCall(null)); // Reset after calling
     }
@@ -127,11 +137,30 @@ const CallModal = () => {
   const answerCall = () => {
     if (!socket || !caller || !callerSignal) return;
 
+    // Request media permissions if we don't have a stream yet
+    if (!stream) {
+      navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((mediaStream) => {
+        dispatch(setStream(mediaStream));
+        if (myVideo.current) {
+          myVideo.current.srcObject = mediaStream;
+        }
+        // Now create the peer connection with the stream
+        createPeerConnection(mediaStream);
+      }).catch((error) => {
+        console.error('Error accessing media devices:', error);
+      });
+    } else {
+      // We already have a stream, create peer connection directly
+      createPeerConnection(stream);
+    }
+  };
+
+  const createPeerConnection = (mediaStream) => {
     dispatch(setCallAccepted(true));
     const peer = new Peer({
       initiator: false,
       trickle: false,
-      stream: stream,
+      stream: mediaStream,
       config: {
         iceServers: [
           {
@@ -145,10 +174,10 @@ const CallModal = () => {
       socket.emit('answer-call', { signal: data, to: caller });
     });
 
-    peer.on('stream', (stream) => {
-      dispatch(setRemoteStream(stream));
+    peer.on('stream', (remoteStream) => {
+      dispatch(setRemoteStream(remoteStream));
       if (userVideo.current) {
-        userVideo.current.srcObject = stream;
+        userVideo.current.srcObject = remoteStream;
       }
     });
 

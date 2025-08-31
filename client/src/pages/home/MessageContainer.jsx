@@ -15,6 +15,15 @@ const MessageContainer = ({ onBack, isMobile }) => {
   const { userProfile, selectedUser, screenLoading } = useSelector((state) => state.userReducer || { userProfile: null, selectedUser: null, screenLoading: true });
   // Fix: userProfile might be null or undefined, so fallback to empty object to avoid undefined.name
   const safeUserProfile = userProfile || {};
+
+  // Debug: Check why button is disabled
+  console.log('Call button debug:', {
+    screenLoading,
+    userProfile,
+    safeUserProfile,
+    userProfileName: safeUserProfile.name,
+    isDisabled: screenLoading || !safeUserProfile.name
+  });
   const { conversations, messages: messagesByConversation } = useSelector((state) => state.messageReducer);
   const typingUsers = useSelector((state) => state.typingReducer.typingUsers);
   const socket = useSocket();

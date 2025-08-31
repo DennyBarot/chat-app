@@ -106,11 +106,8 @@ export const SocketProvider = ({ children }) => {
       if (data.signal) {
         console.log('SOCKET EVENT - Answer signal received and dispatched');
         dispatch(setAnswerSignal(data.signal));
-      } else if (data.sdp) {
-        console.log('SOCKET EVENT - Answer SDP received and dispatched');
-        dispatch(setAnswerSignal(data));
       } else {
-        console.warn('SOCKET EVENT - Call accepted but no answer signal or SDP provided');
+        console.warn('SOCKET EVENT - Call accepted but no answer signal provided');
       }
     });
 

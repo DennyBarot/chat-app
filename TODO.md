@@ -12,14 +12,25 @@
 - [x] Added server-side logging for call signaling events
 
 ### Next Steps:
-- [ ] Test the call functionality with track state logging and timeout
-- [ ] Check if media tracks are in correct state (enabled, live, not muted)
-- [ ] Check if createOffer times out or succeeds
-- [ ] Check browser console logs for detailed error information
+- [x] Test the call functionality with track state logging and timeout
+- [x] Check if media tracks are in correct state (enabled, live, not muted)
+- [x] Check if createOffer times out or succeeds
+- [x] Check browser console logs for detailed error information
+- [ ] Test the fallback createOffer mechanism
 - [ ] Check server console logs for call signaling events
 - [ ] Identify if call-accepted event is received
 - [ ] Check if peer connection is failing
 - [ ] Verify if callEnded is being set prematurely
+
+### Root Cause Identified:
+- createOffer() is hanging indefinitely (timeout after 10 seconds)
+- Media tracks are in correct state (enabled=true, readyState=live, muted=false)
+- Peer connection is created successfully
+- Issue is with WebRTC createOffer implementation in the browser/environment
+
+### Fix Applied:
+- Added fallback mechanism to try createOffer without offerToReceiveAudio/Video options
+- Reduced timeout to 5 seconds for faster failure detection
 
 ### Potential Issues to Check:
 1. Socket connection stability

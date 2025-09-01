@@ -198,17 +198,30 @@ const CallModal = () => {
         });
       }
 
-      // Add timeout to createOffer
-      const offerPromise = peerConnection.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: true,
-      });
+      // Try createOffer with different options
+      let offer;
+      try {
+        console.log("Trying createOffer with offerToReceive options...");
+        const offerPromise = peerConnection.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: true,
+        });
 
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('createOffer timeout after 10 seconds')), 10000);
-      });
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('createOffer timeout after 5 seconds')), 5000);
+        });
 
-      const offer = await Promise.race([offerPromise, timeoutPromise]);
+        offer = await Promise.race([offerPromise, timeoutPromise]);
+      } catch (error) {
+        console.log("createOffer with options failed, trying without options...", error.message);
+        // Fallback: try createOffer without options
+        const offerPromise = peerConnection.createOffer();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('createOffer fallback timeout after 5 seconds')), 5000);
+        });
+
+        offer = await Promise.race([offerPromise, timeoutPromise]);
+      }
       console.log("Offer created successfully:", offer.type);
       console.log("Offer SDP length:", offer.sdp?.length || 0);
 

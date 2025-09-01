@@ -65,10 +65,16 @@ const CallModal = () => {
   const [isVideoMuted, setIsVideoMuted] = useState(false);
   const [callStatus, setCallStatus] = useState('');
 
-  const iceServers = {
+ const iceServers = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      // Add the TURN server configuration here
+      {
+        urls: 'turn:openrelay.metered.ca:80',
+        username: 'openrelayproject',
+        credential: 'openrelayproject'
+      }
     ],
   };
 
@@ -95,7 +101,11 @@ const CallModal = () => {
     if ((idToCall || receivingCall) && !stream) {
       setCallStatus('requesting-media');
       navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: 'user'
+        },
         audio: { echoCancellation: true, noiseSuppression: true }
       })
         .then((mediaStream) => {

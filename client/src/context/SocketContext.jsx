@@ -15,17 +15,12 @@ import {
   setName,
 } from "../store/slice/call/call.slice";
 
-// 1. Create the context with a default value of null.
+// Context
 const SocketContext = createContext(null);
-
-// 2. Create a clean, reusable hook to access the context.
-export const useSocket = () => {
-  return useContext(SocketContext);
-};
+export const useSocket = () => useContext(SocketContext);
 
 const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
 
-// 3. The provider's ONLY job is to create and manage the socket connection.
 export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer);
   const [socket, setSocket] = useState(null);
@@ -34,7 +29,7 @@ export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Disconnect if the user is not logged in.
+    // Disconnect if user logged out
     if (!userProfile?._id) {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -44,47 +39,46 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    // Do nothing if a valid connection already exists.
+    // Do nothing if socket exists and is connected
     if (socketRef.current && socketRef.current.connected) {
       return;
     }
 
     const backendUrl = trimTrailingSlash(import.meta.env.VITE_BACKEND_URL);
-    
     const newSocket = io(backendUrl, {
       query: { userId: userProfile._id },
       transports: ['websocket', 'polling'],
     });
 
-    newSocket.on("connect", () => {
-      console.log("Socket connected:", newSocket.id);
-      dispatch(setMe(newSocket.id));
-    });
-    newSocket.on("disconnect", () => {
-      console.log("Socket disconnected.");
-      dispatch(setMe(""));
-    });
-    newSocket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
-    });
-    newSocket.on("reconnect", () => {
-      console.log("Socket reconnected");
-    });
+    // --- Ensure event listeners are cleaned up! ---
+    // For every `.on()`, add the corresponding `.off()` in cleanup
 
-    // Listen for user status updates
+    const handleConnect = () => {
+      dispatch(setMe(newSocket.id));
+    };
+    const handleDisconnect = () => {
+      dispatch(setMe(""));
+    };
+    const handleConnectError = (error) => {
+      // Optionally, handle error
+    };
+    const handleReconnect = () => {};
+
+    newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
+    newSocket.on("connect_error", handleConnectError);
+    newSocket.on("reconnect", handleReconnect);
+
     newSocket.on("userStatusUpdate", (statusData) => {
       dispatch(updateUserStatus(statusData));
     });
 
-    // Listen for online users list
     newSocket.on("onlineUsers", (onlineUserIds) => {
-      // Update status for all online users
       onlineUserIds.forEach(userId => {
         dispatch(updateUserStatus({ userId, isOnline: true, lastSeen: new Date() }));
       });
     });
 
-    // Listen for voice recording status
     newSocket.on("voiceRecordingStatus", (data) => {
       dispatch(updateUserStatus({ 
         userId: data.senderId, 
@@ -93,59 +87,69 @@ export const SocketProvider = ({ children }) => {
       }));
     });
 
-    // Call signaling events - handle both incoming calls and call acceptance
-    newSocket.on("call-user", (data) => {
-      console.log('Received incoming call:', data);
+    // --- Call events (with cleanup) ---
+    const handleCallUser = (data) => {
       dispatch(setReceivingCall(true));
       dispatch(setCaller(data.from));
       dispatch(setCallerSignal(data.signal));
-      // Also set the caller's name for display
-      if (data.name) {
-        dispatch(setName(data.name));
-      }
-    });
+      if (data.name) dispatch(setName(data.name));
+    };
 
-    newSocket.on("call-accepted", (data) => {
-      console.log('Call was accepted:', data);
+    const handleCallAccepted = (data) => {
       dispatch(setCallAccepted(true));
-      // Handle the answer signal from the callee
       if (data.signal) {
         dispatch(setAnswerSignal(data.signal));
       }
-    });
+    };
 
-    newSocket.on("call-rejected", () => {
-      console.log('Call was rejected');
+    const handleCallRejected = () => {
       dispatch(setCallEnded(true));
-      // Add a delay to ensure proper cleanup
       dispatch(resetCallState());
-    });
+    };
 
-    newSocket.on("end-call", () => {
-      console.log('Received end-call event, cleaning up call state');
+    const handleEndCall = () => {
       dispatch(setCallEnded(true));
-      // Add a delay to ensure proper cleanup before resetting state
       dispatch(resetCallState());
-    });
+    };
 
-    // Handle ICE candidates for WebRTC
-    newSocket.on("ice-candidate", (data) => {
-      console.log('Received ICE candidate:', data);
+    const handleIceCandidate = (data) => {
       dispatch(addIceCandidate(data.candidate));
-    });
+    };
+
+    newSocket.on("call-user", handleCallUser);
+    newSocket.on("call-accepted", handleCallAccepted);
+    newSocket.on("call-rejected", handleCallRejected);
+    newSocket.on("end-call", handleEndCall);
+    newSocket.on("ice-candidate", handleIceCandidate);
 
     setSocket(newSocket);
     socketRef.current = newSocket;
 
-    // Cleanup on unmount.
     return () => {
-      newSocket.disconnect();
-      socketRef.current = null;
-      setSocket(null);
+      // Remove all listeners to avoid event duplication on remount
+      if (newSocket) {
+        newSocket.off("connect", handleConnect);
+        newSocket.off("disconnect", handleDisconnect);
+        newSocket.off("connect_error", handleConnectError);
+        newSocket.off("reconnect", handleReconnect);
+
+        newSocket.off("userStatusUpdate");
+        newSocket.off("onlineUsers");
+        newSocket.off("voiceRecordingStatus");
+
+        newSocket.off("call-user", handleCallUser);
+        newSocket.off("call-accepted", handleCallAccepted);
+        newSocket.off("call-rejected", handleCallRejected);
+        newSocket.off("end-call", handleEndCall);
+        newSocket.off("ice-candidate", handleIceCandidate);
+
+        newSocket.disconnect();
+        socketRef.current = null;
+        setSocket(null);
+      }
     };
   }, [userProfile?._id, dispatch]);
 
-  // 4. Provide the raw socket object as the value.
   return (
     <SocketContext.Provider value={socket}>
       {children}

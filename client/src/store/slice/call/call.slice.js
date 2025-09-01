@@ -71,7 +71,7 @@ const callSlice = createSlice({
       state.answerSignal = null;
       state.iceCandidates = [];
       state.name = "";
-      state.me = "";
+      // state.me = "";
     },
   },
 });

@@ -121,7 +121,8 @@ io.on("connection", async (socket) => {
 
   socket.on("ice-candidate", ({ to, candidate }) => {
     console.log(`ICE candidate sent from ${userId} to ${to}`);
-    io.to(to).emit("ice-candidate", { candidate });
+    // Forward the candidate to the other user, including who it is from.
+    io.to(to).emit("ice-candidate", { candidate, from: userId });
   });
 
   socket.on("end-call", ({ to }) => {

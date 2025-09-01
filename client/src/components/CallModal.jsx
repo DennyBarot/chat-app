@@ -73,6 +73,11 @@ const CallModal = () => {
         urls: "turn:relay1.expressturn.com:3480",
         username: "000000002072089828",
         credential: "zQhAOHM7AYz3cjh4MY4jBJEtHEQ="
+      },
+      {
+        urls: "turns:relay1.expressturn.com:443",
+        username: "000000002072089828",
+        credential: "zQhAOHM7AYz3cjh4MY4jBJEtHEQ="
       }
     ],
   };

@@ -118,18 +118,25 @@ const CallModal = () => {
 
   // --- Peer connection utilities ---
   const createPeerConnection = useCallback(() => {
+    console.log("Creating peer connection with ICE servers:", iceServers);
     const peerConnection = new RTCPeerConnection(iceServers);
+    console.log("Peer connection created successfully");
 
     if (stream) {
+      console.log("Adding tracks to peer connection, track count:", stream.getTracks().length);
       stream.getTracks().forEach(track => {
         peerConnection.addTrack(track, stream);
       });
+    } else {
+      console.log("No stream available to add tracks");
     }
 
     peerConnection.onicecandidate = (event) => {
+      console.log("ICE candidate event:", event.candidate ? "candidate available" : "no candidate");
       if (event.candidate && socket) {
         const targetUser = idToCall || caller;
         if (targetUser) {
+          console.log("Emitting ICE candidate to:", targetUser);
           socket.emit('ice-candidate', {
             to: targetUser,
             candidate: event.candidate
@@ -139,6 +146,7 @@ const CallModal = () => {
     };
 
     peerConnection.ontrack = (event) => {
+      console.log("Received remote track");
       if (userVideo.current && event.streams[0]) {
         userVideo.current.srcObject = event.streams[0];
       }
@@ -162,6 +170,7 @@ const CallModal = () => {
 
   // --- Outgoing call (FIX: Always start with clean state) ---
   const callUser = useCallback(async () => {
+    console.log("callUser function called");
     dispatch(resetCallState());
     callEndedRef.current = false;
 
@@ -170,16 +179,24 @@ const CallModal = () => {
       return;
     }
 
+    console.log("All requirements met, proceeding with call setup");
     setCallStatus('calling');
+    console.log("Set call status to 'calling'");
     const peerConnection = createPeerConnection();
     connectionRef.current = peerConnection;
+    console.log("Peer connection assigned to connectionRef");
 
     try {
+      console.log("Creating offer...");
       const offer = await peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
+      console.log("Offer created successfully:", offer.type);
+
+      console.log("Setting local description...");
       await peerConnection.setLocalDescription(offer);
+      console.log("Local description set successfully");
 
       console.log("Emitting call-user to:", idToCall);
       socket.emit('call-user', {
@@ -188,6 +205,7 @@ const CallModal = () => {
         from: userProfile._id,
         name: userProfile.fullName || userProfile.username || 'Unknown',
       });
+      console.log("call-user event emitted successfully");
     } catch (error) {
       console.error("Error in callUser:", error);
       dispatch(setCallEnded(true));

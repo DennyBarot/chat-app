@@ -12,7 +12,10 @@
 - [x] Added server-side logging for call signaling events
 
 ### Next Steps:
-- [ ] Test the call functionality and check browser console logs
+- [ ] Test the call functionality again with enhanced logging
+- [ ] Check browser console logs for detailed callUser function execution
+- [ ] Check if peer connection creation is working
+- [ ] Check if offer creation and local description setting work
 - [ ] Check server console logs for call signaling events
 - [ ] Identify if call-accepted event is received
 - [ ] Check if peer connection is failing

@@ -93,28 +93,65 @@ const CallModal = () => {
     console.log('Call cleanup completed');
   }, [dispatch]);
 
-  // Get user media
+  // Main call setup effect
   useEffect(() => {
-    if ((idToCall || receivingCall) && !stream) {
-      setCallStatus('requesting-media');
-      navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: { echoCancellation: true, noiseSuppression: true }
-      })
-        .then((mediaStream) => {
+    // This effect handles the logic for acquiring media and initiating outgoing calls.
+    
+    // We only proceed if we are trying to make a call (idToCall) or receiving one.
+    if (!idToCall && !receivingCall) {
+      return;
+    }
+
+    const setupCall = async () => {
+      // For outgoing calls
+      if (idToCall && !callAccepted && !receivingCall) {
+        let mediaStream = stream; // Use existing stream if available
+        
+        // If no stream, get one.
+        if (!mediaStream) {
+          try {
+            setCallStatus('requesting-media');
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+              audio: { echoCancellation: true, noiseSuppression: true }
+            });
+            dispatch(setStream(mediaStream));
+            setCallStatus('media-ready');
+          } catch (error) {
+            console.error("Failed to get user media for outgoing call", error);
+            alert('Could not access camera and microphone. Please check permissions.');
+            dispatch(resetCallState());
+            return; // Stop if we can't get media
+          }
+        }
+        // Now that we are GUARANTEED to have a stream, make the call.
+        await callUser(mediaStream);
+      } 
+      // For incoming calls, we just need to get the stream ready for when the user clicks "Answer".
+      // The `answerCall` function will then use this stream.
+      else if (receivingCall && !stream) {
+        try {
+          setCallStatus('requesting-media');
+          const mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' },
+            audio: { echoCancellation: true, noiseSuppression: true }
+          });
           dispatch(setStream(mediaStream));
           setCallStatus('media-ready');
-        })
-        .catch((error) => {
-          alert('Could not access camera and microphone. Please check permissions.');
+        } catch (error) {
+          console.error("Failed to get user media for incoming call", error);
+          alert('Could not access camera and microphone to answer the call.');
+          // Don't reset the entire state, just reject the call
+          if (caller && socket) {
+            socket.emit('reject-call', { to: caller });
+          }
           dispatch(resetCallState());
-        });
-    }
-  }, [idToCall, receivingCall, stream, dispatch]);
+        }
+      }
+    };
+
+    setupCall();
+  }, [idToCall, receivingCall, callAccepted, stream, dispatch, callUser, caller, socket]);
 
   // Attach stream to local video
   useEffect(() => {
@@ -124,15 +161,15 @@ const CallModal = () => {
   }, [stream]);
 
   // --- Peer connection utilities ---
-  const createPeerConnection = useCallback(() => {
+  const createPeerConnection = useCallback((mediaStream) => {
     console.log("Creating peer connection with ICE servers:", iceServers);
     const peerConnection = new RTCPeerConnection(iceServers);
     console.log("Peer connection created successfully");
 
-    if (stream) {
-      console.log("Adding tracks to peer connection, track count:", stream.getTracks().length);
-      stream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, stream);
+    if (mediaStream) {
+      console.log("Adding tracks to peer connection, track count:", mediaStream.getTracks().length);
+      mediaStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, mediaStream);
       });
     } else {
       console.log("No stream available to add tracks");
@@ -173,22 +210,22 @@ const CallModal = () => {
     };
 
     return peerConnection;
-  }, [stream, socket, idToCall, caller, handleCallEnd]);
+  }, [socket, idToCall, caller, handleCallEnd]);
 
   // --- Outgoing call (FIX: Always start with clean state) ---
-  const callUser = useCallback(async () => {
+  const callUser = useCallback(async (mediaStream) => {
     console.log("callUser function called");
     callEndedRef.current = false;
 
-    if (!stream || !socket || !idToCall) {
-      console.log("Missing requirements for call:", { stream: !!stream, socket: !!socket, idToCall });
+    if (!mediaStream || !socket || !idToCall) {
+      console.log("Missing requirements for call:", { mediaStream: !!mediaStream, socket: !!socket, idToCall });
       return;
     }
 
     console.log("All requirements met, proceeding with call setup");
     setCallStatus('calling');
     console.log("Set call status to 'calling'");
-    const peerConnection = createPeerConnection();
+    const peerConnection = createPeerConnection(mediaStream);
     connectionRef.current = peerConnection;
     console.log("Peer connection assigned to connectionRef");
 
@@ -223,7 +260,7 @@ const CallModal = () => {
       console.error("Error stack:", error.stack);
       dispatch(setCallEnded(true));
     }
-  }, [stream, socket, idToCall, userProfile, createPeerConnection, dispatch]);
+  }, [socket, idToCall, userProfile, createPeerConnection, dispatch]);
 
   // Incoming calls
   const answerCall = useCallback(async () => {
@@ -234,7 +271,7 @@ const CallModal = () => {
     setCallStatus('connecting');
     dispatch(setCallAccepted(true));
 
-    const peerConnection = createPeerConnection();
+    const peerConnection = createPeerConnection(stream);
     connectionRef.current = peerConnection;
 
     try {
@@ -251,7 +288,7 @@ const CallModal = () => {
       console.error("Error in answerCall:", error);
       dispatch(setCallEnded(true));
     }
-  }, [stream, socket, callerSignal, caller, createPeerConnection, dispatch]);
+  }, [stream, socket, callerSignal, caller, createPeerConnection, dispatch, setCallAccepted]);
 
   // --- FIX: Only set remote description if needed ---
   useEffect(() => {
@@ -272,14 +309,7 @@ const CallModal = () => {
     }
   }, [iceCandidates, dispatch]);
 
-  // Auto call when ready
-  useEffect(() => {
-    console.log("Auto call effect triggered:", { idToCall, stream: !!stream, socket: !!socket, callAccepted, receivingCall });
-    if (idToCall && stream && socket && !callAccepted && !receivingCall) {
-      console.log("Calling callUser from auto effect");
-      callUser();
-    }
-  }, [idToCall, stream, socket, callAccepted, receivingCall, callUser]);
+  
 
   // --- Always reset clean flag for new calls ---
   useEffect(() => {

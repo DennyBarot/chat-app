@@ -15,11 +15,10 @@ import {
   setName,
 } from "../store/slice/call/call.slice";
 
-// Context
 const SocketContext = createContext(null);
 export const useSocket = () => useContext(SocketContext);
 
-const trimTrailingSlash = (url) => url?.endsWith('/') ? url.slice(0, -1) : url;
+const trimTrailingSlash = (url) => (url?.endsWith("/") ? url.slice(0, -1) : url);
 
 export const SocketProvider = ({ children }) => {
   const { userProfile } = useSelector((state) => state.userReducer);
@@ -29,7 +28,7 @@ export const SocketProvider = ({ children }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Disconnect if user logged out
+    // Disconnect socket if user logged out
     if (!userProfile?._id) {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -39,7 +38,7 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    // Do nothing if socket exists and is connected
+    // Avoid reconnect if already connected
     if (socketRef.current && socketRef.current.connected) {
       return;
     }
@@ -47,56 +46,61 @@ export const SocketProvider = ({ children }) => {
     const backendUrl = trimTrailingSlash(import.meta.env.VITE_BACKEND_URL);
     const newSocket = io(backendUrl, {
       query: { userId: userProfile._id },
-      transports: ['websocket', 'polling'],
+      transports: ["websocket", "polling"],
     });
 
-    // --- Ensure event listeners are cleaned up! ---
-    // For every `.on()`, add the corresponding `.off()` in cleanup
+    // --- Define all handlers BEFORE adding listeners ---
 
     const handleConnect = () => {
       dispatch(setMe(newSocket.id));
+      console.log("Socket connected:", newSocket.id);
     };
+
     const handleDisconnect = () => {
       dispatch(setMe(""));
+      console.log("Socket disconnected.");
     };
+
     const handleConnectError = (error) => {
-      // Optionally, handle error
+      console.error("Socket connection error:", error);
     };
-    const handleReconnect = () => {};
 
-    newSocket.on("connect", handleConnect);
-    newSocket.on("disconnect", handleDisconnect);
-    newSocket.on("connect_error", handleConnectError);
-    newSocket.on("reconnect", handleReconnect);
+    const handleReconnect = () => {
+      console.log("Socket reconnected");
+    };
 
-    newSocket.on("userStatusUpdate", (statusData) => {
+    const handleUserStatusUpdate = (statusData) => {
       dispatch(updateUserStatus(statusData));
-    });
+    };
 
-    newSocket.on("onlineUsers", (onlineUserIds) => {
-      onlineUserIds.forEach(userId => {
+    const handleOnlineUsers = (onlineUserIds) => {
+      onlineUserIds.forEach((userId) => {
         dispatch(updateUserStatus({ userId, isOnline: true, lastSeen: new Date() }));
       });
-    });
+    };
 
-    newSocket.on("voiceRecordingStatus", (data) => {
-      dispatch(updateUserStatus({ 
-        userId: data.senderId, 
-        isRecording: data.status === "recording",
-        lastSeen: new Date()
-      }));
-    });
+    const handleVoiceRecordingStatus = (data) => {
+      dispatch(
+        updateUserStatus({
+          userId: data.senderId,
+          isRecording: data.status === "recording",
+          lastSeen: new Date(),
+        })
+      );
+    };
 
-newSocket.on("call-user", (data) => {
-  console.log("SocketContext: Incoming call from", data.from, "signal:", data.signal);
-  dispatch(setReceivingCall(true));
-  dispatch(setCaller(data.from));
-  dispatch(setCallerSignal(data.signal));
-  if (data.name) dispatch(setName(data.name));
-});
-
+    const handleCallUser = (data) => {
+      console.log("Received incoming call:", data);
+      dispatch(setReceivingCall(true));
+      dispatch(setCaller(data.from));
+      dispatch(setCallerSignal(data.signal));
+      if (data.name) {
+        dispatch(setName(data.name));
+      }
+    };
 
     const handleCallAccepted = (data) => {
+      console.log("Call was accepted:", data);
       dispatch(setCallAccepted(true));
       if (data.signal) {
         dispatch(setAnswerSignal(data.signal));
@@ -104,18 +108,32 @@ newSocket.on("call-user", (data) => {
     };
 
     const handleCallRejected = () => {
+      console.log("Call was rejected");
       dispatch(setCallEnded(true));
       dispatch(resetCallState());
     };
 
     const handleEndCall = () => {
+      console.log("Received end-call event, cleaning up call state");
       dispatch(setCallEnded(true));
       dispatch(resetCallState());
     };
 
     const handleIceCandidate = (data) => {
+      console.log("Received ICE candidate:", data);
       dispatch(addIceCandidate(data.candidate));
     };
+
+    // --- Add event listeners ---
+
+    newSocket.on("connect", handleConnect);
+    newSocket.on("disconnect", handleDisconnect);
+    newSocket.on("connect_error", handleConnectError);
+    newSocket.on("reconnect", handleReconnect);
+
+    newSocket.on("userStatusUpdate", handleUserStatusUpdate);
+    newSocket.on("onlineUsers", handleOnlineUsers);
+    newSocket.on("voiceRecordingStatus", handleVoiceRecordingStatus);
 
     newSocket.on("call-user", handleCallUser);
     newSocket.on("call-accepted", handleCallAccepted);
@@ -126,17 +144,18 @@ newSocket.on("call-user", (data) => {
     setSocket(newSocket);
     socketRef.current = newSocket;
 
+    // --- Cleanup ---
+
     return () => {
-      // Remove all listeners to avoid event duplication on remount
       if (newSocket) {
         newSocket.off("connect", handleConnect);
         newSocket.off("disconnect", handleDisconnect);
         newSocket.off("connect_error", handleConnectError);
         newSocket.off("reconnect", handleReconnect);
 
-        newSocket.off("userStatusUpdate");
-        newSocket.off("onlineUsers");
-        newSocket.off("voiceRecordingStatus");
+        newSocket.off("userStatusUpdate", handleUserStatusUpdate);
+        newSocket.off("onlineUsers", handleOnlineUsers);
+        newSocket.off("voiceRecordingStatus", handleVoiceRecordingStatus);
 
         newSocket.off("call-user", handleCallUser);
         newSocket.off("call-accepted", handleCallAccepted);
@@ -151,9 +170,5 @@ newSocket.on("call-user", (data) => {
     };
   }, [userProfile?._id, dispatch]);
 
-  return (
-    <SocketContext.Provider value={socket}>
-      {children}
-    </SocketContext.Provider>
-  );
+  return <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>;
 };

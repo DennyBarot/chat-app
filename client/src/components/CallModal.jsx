@@ -171,7 +171,6 @@ const CallModal = () => {
   // --- Outgoing call (FIX: Always start with clean state) ---
   const callUser = useCallback(async () => {
     console.log("callUser function called");
-    dispatch(resetCallState());
     callEndedRef.current = false;
 
     if (!stream || !socket || !idToCall) {

@@ -188,15 +188,21 @@ const CallModal = () => {
 
     try {
       console.log("Creating offer...");
+      console.log("Peer connection state before offer:", peerConnection.connectionState);
+      console.log("Peer connection signaling state:", peerConnection.signalingState);
+
       const offer = await peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
       console.log("Offer created successfully:", offer.type);
+      console.log("Offer SDP length:", offer.sdp?.length || 0);
 
       console.log("Setting local description...");
+      console.log("Signaling state before setLocalDescription:", peerConnection.signalingState);
       await peerConnection.setLocalDescription(offer);
       console.log("Local description set successfully");
+      console.log("Signaling state after setLocalDescription:", peerConnection.signalingState);
 
       console.log("Emitting call-user to:", idToCall);
       socket.emit('call-user', {
@@ -208,6 +214,7 @@ const CallModal = () => {
       console.log("call-user event emitted successfully");
     } catch (error) {
       console.error("Error in callUser:", error);
+      console.error("Error stack:", error.stack);
       dispatch(setCallEnded(true));
     }
   }, [stream, socket, idToCall, userProfile, createPeerConnection, dispatch]);

@@ -105,6 +105,8 @@ export const SocketProvider = ({ children }) => {
       if (data.signal) {
         dispatch(setAnswerSignal(data.signal));
       }
+      // Add debug log for call accepted state
+      console.log("Dispatching call accepted and setting answer signal");
     };
 
     const handleCallRejected = () => {

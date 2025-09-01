@@ -109,11 +109,13 @@ io.on("connection", async (socket) => {
   // Call signaling events
   socket.on("call-user", ({ userToCall, signal, from, name }) => {
     console.log(`Call initiated from ${from} to ${userToCall}`);
+    console.log(`Emitting call-user to room: ${userToCall}`);
     io.to(userToCall).emit("call-user", { signal, from, name });
   });
 
   socket.on("answer-call", (data) => {
     console.log(`Call answered by ${userId} to ${data.to}`);
+    console.log(`Emitting call-accepted to room: ${data.to}`);
     io.to(data.to).emit("call-accepted", { signal: data.signal });
   });
 
@@ -124,11 +126,13 @@ io.on("connection", async (socket) => {
 
   socket.on("end-call", ({ to }) => {
     console.log(`Call ended by ${userId} to ${to}`);
+    console.log(`Emitting end-call to room: ${to}`);
     io.to(to).emit("end-call");
   });
 
   socket.on("reject-call", ({ to }) => {
     console.log(`Call rejected by ${userId} to ${to}`);
+    console.log(`Emitting call-rejected to room: ${to}`);
     io.to(to).emit("call-rejected");
   });
 

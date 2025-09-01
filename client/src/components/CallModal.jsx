@@ -145,12 +145,14 @@ const CallModal = () => {
     };
 
     peerConnection.onconnectionstatechange = () => {
+      console.log("Peer connection state changed to:", peerConnection.connectionState);
       if (peerConnection.connectionState === 'connected') {
         setCallStatus('connected');
       } else if (
         peerConnection.connectionState === 'disconnected' ||
         peerConnection.connectionState === 'failed'
       ) {
+        console.log("Peer connection failed or disconnected, ending call");
         handleCallEnd();
       }
     };
@@ -164,6 +166,7 @@ const CallModal = () => {
     callEndedRef.current = false;
 
     if (!stream || !socket || !idToCall) {
+      console.log("Missing requirements for call:", { stream: !!stream, socket: !!socket, idToCall });
       return;
     }
 
@@ -178,6 +181,7 @@ const CallModal = () => {
       });
       await peerConnection.setLocalDescription(offer);
 
+      console.log("Emitting call-user to:", idToCall);
       socket.emit('call-user', {
         userToCall: idToCall,
         signal: offer,
@@ -185,13 +189,17 @@ const CallModal = () => {
         name: userProfile.fullName || userProfile.username || 'Unknown',
       });
     } catch (error) {
+      console.error("Error in callUser:", error);
       dispatch(setCallEnded(true));
     }
   }, [stream, socket, idToCall, userProfile, createPeerConnection, dispatch]);
 
   // Incoming calls
   const answerCall = useCallback(async () => {
-    if (!stream || !socket || !callerSignal || !caller) return;
+    if (!stream || !socket || !callerSignal || !caller) {
+      console.log("Missing requirements for answerCall:", { stream: !!stream, socket: !!socket, callerSignal: !!callerSignal, caller });
+      return;
+    }
     setCallStatus('connecting');
     dispatch(setCallAccepted(true));
 
@@ -203,11 +211,13 @@ const CallModal = () => {
       const answer = await peerConnection.createAnswer();
       await peerConnection.setLocalDescription(answer);
 
+      console.log("Emitting answer-call to:", caller);
       socket.emit('answer-call', {
         signal: answer,
         to: caller,
       });
     } catch (error) {
+      console.error("Error in answerCall:", error);
       dispatch(setCallEnded(true));
     }
   }, [stream, socket, callerSignal, caller, createPeerConnection, dispatch]);
@@ -233,7 +243,9 @@ const CallModal = () => {
 
   // Auto call when ready
   useEffect(() => {
+    console.log("Auto call effect triggered:", { idToCall, stream: !!stream, socket: !!socket, callAccepted, receivingCall });
     if (idToCall && stream && socket && !callAccepted && !receivingCall) {
+      console.log("Calling callUser from auto effect");
       callUser();
     }
   }, [idToCall, stream, socket, callAccepted, receivingCall, callUser]);
@@ -247,7 +259,9 @@ const CallModal = () => {
 
   // On callEnded, clean up everything
   useEffect(() => {
+    console.log("Call ended effect triggered, callEnded:", callEnded);
     if (callEnded) {
+      console.log("Handling call end due to callEnded state");
       handleCallEnd();
     }
   }, [callEnded, handleCallEnd]);

@@ -271,8 +271,15 @@ const CallModal = () => {
 
   useEffect(() => {
     if (connectionRef.current && answerSignal && !connectionRef.current.currentRemoteDescription) {
+      console.log("Attempting to set remote description with answer signal:", answerSignal);
       connectionRef.current.setRemoteDescription(new RTCSessionDescription(answerSignal))
-        .catch(() => dispatch(setCallEnded(true)));
+        .then(() => {
+          console.log("Remote description set successfully.");
+        })
+        .catch((err) => {
+          console.error("!!! FAILED TO SET REMOTE DESCRIPTION:", err);
+          dispatch(setCallEnded(true));
+        });
     }
   }, [answerSignal, dispatch]);
 

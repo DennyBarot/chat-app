@@ -191,24 +191,10 @@ const CallModal = () => {
       console.log("Peer connection state before offer:", peerConnection.connectionState);
       console.log("Peer connection signaling state:", peerConnection.signalingState);
 
-      // Check track states
-      if (stream) {
-        stream.getTracks().forEach((track, index) => {
-          console.log(`Track ${index}: kind=${track.kind}, enabled=${track.enabled}, readyState=${track.readyState}, muted=${track.muted}`);
-        });
-      }
-
-      // Add timeout to createOffer
-      const offerPromise = peerConnection.createOffer({
+      const offer = await peerConnection.createOffer({
         offerToReceiveAudio: true,
         offerToReceiveVideo: true,
       });
-
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('createOffer timeout after 10 seconds')), 10000);
-      });
-
-      const offer = await Promise.race([offerPromise, timeoutPromise]);
       console.log("Offer created successfully:", offer.type);
       console.log("Offer SDP length:", offer.sdp?.length || 0);
 
@@ -229,8 +215,6 @@ const CallModal = () => {
     } catch (error) {
       console.error("Error in callUser:", error);
       console.error("Error stack:", error.stack);
-      console.error("Error name:", error.name);
-      console.error("Error message:", error.message);
       dispatch(setCallEnded(true));
     }
   }, [stream, socket, idToCall, userProfile, createPeerConnection, dispatch]);

@@ -87,13 +87,14 @@ export const SocketProvider = ({ children }) => {
       }));
     });
 
-    // --- Call events (with cleanup) ---
-    const handleCallUser = (data) => {
-      dispatch(setReceivingCall(true));
-      dispatch(setCaller(data.from));
-      dispatch(setCallerSignal(data.signal));
-      if (data.name) dispatch(setName(data.name));
-    };
+newSocket.on("call-user", (data) => {
+  console.log("SocketContext: Incoming call from", data.from, "signal:", data.signal);
+  dispatch(setReceivingCall(true));
+  dispatch(setCaller(data.from));
+  dispatch(setCallerSignal(data.signal));
+  if (data.name) dispatch(setName(data.name));
+});
+
 
     const handleCallAccepted = (data) => {
       dispatch(setCallAccepted(true));
